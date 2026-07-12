@@ -15,6 +15,8 @@
 
 简体中文 | [English](README.en.md)
 
+<img src="screen.png" alt="Scoop GUI 界面截图" width="840" />
+
 </div>
 
 ---
@@ -74,7 +76,7 @@ src-tauri/           Rust 后端
   src/commands.rs    全部 IPC 命令(读命令 spawn_blocking,写命令入队)
 ```
 
-产品需求、业务流程与状态机契约见 [docs/prd/](docs/prd/),设计系统见 [docs/design/systems/electron.md](docs/design/systems/electron.md)。
+产品需求、业务流程与状态机契约见 [docs/prd/](docs/prd/),设计系统见 [docs/design/systems/web.md](docs/design/systems/web.md)。
 
 ## 开发与测试
 

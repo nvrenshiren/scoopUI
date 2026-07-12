@@ -15,6 +15,8 @@
 
 English | [简体中文](README.md)
 
+<img src="screen.png" alt="Scoop GUI screenshot" width="840" />
+
 </div>
 
 ---
@@ -74,7 +76,7 @@ src-tauri/           Rust backend
   src/commands.rs    All IPC commands (read commands run via spawn_blocking, write commands are enqueued)
 ```
 
-Product requirements, business flows, and state-machine contracts live in [docs/prd/](docs/prd/); the design system is documented in [docs/design/systems/electron.md](docs/design/systems/electron.md).
+Product requirements, business flows, and state-machine contracts live in [docs/prd/](docs/prd/); the design system is documented in [docs/design/systems/web.md](docs/design/systems/web.md).
 
 ## Development & testing
 
