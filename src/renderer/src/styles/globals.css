@@ -1,0 +1,203 @@
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+@import "tailwindcss";
+
+/* ───────────────────────────────────────────────────────────────
+   主题 v2(暗色默认 + 亮色备选)· 见 docs/design/systems/electron.md v2
+   全部遵循基线约束,值采用设计文档规定的 hex
+   ─────────────────────────────────────────────────────────────── */
+
+:root {
+  /* run-green 主色 */
+  --primary: #22C55E;
+  --primary-hover: #34D672;
+  --primary-glow: rgba(34, 197, 94, 0.4);
+
+  /* 背景层(OLED 近真黑) */
+  --bg: #0B1220;
+  --bg-elevated: #111827;
+  --bg-overlay: #1A2332;
+
+  /* 文本 */
+  --fg: #F9FAFB;
+  --fg-muted: #9CA3AF;
+  --fg-subtle: #6B7280;
+
+  /* 边框 */
+  --border: #1F2937;
+  --border-strong: #374151;
+
+  /* 语义 */
+  --accent: #60A5FA;
+  --accent-glow: rgba(96, 165, 250, 0.25);
+  --warning: #F59E0B;
+  --destructive: #EF4444;
+  --destructive-glow: rgba(239, 68, 68, 0.25);
+  --success: #22C55E;
+  --ring: #22C55E;
+
+  /* 字体 */
+  --font-heading: 'Space Grotesk', system-ui, sans-serif;
+  --font-body: 'DM Sans', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', 'Cascadia Code', Consolas, monospace;
+
+  /* 圆角 */
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+
+  /* 阴影 */
+  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.5), 0 2px 4px -2px rgb(0 0 0 / 0.4);
+  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.6), 0 4px 6px -4px rgb(0 0 0 / 0.4);
+  --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.7), 0 8px 10px -6px rgb(0 0 0 / 0.5);
+}
+
+.light {
+  --bg: #FAFBFC;
+  --bg-elevated: #FFFFFF;
+  --bg-overlay: #F4F6F8;
+  --fg: #0F172A;
+  --fg-muted: #475569;
+  --fg-subtle: #94A3B8;
+  --border: #D1D5DB;
+  --border-strong: #94A3B8;
+  --primary: #16A34A;
+  --primary-hover: #15803D;
+  --primary-glow: rgba(22, 163, 74, 0.35);
+  --accent: #2563EB;
+  --destructive: #DC2626;
+  --destructive-glow: rgba(220, 38, 38, 0.25);
+  --warning: #D97706;
+  --success: #16A34A;
+  --ring: #16A34A;
+}
+
+.dark {
+  /* 显式声明 .dark 类,锁定 token(避免 system 时被媒体查询覆盖) */
+  --primary: #22C55E;
+  --primary-hover: #34D672;
+  --primary-glow: rgba(34, 197, 94, 0.4);
+  --bg: #0B1220;
+  --bg-elevated: #111827;
+  --bg-overlay: #1A2332;
+  --fg: #F9FAFB;
+  --fg-muted: #9CA3AF;
+  --fg-subtle: #6B7280;
+  --border: #1F2937;
+  --border-strong: #374151;
+  --accent: #60A5FA;
+  --accent-glow: rgba(96, 165, 250, 0.25);
+  --warning: #F59E0B;
+  --destructive: #EF4444;
+  --destructive-glow: rgba(239, 68, 68, 0.25);
+  --success: #22C55E;
+  --ring: #22C55E;
+}
+
+* {
+  border-color: var(--border);
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--font-body);
+  font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--border-strong);
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--primary);
+}
+
+/* ───────────────────────────────────────────────────────────────
+   设计系统工具类
+   ─────────────────────────────────────────────────────────────── */
+
+@layer utilities {
+  /* 主色微光 */
+  .glow-primary {
+    box-shadow: 0 0 20px var(--primary-glow);
+  }
+  .glow-primary-lg {
+    box-shadow: 0 0 20px var(--primary-glow), 0 0 40px var(--primary-glow);
+  }
+  .glow-destructive {
+    box-shadow: 0 0 12px var(--destructive-glow);
+  }
+  /* 网格背景 */
+  .bg-grid {
+    background-image:
+      linear-gradient(to right, rgba(255, 255, 255, 0.04) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(255, 255, 255, 0.04) 1px, transparent 1px);
+    background-size: 32px 32px;
+  }
+  /* 顶部辉光 */
+  .bg-glow-top {
+    background: radial-gradient(
+      ellipse 800px 200px at 50% -50%,
+      rgba(34, 197, 94, 0.10),
+      transparent
+    );
+  }
+  /* 顶部 1px 渐变线(品牌线) */
+  .top-gradient-line {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, #22C55E, transparent);
+    z-index: 100;
+  }
+  /* 卡片顶部 thin gradient line */
+  .card-top-line {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(34, 197, 94, 0.4), transparent);
+    border-top-left-radius: var(--radius-lg);
+    border-top-right-radius: var(--radius-lg);
+  }
+  /* 进度条顶部 thin gradient bar(v2 P08) */
+  .progress-top-bar {
+    height: 1px;
+    background: linear-gradient(90deg, var(--primary), var(--accent), var(--primary));
+  }
+  /* 玻璃表面 */
+  .surface-glass {
+    background: rgba(26, 35, 50, 0.6);
+    backdrop-filter: blur(12px);
+  }
+  /* 数字等宽字体 */
+  .tabular-nums {
+    font-variant-numeric: tabular-nums;
+  }
+  /* 滚动条隐藏 */
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+}

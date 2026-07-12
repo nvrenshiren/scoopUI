@@ -1,0 +1,667 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>P03 · 主界面壳 (Prototype · v2)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=JetBrains+Mono:wght@400;500&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    /* Dark mode (default & primary) */
+    --bg: #0B1220;
+    --bg-elevated: #111827;
+    --bg-overlay: #1A2332;
+    --fg: #F5F7FA;
+    --fg-muted: #A1AAB8;
+    --fg-subtle: #6B7280;
+    --border: #374151;
+    --border-strong: #5B6678;
+    --primary: #22C55E;
+    --primary-hover: #34D672;
+    --primary-glow: rgba(34, 197, 94, 0.25);
+    --primary-soft: rgba(34, 197, 94, 0.10);
+    --accent: #60A5FA;
+    --accent-glow: rgba(96, 165, 250, 0.25);
+    --warning: #F59E0B;
+    --destructive: #EF4444;
+
+    --font-heading: 'Space Grotesk', system-ui, sans-serif;
+    --font-body: 'DM Sans', system-ui, sans-serif;
+    --font-mono: 'JetBrains Mono', 'Cascadia Code', Consolas, monospace;
+
+    --radius-sm: 4px;
+    --radius-md: 8px;
+    --radius-lg: 12px;
+
+    --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.5), 0 2px 4px -2px rgb(0 0 0 / 0.4);
+    --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.6), 0 4px 6px -4px rgb(0 0 0 / 0.4);
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body {
+    margin: 0;
+    padding: 0;
+    background: #06080F;
+    color: var(--fg);
+    font-family: var(--font-body);
+    font-size: 14px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  /* ===== Tech-feel overlays ===== */
+  .bg-grid {
+    background-image:
+      linear-gradient(to right, rgba(91, 102, 120, 0.08) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(91, 102, 120, 0.08) 1px, transparent 1px);
+    background-size: 32px 32px;
+    background-position: -1px -1px;
+  }
+  .bg-glow-top {
+    background:
+      radial-gradient(ellipse 900px 240px at 50% -40%, rgba(34, 197, 94, 0.10), transparent 70%),
+      radial-gradient(ellipse 600px 160px at 50% 0%, rgba(96, 165, 250, 0.05), transparent 70%);
+  }
+  .gradient-line-primary {
+    background: linear-gradient(to right, transparent, var(--primary) 50%, transparent);
+    height: 1px;
+  }
+  .gradient-line-pageheader {
+    background: linear-gradient(to right, transparent, var(--primary) 25%, var(--accent) 50%, var(--primary) 75%, transparent);
+    height: 1px;
+  }
+
+  /* ===== Window chrome ===== */
+  #window {
+    width: 1280px;
+    height: 800px;
+    background: var(--bg);
+    color: var(--fg);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+    position: relative;
+    box-shadow: 0 30px 60px -20px rgb(0 0 0 / 0.7), 0 0 0 1px rgb(255 255 255 / 0.02) inset;
+  }
+  #window-top-line {
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 1px;
+    background: linear-gradient(to right, transparent 0%, rgba(34, 197, 94, 0.0) 5%, var(--primary) 50%, rgba(34, 197, 94, 0.0) 95%, transparent 100%);
+    z-index: 30;
+    box-shadow: 0 0 8px rgba(34, 197, 94, 0.5);
+  }
+
+  /* ===== Sidebar ===== */
+  .sidebar {
+    width: 240px;
+    flex-shrink: 0;
+    height: 100%;
+    background: var(--bg-elevated);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    position: relative;
+  }
+  .sidebar-brand {
+    padding: 16px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    height: 72px;
+  }
+  .sidebar-brand-logo {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    background: linear-gradient(135deg, var(--primary), #16A34A);
+    color: #052E16;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 0 16px var(--primary-glow), inset 0 1px 0 rgba(255,255,255,0.2);
+  }
+  .sidebar-brand-title {
+    font-family: var(--font-heading);
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--fg);
+    line-height: 1.2;
+  }
+  .sidebar-brand-sub {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--fg-muted);
+    line-height: 1.2;
+    margin-top: 2px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .sidebar-brand-sub .dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 9999px;
+    background: var(--primary);
+    box-shadow: 0 0 6px var(--primary);
+  }
+
+  .sidebar-nav {
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .nav-item {
+    position: relative;
+    height: 40px;
+    padding: 0 12px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--fg-muted);
+    cursor: pointer;
+    background: transparent;
+    border: none;
+    width: 100%;
+    text-align: left;
+    transition: background 120ms ease, color 120ms ease;
+    font-family: var(--font-body);
+  }
+  .nav-item:hover {
+    background: var(--bg-overlay);
+    color: var(--fg);
+  }
+  .nav-item:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 1px var(--primary), 0 0 0 4px var(--primary-glow);
+  }
+  .nav-item svg { flex-shrink: 0; }
+  .nav-item.active {
+    background: var(--primary-soft);
+    color: var(--primary);
+  }
+  .nav-item.active::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 8px;
+    bottom: 8px;
+    width: 2px;
+    border-radius: 0 2px 2px 0;
+    background: var(--primary);
+    box-shadow: 0 0 8px var(--primary-glow);
+  }
+
+  .sidebar-footer {
+    margin-top: auto;
+    padding: 12px;
+    border-top: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  /* ===== Theme segmented control ===== */
+  .theme-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .theme-label {
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--fg-subtle);
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    padding: 0 4px;
+  }
+  .theme-seg {
+    display: flex;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 2px;
+    height: 32px;
+    gap: 2px;
+  }
+  .theme-seg button {
+    flex: 1;
+    border: none;
+    background: transparent;
+    color: var(--fg-muted);
+    font-size: 12px;
+    font-weight: 500;
+    border-radius: 6px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    font-family: var(--font-body);
+    transition: background 120ms ease, color 120ms ease, box-shadow 120ms ease;
+  }
+  .theme-seg button:hover { color: var(--fg); }
+  .theme-seg button.active {
+    background: var(--bg-overlay);
+    color: var(--primary);
+    box-shadow: inset 0 0 0 1px rgba(34, 197, 94, 0.3);
+  }
+
+  /* ===== Lang toggle ===== */
+  .lang-toggle {
+    display: flex;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 2px;
+    height: 32px;
+  }
+  .lang-toggle button {
+    flex: 1;
+    border: none;
+    background: transparent;
+    color: var(--fg-muted);
+    font-size: 12px;
+    font-weight: 500;
+    border-radius: 6px;
+    cursor: pointer;
+    font-family: var(--font-body);
+    transition: background 120ms ease, color 120ms ease;
+  }
+  .lang-toggle button.active {
+    background: var(--bg-overlay);
+    color: var(--fg);
+    box-shadow: inset 0 0 0 1px var(--border-strong);
+  }
+
+  /* ===== Content area ===== */
+  .content {
+    flex: 1;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    overflow: hidden;
+  }
+  .content-bg {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 0;
+  }
+  .content-body {
+    position: relative;
+    z-index: 1;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+  }
+
+  .page-header {
+    height: 56px;
+    border-bottom: 1px solid var(--border);
+    background: rgba(17, 24, 39, 0.6);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    display: flex;
+    align-items: center;
+    padding: 0 24px;
+    gap: 16px;
+    flex-shrink: 0;
+    position: relative;
+  }
+  .page-header::before {
+    content: "";
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 1px;
+    background: linear-gradient(to right, transparent, var(--primary) 25%, var(--accent) 50%, var(--primary) 75%, transparent);
+    opacity: 0.7;
+  }
+  .page-header-title {
+    font-family: var(--font-heading);
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--fg);
+    line-height: 1.2;
+    letter-spacing: -0.01em;
+  }
+  .page-header-crumb {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--fg-subtle);
+    margin-top: 2px;
+  }
+  .page-header-spacer { flex: 1; }
+
+  /* Status badge */
+  .status-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    height: 28px;
+    padding: 0 10px;
+    border-radius: 9999px;
+    background: var(--primary-soft);
+    border: 1px solid rgba(34, 197, 94, 0.3);
+    color: var(--primary);
+    font-size: 12px;
+    font-weight: 500;
+  }
+  .status-pill .dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 9999px;
+    background: var(--primary);
+    box-shadow: 0 0 6px var(--primary);
+  }
+
+  /* CmdK button */
+  .cmdk-btn {
+    height: 36px;
+    padding: 0 10px 0 12px;
+    background: var(--bg-overlay);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--fg-muted);
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    cursor: pointer;
+    font-family: var(--font-body);
+    transition: border-color 120ms ease, color 120ms ease;
+  }
+  .cmdk-btn:hover {
+    border-color: var(--border-strong);
+    color: var(--fg);
+  }
+  .cmdk-btn kbd {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--fg-subtle);
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 1px 6px;
+    line-height: 1.4;
+  }
+
+  /* ===== Page body ===== */
+  .page-body {
+    flex: 1;
+    overflow: auto;
+    padding: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .welcome {
+    max-width: 560px;
+    text-align: center;
+    position: relative;
+  }
+  .welcome-mark {
+    width: 64px;
+    height: 64px;
+    margin: 0 auto 20px;
+    border-radius: 14px;
+    background: linear-gradient(135deg, rgba(34, 197, 94, 0.18), rgba(96, 165, 250, 0.12));
+    border: 1px solid rgba(34, 197, 94, 0.35);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--primary);
+    box-shadow: 0 0 32px var(--primary-glow), inset 0 1px 0 rgba(255,255,255,0.05);
+  }
+  .welcome-title {
+    font-family: var(--font-heading);
+    font-size: 28px;
+    font-weight: 600;
+    color: var(--fg);
+    letter-spacing: -0.02em;
+    line-height: 1.2;
+  }
+  .welcome-desc {
+    margin-top: 10px;
+    color: var(--fg-muted);
+    font-size: 14px;
+    line-height: 1.6;
+  }
+  .welcome-meta {
+    margin-top: 24px;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 12px;
+    border-radius: 9999px;
+    background: var(--bg-elevated);
+    border: 1px solid var(--border);
+    color: var(--fg-subtle);
+    font-family: var(--font-mono);
+    font-size: 11px;
+  }
+  .welcome-meta .dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 9999px;
+    background: var(--primary);
+    box-shadow: 0 0 6px var(--primary);
+  }
+
+  /* ===== i18n ===== */
+  [data-en] { display: none; }
+  .lang-en [data-zh] { display: none; }
+  .lang-en [data-en] { display: inline; }
+  .lang-en .block-en { display: block; }
+  .lang-en .hide-en { display: none; }
+  .block-en { display: block; }
+  .hide-en { display: none; }
+
+  /* Layout helpers (avoids needing Tailwind) */
+  .row { display: flex; align-items: center; }
+  .gap-1 { gap: 4px; } .gap-2 { gap: 8px; } .gap-3 { gap: 12px; } .gap-4 { gap: 16px; }
+</style>
+</head>
+<body>
+<div style="min-height:100vh; display:flex; align-items:center; justify-content:center; padding:32px;">
+  <div id="window">
+    <div id="window-top-line"></div>
+
+    <div class="row" style="height:100%;">
+      <!-- ============ Sidebar ============ -->
+      <aside class="sidebar" aria-label="Primary">
+        <!-- Brand -->
+        <div class="sidebar-brand">
+          <div class="sidebar-brand-logo">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M16.5 9.4 7.55 4.24"/><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/>
+            </svg>
+          </div>
+          <div style="min-width:0;">
+            <div class="sidebar-brand-title">scoop-gui</div>
+            <div class="sidebar-brand-sub">
+              <span class="dot"></span>
+              <span data-zh>Scoop 可用 · v0.5.2</span>
+              <span data-en>Scoop ready · v0.5.2</span>
+            </div>
+          </div>
+        </div>
+        <!-- Sidebar top 1px gradient line -->
+        <div class="gradient-line-primary" style="opacity:0.7;"></div>
+
+        <!-- Nav -->
+        <nav class="sidebar-nav" aria-label="Primary navigation">
+          <button class="nav-item active" data-nav="installed" aria-current="page">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+              <path d="m16 16 2 2 4-4"/><path d="M21 10V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l2-1.14"/><path d="m7.5 4.27 9 5.15"/><polyline points="3.29 7 12 12 20.71 7"/><line x1="12" y1="22" x2="12" y2="12"/>
+            </svg>
+            <span data-zh>已装</span><span data-en>Installed</span>
+          </button>
+          <button class="nav-item" data-nav="browse">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>
+            </svg>
+            <span data-zh>浏览</span><span data-en>Browse</span>
+          </button>
+          <button class="nav-item" data-nav="buckets">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+              <ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14c0 1.66 4.03 3 9 3s9-1.34 9-3V5"/><path d="M3 12c0 1.66 4.03 3 9 3s9-1.34 9-3"/>
+            </svg>
+            <span data-zh>桶</span><span data-en>Buckets</span>
+          </button>
+          <button class="nav-item" data-nav="settings">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.38a2 2 0 0 0-.73-2.73l-.15-.09a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/>
+            </svg>
+            <span data-zh>设置</span><span data-en>Settings</span>
+          </button>
+        </nav>
+
+        <!-- Footer: theme + lang -->
+        <div class="sidebar-footer">
+          <div class="theme-group">
+            <span class="theme-label">
+              <span data-zh>主题</span><span data-en>Theme</span>
+            </span>
+            <div class="theme-seg" role="tablist" aria-label="Theme">
+              <button role="tab" data-theme="light">
+                <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg>
+                <span data-zh>亮</span><span data-en>Light</span>
+              </button>
+              <button role="tab" class="active" data-theme="dark" aria-selected="true">
+                <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>
+                <span data-zh>暗</span><span data-en>Dark</span>
+              </button>
+              <button role="tab" data-theme="system">
+                <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8"/><path d="M12 17v4"/></svg>
+                <span data-zh>跟随</span><span data-en>Auto</span>
+              </button>
+            </div>
+          </div>
+          <div class="lang-toggle" role="group" aria-label="Language">
+            <button class="active" data-lang="zh" aria-pressed="true">中</button>
+            <button data-lang="en" aria-pressed="false">EN</button>
+          </div>
+        </div>
+      </aside>
+
+      <!-- ============ Content ============ -->
+      <section class="content">
+        <!-- Background overlays (grid + glow) on Content top half -->
+        <div class="content-bg bg-grid bg-glow-top"></div>
+
+        <div class="content-body">
+          <!-- PageHeader -->
+          <header class="page-header">
+            <div style="min-width:0;">
+              <div class="page-header-title" data-zh>已装软件包</div>
+              <div class="page-header-title hide-en" data-en>Installed Apps</div>
+              <div class="page-header-crumb">scoop-gui / installed</div>
+            </div>
+            <div class="page-header-spacer"></div>
+            <button class="cmdk-btn" aria-label="Global search">
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+              <span data-zh>全局搜索</span><span data-en>Search</span>
+              <kbd>Ctrl K</kbd>
+            </button>
+            <span class="status-pill">
+              <span class="dot"></span>
+              <span data-zh>Scoop 可用</span><span data-en>Scoop ready</span>
+            </span>
+          </header>
+
+          <!-- PageBody: 欢迎使用 placeholder -->
+          <main class="page-body">
+            <div class="welcome">
+              <div class="welcome-mark" aria-hidden="true">
+                <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="m16 16 2 2 4-4"/><path d="M21 10V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l2-1.14"/><path d="m7.5 4.27 9 5.15"/><polyline points="3.29 7 12 12 20.71 7"/><line x1="12" y1="22" x2="12" y2="12"/>
+                </svg>
+              </div>
+              <h1 class="welcome-title" data-zh>欢迎使用 scoop-gui</h1>
+              <h1 class="welcome-title hide-en" data-en>Welcome to scoop-gui</h1>
+              <p class="welcome-desc" data-zh>从左侧选择「已装 / 浏览 / 桶 / 设置」开始管理本机 Scoop。本页只承载主界面壳与导航上下文,具体内容由 P04 / P05 / P06 / P09 渲染。</p>
+              <p class="welcome-desc hide-en" data-en>Use the sidebar to manage installed apps, browse apps, buckets, or settings. This shell only hosts navigation; actual content is rendered by P04 / P05 / P06 / P09.</p>
+              <div class="welcome-meta">
+                <span class="dot"></span>
+                <span>1280 × 800 · dark · v2 design system</span>
+              </div>
+            </div>
+          </main>
+        </div>
+      </section>
+    </div>
+  </div>
+</div>
+
+<script>
+  // Nav selection
+  document.querySelectorAll('.nav-item').forEach(function (el) {
+    el.addEventListener('click', function () {
+      document.querySelectorAll('.nav-item').forEach(function (n) {
+        n.classList.remove('active');
+        n.removeAttribute('aria-current');
+      });
+      el.classList.add('active');
+      el.setAttribute('aria-current', 'page');
+      var nav = el.getAttribute('data-nav');
+      var titleMap = {
+        installed: { zh: '已装软件包', en: 'Installed Apps', crumb: 'installed' },
+        browse:    { zh: '浏览软件包', en: 'Browse Apps',    crumb: 'browse'    },
+        buckets:   { zh: '桶管理',     en: 'Buckets',        crumb: 'buckets'   },
+        settings:  { zh: '设置',       en: 'Settings',       crumb: 'settings'  }
+      };
+      var t = titleMap[nav];
+      var doc = document;
+      doc.querySelector('[data-zh].page-header-title').textContent = t.zh;
+      doc.querySelector('[data-en].page-header-title').textContent = t.en;
+      doc.querySelector('.page-header-crumb').textContent = 'scoop-gui / ' + t.crumb;
+    });
+  });
+
+  // Theme segmented control (visual only)
+  document.querySelectorAll('.theme-seg button').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      document.querySelectorAll('.theme-seg button').forEach(function (b) {
+        b.classList.remove('active');
+        b.removeAttribute('aria-selected');
+      });
+      btn.classList.add('active');
+      btn.setAttribute('aria-selected', 'true');
+    });
+  });
+
+  // Lang toggle
+  function setLang(lang) {
+    var html = document.documentElement;
+    if (lang === 'en') {
+      html.classList.add('lang-en');
+      html.lang = 'en-US';
+    } else {
+      html.classList.remove('lang-en');
+      html.lang = 'zh-CN';
+    }
+    document.querySelectorAll('.lang-toggle button').forEach(function (b) {
+      var active = b.getAttribute('data-lang') === lang;
+      b.classList.toggle('active', active);
+      b.setAttribute('aria-pressed', active ? 'true' : 'false');
+    });
+  }
+  document.querySelectorAll('.lang-toggle button').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      setLang(btn.getAttribute('data-lang'));
+    });
+  });
+</script>
+</body>
+</html>

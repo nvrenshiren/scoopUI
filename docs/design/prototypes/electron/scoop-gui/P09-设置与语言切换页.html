@@ -1,0 +1,519 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=1280">
+<title>P09 · 设置与语言切换页 · v2</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=JetBrains+Mono:wght@400;500&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #0B1220;
+  --bg-elevated: #111827;
+  --bg-overlay: #1A2332;
+  --surface-glass: rgb(26 35 50 / 0.62);
+  --fg: #F5F7FA;
+  --fg-muted: #A1AAB8;
+  --fg-subtle: #6B7280;
+  --border: #374151;
+  --border-strong: #5B6678;
+  --primary: #22C55E;
+  --primary-hover: #34D672;
+  --primary-glow: rgb(34 197 94 / 0.25);
+  --accent: #60A5FA;
+  --accent-glow: rgb(96 165 250 / 0.25);
+  --warning: #F59E0B;
+  --destructive: #EF4444;
+  --destructive-glow: rgb(239 68 68 / 0.20);
+  --success: #22C55E;
+  --ring: #22C55E;
+  --font-heading: 'Space Grotesk', system-ui, sans-serif;
+  --font-body: 'DM Sans', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', 'Cascadia Code', Consolas, monospace;
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.5), 0 2px 4px -2px rgb(0 0 0 / 0.4);
+  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.6), 0 4px 6px -4px rgb(0 0 0 / 0.4);
+  --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.7), 0 8px 10px -6px rgb(0 0 0 / 0.5);
+  --glow-primary: 0 0 20px var(--primary-glow), 0 0 40px var(--primary-glow);
+  --glow-accent: 0 0 16px var(--accent-glow);
+  --glow-destructive: 0 0 12px var(--destructive-glow);
+  --ring-primary: 0 0 0 1px var(--primary), 0 0 0 4px var(--primary-glow);
+}
+* { box-sizing: border-box; }
+html, body { width: 100%; min-height: 100%; }
+body {
+  margin: 0;
+  background:
+    radial-gradient(ellipse 900px 420px at 50% -18%, rgb(34 197 94 / 0.11), transparent 58%),
+    radial-gradient(ellipse 740px 360px at 95% 8%, rgb(96 165 250 / 0.08), transparent 60%),
+    var(--bg);
+  color: var(--fg);
+  font-family: var(--font-body);
+  -webkit-font-smoothing: antialiased;
+}
+button { font: inherit; }
+.font-heading { font-family: var(--font-heading); }
+.font-body { font-family: var(--font-body); }
+.font-mono { font-family: var(--font-mono); }
+.bg-grid {
+  background-image:
+    linear-gradient(to right, rgb(55 65 81 / 0.18) 1px, transparent 1px),
+    linear-gradient(to bottom, rgb(55 65 81 / 0.18) 1px, transparent 1px);
+  background-size: 32px 32px;
+}
+.bg-glow-top {
+  background: radial-gradient(ellipse 800px 200px at 50% -50%, rgb(34 197 94 / 0.12), transparent);
+}
+.gradient-line-primary { background: linear-gradient(to right, transparent, var(--primary), transparent); }
+.window-shell {
+  width: 1280px;
+  height: 800px;
+  background: var(--bg);
+  border: 1px solid rgb(55 65 81 / 0.82);
+  box-shadow: var(--shadow-xl), 0 0 0 1px rgb(34 197 94 / 0.05), 0 0 60px rgb(34 197 94 / 0.08);
+}
+.sidebar {
+  width: 240px;
+  background: linear-gradient(180deg, rgb(17 24 39 / 0.98), rgb(11 18 32 / 0.96));
+  border-right: 1px solid var(--border);
+}
+.logo-mark {
+  background: var(--primary);
+  color: #052E16;
+  box-shadow: var(--glow-primary);
+}
+.nav-item {
+  position: relative;
+  height: 40px;
+  width: 100%;
+  border: 0;
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 12px;
+  background: transparent;
+  color: var(--fg-muted);
+  font-size: 14px;
+  font-weight: 500;
+  text-align: left;
+  transition: background .15s ease, color .15s ease;
+}
+.nav-item:hover { background: var(--bg-overlay); color: var(--fg); }
+.nav-item.active { background: rgb(34 197 94 / 0.10); color: var(--primary); }
+.nav-item.active::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  width: 2px;
+  height: 22px;
+  border-radius: 9999px;
+  background: var(--primary);
+  box-shadow: var(--glow-primary);
+}
+.card-surface {
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(180deg, rgb(17 24 39 / 0.98), rgb(17 24 39 / 0.91));
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+}
+.card-surface::before {
+  content: '';
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 1px;
+  background: linear-gradient(to right, transparent, rgb(34 197 94 / 0.22), rgb(96 165 250 / 0.18), transparent);
+}
+.status-strip {
+  background: rgb(26 35 50 / 0.74);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+}
+.pill {
+  height: 24px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 10px;
+  border-radius: 9999px;
+  border: 1px solid rgb(34 197 94 / 0.55);
+  background: rgb(34 197 94 / 0.10);
+  color: var(--primary);
+  box-shadow: 0 0 16px rgb(34 197 94 / 0.12);
+  font-size: 12px;
+  font-weight: 700;
+}
+.radio-option {
+  min-height: 64px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: rgb(17 24 39 / 0.80);
+  color: var(--fg);
+  cursor: pointer;
+  transition: border-color .15s ease, background .15s ease, box-shadow .15s ease;
+}
+.radio-option:hover { border-color: var(--border-strong); background: rgb(26 35 50 / 0.78); }
+.radio-option.selected {
+  border-color: var(--primary);
+  background: rgb(34 197 94 / 0.10);
+  box-shadow: var(--ring-primary), 0 0 20px rgb(34 197 94 / 0.10);
+}
+.radio-control {
+  width: 20px;
+  height: 20px;
+  border-radius: 9999px;
+  border: 1.5px solid var(--border-strong);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg);
+  flex: 0 0 auto;
+}
+.radio-option.selected .radio-control {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 4px rgb(34 197 94 / 0.16), 0 0 18px rgb(34 197 94 / 0.18);
+}
+.radio-control::after {
+  content: '';
+  width: 10px;
+  height: 10px;
+  border-radius: 9999px;
+  background: var(--primary);
+  transform: scale(0);
+  transition: transform .15s ease;
+}
+.radio-option.selected .radio-control::after { transform: scale(1); }
+.theme-card {
+  min-height: 116px;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border);
+  background: rgb(17 24 39 / 0.82);
+  color: var(--fg);
+  cursor: pointer;
+  transition: border-color .15s ease, background .15s ease, box-shadow .15s ease;
+}
+.theme-card:hover { border-color: var(--border-strong); background: rgb(26 35 50 / 0.74); }
+.theme-card.selected {
+  border-color: var(--primary);
+  background: rgb(34 197 94 / 0.10);
+  box-shadow: var(--ring-primary), 0 0 24px rgb(34 197 94 / 0.12);
+}
+.theme-card.selected .theme-check { opacity: 1; transform: scale(1); }
+.theme-check {
+  opacity: 0;
+  transform: scale(.85);
+  transition: opacity .15s ease, transform .15s ease;
+}
+.future-item {
+  min-height: 82px;
+  position: relative;
+  padding: 16px;
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--bg-overlay);
+  color: var(--fg-muted);
+  cursor: not-allowed;
+}
+.future-badge {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  height: 22px;
+  display: inline-flex;
+  align-items: center;
+  padding: 0 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: rgb(11 18 32 / 0.72);
+  color: var(--fg-muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+.toast {
+  position: absolute;
+  top: 24px;
+  right: 24px;
+  width: 408px;
+  display: none;
+  gap: 12px;
+  padding: 16px;
+  background: rgb(17 24 39 / 0.98);
+  border: 1px solid var(--border);
+  border-left: 2px solid var(--destructive);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg), var(--glow-destructive);
+  z-index: 30;
+}
+.scene-save-failed .toast { display: flex; }
+.scene-bar {
+  position: absolute;
+  left: 264px;
+  right: 24px;
+  bottom: 18px;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px;
+  border: 1px solid rgb(55 65 81 / 0.72);
+  border-radius: var(--radius-lg);
+  background: rgb(17 24 39 / 0.82);
+  backdrop-filter: blur(14px);
+  box-shadow: var(--shadow-md);
+}
+.scene-btn {
+  height: 32px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 0 12px;
+  background: var(--bg-overlay);
+  color: var(--fg-muted);
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.scene-current .scene-btn[data-scene="current"],
+.scene-switch-zh .scene-btn[data-scene="switch-zh"],
+.scene-switch-en .scene-btn[data-scene="switch-en"],
+.scene-save-failed .scene-btn[data-scene="save-failed"] {
+  border-color: var(--primary);
+  background: rgb(34 197 94 / 0.10);
+  color: var(--primary);
+  box-shadow: 0 0 14px rgb(34 197 94 / 0.12);
+}
+.focus-ring:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; box-shadow: var(--ring-primary); }
+[data-en] { display: none; }
+.lang-en [data-zh] { display: none; }
+.lang-en [data-en] { display: inline; }
+.lang-en [data-en-block] { display: block; }
+.lang-en [data-en-flex] { display: flex; }
+.lang-zh [data-en-block], .lang-zh [data-en-flex] { display: none; }
+.lang-en [data-zh-block], .lang-en [data-zh-flex] { display: none; }
+.lang-zh [data-zh-block] { display: block; }
+.lang-zh [data-zh-flex] { display: flex; }
+.lang-zh .current-lang-en, .lang-en .current-lang-zh { display: none; }
+.scene-switch-en .lang-dependent-copy, .scene-save-failed .lang-dependent-copy { display: none; }
+.scene-switch-en .lang-dependent-copy-en, .scene-save-failed .lang-dependent-copy-en { display: inline; }
+.scene-current .lang-dependent-copy-en, .scene-switch-zh .lang-dependent-copy-en { display: none; }
+.scene-switch-en .radio-option[data-lang-option="en-US"],
+.scene-save-failed .radio-option[data-lang-option="en-US"],
+.scene-current .radio-option[data-lang-option="zh-CN"],
+.scene-switch-zh .radio-option[data-lang-option="zh-CN"] { border-color: var(--primary); background: rgb(34 197 94 / 0.10); box-shadow: var(--ring-primary), 0 0 20px rgb(34 197 94 / 0.10); }
+.scene-switch-en .radio-option[data-lang-option="en-US"] .radio-control,
+.scene-save-failed .radio-option[data-lang-option="en-US"] .radio-control,
+.scene-current .radio-option[data-lang-option="zh-CN"] .radio-control,
+.scene-switch-zh .radio-option[data-lang-option="zh-CN"] .radio-control { border-color: var(--primary); box-shadow: 0 0 0 4px rgb(34 197 94 / 0.16), 0 0 18px rgb(34 197 94 / 0.18); }
+.scene-switch-en .radio-option[data-lang-option="en-US"] .radio-control::after,
+.scene-save-failed .radio-option[data-lang-option="en-US"] .radio-control::after,
+.scene-current .radio-option[data-lang-option="zh-CN"] .radio-control::after,
+.scene-switch-zh .radio-option[data-lang-option="zh-CN"] .radio-control::after { transform: scale(1); }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+</head>
+<body class="lang-zh scene-current">
+<div class="min-h-screen flex items-center justify-center p-6">
+  <div id="window" class="window-shell relative flex overflow-hidden">
+    <div class="absolute inset-x-0 top-0 h-px gradient-line-primary z-20"></div>
+    <aside class="sidebar relative h-full flex flex-col flex-shrink-0">
+      <div class="absolute inset-x-0 top-0 h-px gradient-line-primary"></div>
+      <div class="p-3 border-b" style="border-color:var(--border);">
+        <div class="h-10 flex items-center gap-3">
+          <div class="logo-mark w-8 h-8 rounded-lg flex items-center justify-center">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M16.5 9.4 7.55 4.24"/><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
+          </div>
+          <div class="min-w-0">
+            <div class="font-heading text-sm font-semibold tracking-wide">scoop-gui</div>
+            <div class="font-mono text-[11px] truncate" style="color:var(--fg-subtle);"><span data-zh>Scoop 可用 · v0.5.2</span><span data-en>Scoop ready · v0.5.2</span></div>
+          </div>
+        </div>
+      </div>
+      <nav class="p-3 space-y-1" aria-label="Primary">
+        <button class="nav-item focus-ring" type="button"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="m16 16 2 2 4-4"/><path d="M21 10V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l2-1.14"/><path d="m7.5 4.27 9 5.15"/><polyline points="3.29 7 12 12 20.71 7"/><line x1="12" y1="22" x2="12" y2="12"/></svg><span data-zh>已装</span><span data-en>Installed</span></button>
+        <button class="nav-item focus-ring" type="button"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg><span data-zh>浏览</span><span data-en>Browse</span></button>
+        <button class="nav-item focus-ring" type="button"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14c0 1.66 4.03 3 9 3s9-1.34 9-3V5"/><path d="M3 12c0 1.66 4.03 3 9 3s9-1.34 9-3"/></svg><span data-zh>桶管理</span><span data-en>Buckets</span></button>
+        <button class="nav-item active focus-ring" type="button"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg><span data-zh>设置</span><span data-en>Settings</span></button>
+      </nav>
+      <div class="flex-1 px-3 pt-2">
+        <div class="rounded-xl p-3" style="background:rgb(26 35 50 / 0.55);border:1px solid var(--border);">
+          <div class="font-heading text-xs font-semibold" style="color:var(--fg);"><span data-zh>当前策略</span><span data-en>Current policy</span></div>
+          <div class="mt-1 text-xs" style="color:var(--fg-muted);"><span data-zh>暗色默认 · 手动语言</span><span data-en>Dark default · Manual language</span></div>
+        </div>
+      </div>
+      <div class="p-3 border-t space-y-2" style="border-color:var(--border);">
+        <div class="grid grid-cols-3 gap-1 rounded-lg p-1" style="background:var(--bg-overlay);border:1px solid var(--border);">
+          <div class="h-7 rounded-md flex items-center justify-center text-[11px]" style="color:var(--fg-subtle);">Light</div>
+          <div class="h-7 rounded-md flex items-center justify-center text-[11px] font-bold" style="background:rgb(34 197 94 / 0.10);color:var(--primary);box-shadow:0 0 12px rgb(34 197 94 / 0.12);">Dark</div>
+          <div class="h-7 rounded-md flex items-center justify-center text-[11px]" style="color:var(--fg-subtle);">Auto</div>
+        </div>
+        <div class="grid grid-cols-2 gap-1 rounded-lg p-1" style="background:var(--bg-overlay);border:1px solid var(--border);">
+          <button type="button" class="h-7 rounded-md text-[11px] font-bold focus-ring" style="border:0;background:rgb(34 197 94 / 0.10);color:var(--primary);">中文</button>
+          <button type="button" class="h-7 rounded-md text-[11px] font-bold focus-ring" style="border:0;background:transparent;color:var(--fg-subtle);">English</button>
+        </div>
+      </div>
+    </aside>
+    <main class="relative flex-1 min-w-0 h-full flex flex-col overflow-hidden">
+      <div class="absolute inset-x-0 top-0 h-[280px] bg-grid opacity-90"></div>
+      <div class="absolute inset-x-0 top-0 h-[280px] bg-glow-top"></div>
+      <header class="relative z-10 h-[76px] flex items-center justify-between px-8 border-b" style="border-color:var(--border);background:rgb(11 18 32 / 0.70);backdrop-filter:blur(18px);">
+        <div>
+          <h1 class="font-heading text-3xl font-semibold tracking-tight leading-none"><span data-zh>设置</span><span data-en>Settings</span></h1>
+          <p class="mt-2 text-sm" style="color:var(--fg-muted);"><span data-zh>偏好与界面语言</span><span data-en>Preferences & UI language</span></p>
+        </div>
+        <div class="hidden items-center gap-2 rounded-full px-3 py-1.5 text-xs md:flex" style="border:1px solid var(--border);background:rgb(26 35 50 / 0.65);color:var(--fg-muted);">
+          <span class="w-2 h-2 rounded-full" style="background:var(--primary);box-shadow:var(--glow-primary);"></span>
+          <span data-zh>prefs:set ready</span><span data-en>prefs:set ready</span>
+        </div>
+      </header>
+      <section class="relative z-10 flex-1 overflow-auto px-8 pt-8 pb-24">
+        <div class="max-w-4xl space-y-6">
+          <section class="card-surface p-6">
+            <div class="flex items-start justify-between gap-4">
+              <div>
+                <div class="font-heading text-xl font-semibold"><span data-zh>界面语言</span><span data-en>Interface language</span></div>
+                <div class="mt-1 text-sm" style="color:var(--fg-muted);"><span data-zh>选择中文或 English,切换后立即生效。</span><span data-en>Choose Chinese or English. Changes apply immediately.</span></div>
+              </div>
+              <div class="font-mono text-xs" style="color:var(--fg-subtle);">scoop:prefs:set</div>
+            </div>
+            <div class="status-strip mt-5 p-4 flex items-center gap-4">
+              <div class="w-10 h-10 rounded-xl flex items-center justify-center" style="background:rgb(34 197 94 / 0.10);color:var(--primary);box-shadow:0 0 18px rgb(34 197 94 / 0.12);">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+              </div>
+              <div class="min-w-0 flex-1">
+                <div class="text-sm font-bold"><span data-zh>当前语言</span><span data-en>Current language</span></div>
+                <div class="mt-1 text-xs" style="color:var(--fg-muted);"><span data-zh>下次启动将默认使用此语言</span><span data-en>Next launch will use this language by default</span></div>
+              </div>
+              <div class="pill current-lang-zh"><span>中文</span><span class="font-mono">zh-CN</span></div>
+              <div class="pill current-lang-en"><span>English</span><span class="font-mono">en-US</span></div>
+            </div>
+            <div class="mt-5 grid grid-cols-1 gap-3" role="radiogroup" aria-label="Interface language">
+              <button class="radio-option focus-ring" type="button" data-lang-option="zh-CN" role="radio">
+                <span class="radio-control"></span>
+                <span class="min-w-0 flex-1 text-left">
+                  <span class="block text-sm font-bold">中文</span>
+                  <span class="block mt-1 text-xs" style="color:var(--fg-muted);">简体中文 · zh-CN</span>
+                </span>
+              </button>
+              <button class="radio-option focus-ring" type="button" data-lang-option="en-US" role="radio">
+                <span class="radio-control"></span>
+                <span class="min-w-0 flex-1 text-left">
+                  <span class="block text-sm font-bold">English</span>
+                  <span class="block mt-1 text-xs" style="color:var(--fg-muted);">English (US) · en-US</span>
+                </span>
+              </button>
+            </div>
+          </section>
+          <section class="card-surface p-6">
+            <div class="flex items-start justify-between gap-4">
+              <div>
+                <div class="font-heading text-xl font-semibold"><span data-zh>主题</span><span data-en>Theme</span></div>
+                <div class="mt-1 text-sm" style="color:var(--fg-muted);"><span data-zh>暗色为默认主推,亮色作为备选。</span><span data-en>Dark is the recommended default. Light remains available.</span></div>
+              </div>
+              <span class="pill"><span data-zh>默认:暗</span><span data-en>Default: Dark</span></span>
+            </div>
+            <div class="mt-5 grid grid-cols-3 gap-3" role="radiogroup" aria-label="Theme">
+              <button class="theme-card focus-ring" type="button" role="radio" aria-checked="false">
+                <span class="flex items-center justify-between gap-2">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg>
+                </span>
+                <span class="text-left">
+                  <span class="block font-heading text-base font-semibold"><span data-zh>亮</span><span data-en>Light</span></span>
+                  <span class="block mt-1 text-xs" style="color:var(--fg-muted);"><span data-zh>浅色界面</span><span data-en>Light interface</span></span>
+                </span>
+              </button>
+              <button class="theme-card selected focus-ring" type="button" role="radio" aria-checked="true">
+                <span class="flex items-center justify-between gap-2">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+                  <svg class="theme-check" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+                </span>
+                <span class="text-left">
+                  <span class="block font-heading text-base font-semibold"><span data-zh>暗</span><span data-en>Dark</span></span>
+                  <span class="block mt-1 text-xs" style="color:var(--fg-muted);"><span data-zh>默认暗色</span><span data-en>Default dark</span></span>
+                </span>
+              </button>
+              <button class="theme-card focus-ring" type="button" role="radio" aria-checked="false">
+                <span class="flex items-center justify-between gap-2">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+                </span>
+                <span class="text-left">
+                  <span class="block font-heading text-base font-semibold"><span data-zh>跟随系统</span><span data-en>System</span></span>
+                  <span class="block mt-1 text-xs" style="color:var(--fg-muted);"><span data-zh>匹配系统外观</span><span data-en>Match OS appearance</span></span>
+                </span>
+              </button>
+            </div>
+          </section>
+          <section class="card-surface p-6">
+            <div class="flex items-start justify-between gap-4">
+              <div>
+                <div class="font-heading text-xl font-semibold"><span data-zh>即将推出</span><span data-en>Coming soon</span></div>
+                <div class="mt-1 text-sm" style="color:var(--fg-muted);"><span data-zh>未来阶段能力仅展示占位,当前不可交互。</span><span data-en>Future capabilities are placeholders only and are not interactive.</span></div>
+              </div>
+            </div>
+            <div class="mt-5 grid grid-cols-2 gap-3">
+              <div class="future-item"><span class="future-badge"><span data-zh>即将推出</span><span data-en>Coming soon</span></span><div class="font-heading text-sm font-semibold" style="color:var(--fg);"><span data-zh>自动更新</span><span data-en>Auto update</span></div><div class="mt-2 text-xs"><span data-zh>版本检测与后台更新策略</span><span data-en>Version checks and update policy</span></div></div>
+              <div class="future-item"><span class="future-badge"><span data-zh>即将推出</span><span data-en>Coming soon</span></span><div class="font-heading text-sm font-semibold" style="color:var(--fg);"><span data-zh>备份还原</span><span data-en>Backup & restore</span></div><div class="mt-2 text-xs"><span data-zh>导出桶、应用与偏好快照</span><span data-en>Export buckets, apps, and preferences</span></div></div>
+              <div class="future-item"><span class="future-badge"><span data-zh>即将推出</span><span data-en>Coming soon</span></span><div class="font-heading text-sm font-semibold" style="color:var(--fg);"><span data-zh>托盘设置</span><span data-en>Tray settings</span></div><div class="mt-2 text-xs"><span data-zh>最小化、通知与后台行为</span><span data-en>Minimize, notifications, and background behavior</span></div></div>
+              <div class="future-item"><span class="future-badge"><span data-zh>即将推出</span><span data-en>Coming soon</span></span><div class="font-heading text-sm font-semibold" style="color:var(--fg);"><span data-zh>Scoop 配置</span><span data-en>Scoop configuration</span></div><div class="mt-2 text-xs"><span data-zh>代理、全局目录与缓存位置</span><span data-en>Proxy, global dir, and cache path</span></div></div>
+              <div class="future-item col-span-2"><span class="future-badge"><span data-zh>即将推出</span><span data-en>Coming soon</span></span><div class="font-heading text-sm font-semibold" style="color:var(--fg);"><span data-zh>shims 管理</span><span data-en>Shims manager</span></div><div class="mt-2 text-xs"><span data-zh>检查 PATH、重建 shims 与诊断冲突</span><span data-en>Inspect PATH, rebuild shims, and diagnose conflicts</span></div></div>
+            </div>
+          </section>
+        </div>
+      </section>
+    </main>
+    <div class="toast" role="status" aria-live="polite">
+      <div class="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0" style="background:rgb(239 68 68 / 0.12);color:var(--destructive);box-shadow:var(--glow-destructive);">
+        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.46 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>
+      </div>
+      <div class="min-w-0 flex-1">
+        <div class="font-heading text-sm font-semibold"><span data-zh>语言已切换,但保存失败</span><span data-en>Language switched, but saving failed</span></div>
+        <div class="mt-1 text-sm leading-relaxed" style="color:var(--fg-muted);"><span data-zh>本次切换已生效,但下次启动可能仍按旧语言显示。</span><span data-en>The change is active now, but next launch may revert to the previous language.</span></div>
+        <div class="mt-3 inline-flex items-center gap-2 rounded-md px-2 py-1" style="border:1px solid var(--border);background:var(--bg);color:var(--fg-muted);">
+          <span class="text-xs"><span data-zh>错误码</span><span data-en>Error code</span></span>
+          <span class="font-mono text-xs" style="color:var(--destructive);">E_PREFERENCES_WRITE_FAILED</span>
+        </div>
+      </div>
+    </div>
+    <div class="scene-bar">
+      <span class="font-mono text-[11px] px-2" style="color:var(--fg-subtle);">PRD §4</span>
+      <button class="scene-btn" type="button" data-scene="current"><span data-zh>当前查看</span><span data-en>Current view</span></button>
+      <button class="scene-btn" type="button" data-scene="switch-zh"><span data-zh>切到中文</span><span data-en>Switch to Chinese</span></button>
+      <button class="scene-btn" type="button" data-scene="switch-en"><span data-zh>切到 English</span><span data-en>Switch to English</span></button>
+      <button class="scene-btn" type="button" data-scene="save-failed"><span data-zh>保存失败</span><span data-en>Save failed</span></button>
+    </div>
+  </div>
+</div>
+<script>
+const body = document.body;
+const scenes = {
+  current: { cls: 'scene-current', lang: 'zh' },
+  'switch-zh': { cls: 'scene-switch-zh', lang: 'zh' },
+  'switch-en': { cls: 'scene-switch-en', lang: 'en' },
+  'save-failed': { cls: 'scene-save-failed', lang: 'en' }
+};
+function setScene(name) {
+  const scene = scenes[name] || scenes.current;
+  body.classList.remove('scene-current', 'scene-switch-zh', 'scene-switch-en', 'scene-save-failed', 'lang-zh', 'lang-en');
+  body.classList.add(scene.cls, scene.lang === 'en' ? 'lang-en' : 'lang-zh');
+  document.documentElement.lang = scene.lang === 'en' ? 'en' : 'zh-CN';
+}
+document.querySelectorAll('.scene-btn').forEach((button) => button.addEventListener('click', () => setScene(button.dataset.scene)));
+document.querySelectorAll('.radio-option[data-lang-option]').forEach((button) => button.addEventListener('click', () => setScene(button.dataset.langOption === 'en-US' ? 'switch-en' : 'switch-zh')));
+</script>
+</body>
+</html>

@@ -1,0 +1,1151 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>P08 · 长时操作进度对话框 (Prototype · v2)</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  /* ====== Design tokens · 引用 docs/design/systems/electron.md §2 / §11 ====== */
+  :root {
+    --bg: #0B1220;
+    --bg-elevated: #111827;
+    --bg-overlay: #1A2332;
+    --fg: #F5F7FA;
+    --fg-muted: #A1AAB8;
+    --fg-subtle: #6B7280;
+    --border: #374151;
+    --border-strong: #5B6678;
+    --primary: #22C55E;
+    --primary-hover: #34D672;
+    --primary-glow: rgba(34, 197, 94, 0.25);
+    --accent: #60A5FA;
+    --accent-glow: rgba(96, 165, 250, 0.25);
+    --warning: #F59E0B;
+    --destructive: #EF4444;
+    --destructive-glow: rgba(239, 68, 68, 0.20);
+    --ring: #22C55E;
+
+    --font-heading: 'Space Grotesk', system-ui, sans-serif;
+    --font-body: 'DM Sans', system-ui, sans-serif;
+    --font-mono: 'JetBrains Mono', 'Cascadia Code', Consolas, monospace;
+
+    --radius-sm: 4px;
+    --radius-md: 8px;
+    --radius-lg: 12px;
+    --radius-xl: 16px;
+
+    --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.4);
+    --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.5), 0 2px 4px -2px rgb(0 0 0 / 0.4);
+    --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.6), 0 4px 6px -4px rgb(0 0 0 / 0.4);
+    --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.7), 0 8px 10px -6px rgb(0 0 0 / 0.5);
+
+    --glow-primary: 0 0 20px var(--primary-glow), 0 0 40px var(--primary-glow);
+    --glow-destructive: 0 0 12px var(--destructive-glow);
+    --glow-accent: 0 0 16px var(--accent-glow);
+    --ring-primary: 0 0 0 1px var(--primary), 0 0 0 4px var(--primary-glow);
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--fg);
+    font-family: var(--font-body);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    font-feature-settings: "ss01", "cv11";
+  }
+
+  /* 字体语义 */
+  .font-heading { font-family: var(--font-heading); }
+  .font-body { font-family: var(--font-body); }
+  .font-mono { font-family: var(--font-mono); }
+
+  /* 工具类 · Tailwind 风格语义 */
+  .bg-bg { background-color: var(--bg); }
+  .bg-bg-elevated { background-color: var(--bg-elevated); }
+  .bg-bg-overlay { background-color: var(--bg-overlay); }
+  .bg-bg\/50 { background-color: rgba(11, 18, 32, 0.5); }
+  .text-fg { color: var(--fg); }
+  .text-fg-muted { color: var(--fg-muted); }
+  .text-fg-subtle { color: var(--fg-subtle); }
+  .text-primary { color: var(--primary); }
+  .text-accent { color: var(--accent); }
+  .text-destructive { color: var(--destructive); }
+  .text-warning { color: var(--warning); }
+  .border-border { border-color: var(--border); }
+  .border-border-strong { border-color: var(--border-strong); }
+  .border-primary { border-color: var(--primary); }
+  .border-destructive { border-color: var(--destructive); }
+
+  /* 阴影 / 微光 */
+  .shadow-md { box-shadow: var(--shadow-md); }
+  .shadow-lg { box-shadow: var(--shadow-lg); }
+  .shadow-xl { box-shadow: var(--shadow-xl); }
+  .glow-primary { box-shadow: var(--glow-primary); }
+  .glow-destructive { box-shadow: var(--glow-destructive); }
+  .ring-glow-primary { box-shadow: var(--ring-primary); }
+
+  /* 科技感叠加层 · 引用 §2.1 */
+  .bg-grid {
+    background-image:
+      linear-gradient(to right, rgba(55, 65, 81, 0.18) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(55, 65, 81, 0.18) 1px, transparent 1px);
+    background-size: 32px 32px;
+  }
+  .bg-glow-top {
+    background: radial-gradient(ellipse 800px 200px at 50% -50%, rgba(34, 197, 94, 0.08), transparent);
+  }
+  .gradient-line-primary {
+    background: linear-gradient(to right, transparent, var(--primary), transparent);
+  }
+  .gradient-bar-running {
+    background: linear-gradient(to right, var(--primary), var(--accent), var(--primary));
+  }
+
+  /* i18n */
+  [data-en] { display: none; }
+  .lang-en [data-zh] { display: none; }
+  .lang-en [data-en] { display: inline; }
+
+  /* 场景切换 · 6 场景 */
+  .scene-panel { display: none; }
+  body[data-scene="running"] .scene-running { display: block; }
+  body[data-scene="success"] .scene-success { display: block; }
+  body[data-scene="failed"] .scene-failed { display: block; }
+  body[data-scene="cancelled"] .scene-cancelled { display: block; }
+  body[data-scene="batch"] .scene-batch { display: block; }
+  body[data-scene="multi"] .scene-multi { display: block; }
+
+  /* 非 modal 遮罩 · bg-black/30 backdrop-blur-sm */
+  .overlay-nonmodal {
+    position: fixed;
+    inset: 0;
+    background-color: rgba(0, 0, 0, 0.30);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    z-index: 40;
+    pointer-events: none;
+  }
+
+  /* Dialog 容器 */
+  .dialog-shell {
+    position: fixed;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 50;
+    width: 100%;
+    max-width: 672px;
+    background-color: var(--bg-elevated);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-xl);
+    box-shadow: var(--shadow-xl);
+    overflow: hidden;
+  }
+  /* 多任务场景:第二个对话框级联偏移,后发起的 z 更高 */
+  .dialog-shell.offset-1 {
+    top: calc(50% + 28px);
+    left: calc(50% + 28px);
+    z-index: 51;
+    transform: translate(-50%, -50%);
+  }
+  .dialog-shell.offset-2 {
+    top: calc(50% + 56px);
+    left: calc(50% + 56px);
+    z-index: 52;
+    transform: translate(-50%, -50%);
+  }
+
+  /* Dialog 顶部 gradient bar · 进行中态才显示 */
+  .gradient-bar {
+    height: 2px;
+    width: 100%;
+    background: linear-gradient(to right, var(--primary), var(--accent), var(--primary));
+    box-shadow: 0 0 12px rgba(34, 197, 94, 0.4);
+  }
+
+  /* 关闭按钮(右上角 X) */
+  .btn-close {
+    width: 40px;
+    height: 40px;
+    border-radius: var(--radius-md);
+    background: transparent;
+    color: var(--fg-muted);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: background-color 120ms ease, color 120ms ease;
+    cursor: pointer;
+    border: none;
+  }
+  .btn-close:hover { background-color: var(--bg-overlay); color: var(--fg); }
+  .btn-close:focus-visible { outline: none; box-shadow: var(--ring-primary); }
+
+  /* 阶段图标圆点 */
+  .stage-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 9999px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+  .stage-icon.running { background: rgba(34, 197, 94, 0.12); color: var(--primary); }
+  .stage-icon.success { background: rgba(34, 197, 94, 0.15); color: var(--primary); }
+  .stage-icon.failed { background: rgba(239, 68, 68, 0.15); color: var(--destructive); }
+  .stage-icon.cancelled { background: rgba(161, 170, 184, 0.12); color: var(--fg-muted); }
+
+  /* 进度条 · h-2 容器 + 填充带 glow */
+  .progress-track {
+    height: 8px;
+    border-radius: 9999px;
+    background-color: var(--bg-overlay);
+    overflow: hidden;
+    position: relative;
+  }
+  .progress-fill {
+    height: 100%;
+    border-radius: 9999px;
+    transition: width 280ms ease;
+    position: relative;
+  }
+  .progress-fill.fill-primary { background-color: var(--primary); box-shadow: var(--glow-primary); }
+  .progress-fill.fill-success { background-color: var(--primary); box-shadow: var(--glow-primary); }
+  .progress-fill.fill-destructive { background-color: var(--destructive); box-shadow: var(--glow-destructive); }
+  .progress-fill.fill-muted { background-color: var(--fg-muted); }
+
+  /* 日志区 · §8.5 硬约束 */
+  .log-area {
+    height: 256px;
+    overflow-y: auto;
+    border-radius: var(--radius-md);
+    background-color: rgba(11, 18, 32, 0.5);
+    border: 1px solid var(--border);
+    padding: 12px 16px;
+    font-family: var(--font-mono);
+    font-size: 12px;
+    line-height: 1.6;
+    color: var(--fg-muted);
+    display: flex;
+    flex-direction: column-reverse;
+  }
+  .log-area .log-line { white-space: pre-wrap; word-break: break-all; padding: 1px 0; }
+  .log-area .log-line.err { color: var(--destructive); }
+  .log-area .log-line.ok { color: var(--primary); }
+  .log-area .log-line.dim { color: var(--fg-subtle); }
+  .log-area::-webkit-scrollbar { width: 8px; }
+  .log-area::-webkit-scrollbar-track { background: transparent; }
+  .log-area::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 4px; }
+  .log-area::-webkit-scrollbar-thumb:hover { background: var(--fg-subtle); }
+
+  /* 按钮 */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    height: 40px;
+    padding: 0 16px;
+    border-radius: var(--radius-md);
+    font-family: var(--font-body);
+    font-size: 14px;
+    font-weight: 500;
+    line-height: 1;
+    transition: filter 120ms ease, transform 120ms ease, background-color 120ms ease;
+    cursor: pointer;
+    border: 1px solid transparent;
+    white-space: nowrap;
+  }
+  .btn:focus-visible { outline: none; box-shadow: var(--ring-primary); }
+  .btn:active { transform: scale(0.98); filter: brightness(0.92); }
+  .btn-primary { background-color: var(--primary); color: #062815; box-shadow: var(--glow-primary); }
+  .btn-primary:hover { background-color: var(--primary-hover); }
+  .btn-destructive { background-color: var(--destructive); color: #2A0808; box-shadow: var(--glow-destructive); }
+  .btn-destructive:hover { filter: brightness(1.05); }
+  .btn-secondary {
+    background-color: var(--bg-overlay);
+    color: var(--fg);
+    border-color: var(--border);
+  }
+  .btn-secondary:hover { border-color: var(--border-strong); background-color: rgba(26, 35, 50, 0.8); }
+  .btn-outline { background-color: transparent; color: var(--fg); border-color: var(--border); }
+  .btn-outline:hover { background-color: var(--bg-overlay); border-color: var(--border-strong); }
+  .btn-ghost { background-color: transparent; color: var(--fg-muted); }
+  .btn-ghost:hover { background-color: var(--bg-overlay); color: var(--fg); }
+  .btn:disabled { opacity: 0.5; cursor: not-allowed; box-shadow: none; }
+
+  /* 错误码徽标 · font-mono */
+  .err-tag {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: var(--radius-sm);
+    font-family: var(--font-mono);
+    font-size: 11px;
+    border: 1px solid var(--destructive);
+    color: var(--destructive);
+    background-color: rgba(239, 68, 68, 0.10);
+  }
+
+  /* 状态徽标 */
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 8px;
+    border-radius: var(--radius-sm);
+    font-size: 11px;
+    font-weight: 500;
+    border: 1px solid;
+    line-height: 1.4;
+  }
+  .badge-primary { background-color: rgba(34, 197, 94, 0.10); border-color: rgba(34, 197, 94, 0.30); color: var(--primary); }
+  .badge-muted { background-color: rgba(161, 170, 184, 0.10); border-color: rgba(161, 170, 184, 0.30); color: var(--fg-muted); }
+  .badge-destructive { background-color: rgba(239, 68, 68, 0.10); border-color: rgba(239, 68, 68, 0.30); color: var(--destructive); }
+
+  /* 批量行 · h-10 与表格行高一致 */
+  .batch-row {
+    height: 40px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 0 12px;
+    border-bottom: 1px solid var(--border);
+    font-size: 13px;
+  }
+  .batch-row:last-child { border-bottom: none; }
+  .batch-row:hover { background-color: rgba(26, 35, 50, 0.5); }
+
+  /* 旋转动画 · 进行中图标 */
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .animate-spin { animation: spin 1s linear infinite; }
+
+  /* 来源页缩略示意(被遮罩覆盖) */
+  .source-page { position: relative; }
+  .source-page::after {
+    content: "";
+    position: absolute; inset: 0;
+    background: rgba(11, 18, 32, 0.18);
+    pointer-events: none;
+  }
+
+  /* 顶部品牌渐变线(主页科技感) */
+  .brand-line {
+    height: 1px;
+    background: linear-gradient(to right, transparent, var(--primary), transparent);
+  }
+
+  /* 选中态场景按钮 */
+  .scene-btn { transition: color 120ms ease, border-color 120ms ease; }
+  .scene-btn.active { color: var(--primary); border-color: var(--primary); }
+
+  /* 行内 link button */
+  .link-btn {
+    background: transparent;
+    border: none;
+    color: var(--fg-muted);
+    font-size: 13px;
+    cursor: pointer;
+    padding: 4px 8px;
+    border-radius: var(--radius-sm);
+  }
+  .link-btn:hover { color: var(--fg); background-color: var(--bg-overlay); }
+
+  /* 工具栏样式 */
+  .toolbar {
+    background-color: var(--bg-elevated);
+    border-bottom: 1px solid var(--border);
+  }
+
+  /* 进度 indeterminate 动画(无百分比时) */
+  @keyframes indeterminate {
+    0% { transform: translateX(-100%); }
+    100% { transform: translateX(400%); }
+  }
+  .progress-indeterminate {
+    position: absolute;
+    top: 0; left: 0;
+    height: 100%;
+    width: 25%;
+    background: linear-gradient(to right, transparent, var(--primary), transparent);
+    animation: indeterminate 1.5s ease-in-out infinite;
+    box-shadow: var(--glow-primary);
+    border-radius: 9999px;
+  }
+</style>
+</head>
+<body class="bg-bg text-fg" data-scene="running" data-lang="zh">
+
+<!-- ====== 顶部品牌渐变线 ====== -->
+<div class="brand-line"></div>
+
+<!-- ====== 工具栏(场景/语言切换) ====== -->
+<div class="toolbar">
+  <div class="mx-auto max-w-[1280px] px-6 py-3 flex items-center justify-between text-xs flex-wrap gap-3">
+    <div class="flex items-center gap-3 flex-wrap">
+      <span class="font-mono text-[11px] text-fg-subtle">P08 · Long-operation Progress Dialog · v2</span>
+      <span class="text-fg-subtle">·</span>
+      <span class="text-fg-muted">
+        <span data-zh>场景</span><span data-en>Scene</span>:
+      </span>
+      <div class="flex items-center gap-1 flex-wrap">
+        <button onclick="setScene('running')" class="scene-btn active px-2 py-1 rounded border border-border text-fg-muted" data-scene-btn="running">
+          <span data-zh>进行中</span><span data-en>Running</span>
+        </button>
+        <button onclick="setScene('success')" class="scene-btn px-2 py-1 rounded border border-border text-fg-muted" data-scene-btn="success">
+          <span data-zh>成功</span><span data-en>Success</span>
+        </button>
+        <button onclick="setScene('failed')" class="scene-btn px-2 py-1 rounded border border-border text-fg-muted" data-scene-btn="failed">
+          <span data-zh>失败</span><span data-en>Failed</span>
+        </button>
+        <button onclick="setScene('cancelled')" class="scene-btn px-2 py-1 rounded border border-border text-fg-muted" data-scene-btn="cancelled">
+          <span data-zh>取消</span><span data-en>Cancelled</span>
+        </button>
+        <button onclick="setScene('batch')" class="scene-btn px-2 py-1 rounded border border-border text-fg-muted" data-scene-btn="batch">
+          <span data-zh>批量更新</span><span data-en>Batch</span>
+        </button>
+        <button onclick="setScene('multi')" class="scene-btn px-2 py-1 rounded border border-border text-fg-muted" data-scene-btn="multi">
+          <span data-zh>多任务</span><span data-en>Multi-task</span>
+        </button>
+      </div>
+    </div>
+    <div class="flex items-center gap-3 text-fg-muted">
+      <span><span data-zh>语言</span><span data-en>Language</span>:</span>
+      <button onclick="setLang('zh')" class="underline text-fg">中</button>
+      <span class="text-fg-subtle">/</span>
+      <button onclick="setLang('en')" class="underline">EN</button>
+    </div>
+  </div>
+</div>
+
+<!-- ====== 来源页背景(被遮罩覆盖,§2 非 modal) ====== -->
+<div class="source-page bg-bg bg-grid bg-glow-top min-h-[calc(100vh-89px)]">
+  <div class="mx-auto flex" style="width:1280px; min-height:780px;">
+    <!-- Sidebar -->
+    <aside class="flex-shrink-0 border-r border-border bg-bg-elevated" style="width:240px;">
+      <div class="px-6 py-5 flex items-center gap-2">
+        <div class="rounded-md flex items-center justify-center text-bg" style="width:28px;height:28px;background:var(--primary); box-shadow: var(--glow-primary);">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"><path d="M16.5 9.4 7.55 4.24"/><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
+        </div>
+        <span class="font-heading text-sm font-semibold">scoop-gui</span>
+      </div>
+      <nav class="px-3 space-y-1">
+        <a class="flex items-center h-10 px-3 rounded-md text-sm font-medium" style="background-color: rgba(34, 197, 94, 0.10); color: var(--primary); border-left: 2px solid var(--primary);">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mr-3"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
+          <span data-zh>已装</span><span data-en>Installed</span>
+        </a>
+        <a class="flex items-center h-10 px-3 rounded-md text-sm text-fg-muted">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mr-3"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+          <span data-zh>浏览</span><span data-en>Browse</span>
+        </a>
+        <a class="flex items-center h-10 px-3 rounded-md text-sm text-fg-muted">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mr-3"><circle cx="18" cy="18" r="3"/><circle cx="6" cy="6" r="3"/><path d="M13 6h3a2 2 0 0 1 2 2v7"/><path d="M6 9v12"/></svg>
+          <span data-zh>桶管理</span><span data-en>Buckets</span>
+        </a>
+        <a class="flex items-center h-10 px-3 rounded-md text-sm text-fg-muted">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mr-3"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
+          <span data-zh>设置</span><span data-en>Settings</span>
+        </a>
+      </nav>
+    </aside>
+
+    <!-- Content -->
+    <main class="flex-1 overflow-hidden bg-bg">
+      <div class="border-b border-border h-14 px-6 flex items-center bg-bg-elevated">
+        <h1 class="font-heading text-xl font-semibold leading-tight">
+          <span data-zh>已装软件包</span><span data-en>Installed apps</span>
+        </h1>
+        <div class="ml-auto flex gap-2">
+          <button class="btn btn-secondary text-sm" disabled style="opacity:0.5; cursor:not-allowed;">
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/><path d="M16 16h5v5"/></svg>
+            <span data-zh>更新全部过期</span><span data-en>Update all outdated</span>
+          </button>
+          <button class="btn btn-outline text-sm" disabled style="opacity:0.5; cursor:not-allowed;">
+            <span data-zh>刷新</span><span data-en>Refresh</span>
+          </button>
+        </div>
+      </div>
+      <div class="p-6">
+        <div class="bg-bg-elevated border border-border rounded-xl shadow-md overflow-hidden">
+          <table class="w-full text-sm">
+            <thead>
+              <tr class="bg-bg-overlay text-fg-muted text-xs uppercase tracking-wide">
+                <th class="text-left font-medium px-4 h-10"><span data-zh>名称</span><span data-en>Name</span></th>
+                <th class="text-left font-medium px-4 h-10"><span data-zh>版本</span><span data-en>Version</span></th>
+                <th class="text-left font-medium px-4 h-10"><span data-zh>源</span><span data-en>Source</span></th>
+                <th class="text-left font-medium px-4 h-10"><span data-zh>状态</span><span data-en>Status</span></th>
+              </tr>
+            </thead>
+            <tbody class="font-body">
+              <tr class="border-t border-border hover:bg-bg-overlay">
+                <td class="px-4 h-10 font-mono">git</td>
+                <td class="px-4 h-10 font-mono">2.45.0</td>
+                <td class="px-4 h-10 text-fg-muted">main</td>
+                <td class="px-4 h-10"><span class="badge badge-primary"><span data-zh>最新</span><span data-en>Latest</span></span></td>
+              </tr>
+              <tr class="border-t border-border hover:bg-bg-overlay">
+                <td class="px-4 h-10 font-mono">nodejs</td>
+                <td class="px-4 h-10 font-mono">20.9.0</td>
+                <td class="px-4 h-10 text-fg-muted">main</td>
+                <td class="px-4 h-10"><span class="badge badge-muted"><span data-zh>过期</span><span data-en>Outdated</span></span></td>
+              </tr>
+              <tr class="border-t border-border hover:bg-bg-overlay">
+                <td class="px-4 h-10 font-mono">python</td>
+                <td class="px-4 h-10 font-mono">3.12.4</td>
+                <td class="px-4 h-10 text-fg-muted">main</td>
+                <td class="px-4 h-10"><span class="badge badge-primary"><span data-zh>最新</span><span data-en>Latest</span></span></td>
+              </tr>
+              <tr class="border-t border-border hover:bg-bg-overlay">
+                <td class="px-4 h-10 font-mono">ffmpeg</td>
+                <td class="px-4 h-10 font-mono">6.1.0</td>
+                <td class="px-4 h-10 text-fg-muted">extras</td>
+                <td class="px-4 h-10"><span class="badge badge-muted"><span data-zh>过期</span><span data-en>Outdated</span></span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+
+<!-- ====== 非 modal 半透明遮罩 · §8.5 硬约束 ====== -->
+<div class="overlay-nonmodal"></div>
+
+<!-- ============================== 场景 1 · 进行中 ============================== -->
+<div class="dialog-shell scene-panel scene-running" role="dialog" aria-modal="false" aria-labelledby="p08-title-running">
+  <!-- 顶部 thin gradient bar(running 态显示) -->
+  <div class="gradient-bar"></div>
+
+  <!-- Header -->
+  <header class="relative px-6 pt-5 pb-4 border-b border-border">
+    <div class="flex items-start gap-4 pr-12">
+      <div class="stage-icon running">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="animate-spin"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>
+      </div>
+      <div class="flex-1 min-w-0">
+        <h2 id="p08-title-running" class="font-heading text-lg font-semibold leading-tight">
+          <span data-zh>正在安装</span><span data-en>Installing</span> · <span class="font-mono text-primary">git</span>
+        </h2>
+        <p class="text-sm text-fg-muted mt-1">
+          <span data-zh>目标对象</span><span data-en>Target</span>:
+          <span class="font-mono text-fg">git</span>
+          ·
+          <span data-zh>源</span><span data-en>Source</span>:
+          <span class="font-mono text-fg">main</span>
+        </p>
+      </div>
+    </div>
+    <button class="btn-close absolute top-3 right-3" aria-label="Close" title="Close (Esc)">
+      <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+    </button>
+  </header>
+
+  <!-- Body -->
+  <div class="px-6 py-5 space-y-4">
+    <!-- 当前阶段 + 进度条 -->
+    <div>
+      <div class="flex items-baseline justify-between mb-2">
+        <p class="text-sm">
+          <span class="text-fg-muted"><span data-zh>当前阶段</span><span data-en>Stage</span>:</span>
+          <span class="font-medium text-fg ml-1">
+            <span data-zh>下载中</span><span data-en>Downloading</span>
+          </span>
+          <span class="font-mono text-xs text-fg-muted ml-2">stage=<span class="text-primary">downloading</span></span>
+        </p>
+        <span class="font-mono text-sm font-medium text-primary">45%</span>
+      </div>
+      <div class="progress-track">
+        <div class="progress-fill fill-primary" style="width: 45%;"></div>
+      </div>
+      <p class="font-mono text-xs text-fg-subtle mt-2">
+        <span data-zh>已下载</span><span data-en>Downloaded</span> 1.42 MB / 3.16 MB ·
+        <span data-zh>来源</span><span data-en>From</span> github.com/git-for-windows/git/releases
+      </p>
+    </div>
+
+    <!-- 原始日志区 -->
+    <div>
+      <div class="flex items-center justify-between mb-2">
+        <span class="text-xs uppercase tracking-wide text-fg-subtle">
+          <span data-zh>原始日志</span><span data-en>Raw log</span>
+        </span>
+        <span class="font-mono text-[10px] text-fg-subtle">tail -f scoop.log</span>
+      </div>
+      <div class="log-area">
+        <div class="log-line dim">[10:23:15] scoop install git</div>
+        <div class="log-line">Installing 'git' (2.45.0) [64bit]</div>
+        <div class="log-line">Loading git-2.45.0 from https://github.com/git-for-windows/git/releases/download/v2.45.0.windows.1/</div>
+        <div class="log-line ok">Downloading git-2.45.0.zip (3.16 MB)...</div>
+        <div class="log-line">  45% |████████████░░░░░░░░░░| 1.42 MB / 3.16 MB | 4.82 MB/s | eta 00:00:01</div>
+        <div class="log-line dim">[10:23:18] Checksum OK | git-2.45.0.zip#22c55e...</div>
+        <div class="log-line dim">[10:23:18] Extracting...</div>
+        <div class="log-line">  Extracting git-2.45.0.zip to C:\Users\demo\scoop\apps\git</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <footer class="px-6 py-4 border-t border-border flex items-center justify-end gap-3">
+    <button class="btn btn-secondary text-sm">
+      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/></svg>
+      <span data-zh>后台运行</span><span data-en>Run in background</span>
+    </button>
+    <button class="btn btn-destructive text-sm">
+      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="m4.93 4.93 14.14 14.14"/></svg>
+      <span data-zh>停止</span><span data-en>Stop</span>
+    </button>
+  </footer>
+</div>
+
+<!-- ============================== 场景 2 · 成功 ============================== -->
+<div class="dialog-shell scene-panel scene-success" role="dialog" aria-modal="false" aria-labelledby="p08-title-success">
+  <!-- 成功态不显示顶部 gradient bar(可选:此处不显示,体现"运行已结束") -->
+  <header class="relative px-6 pt-5 pb-4 border-b border-border">
+    <div class="flex items-start gap-4 pr-12">
+      <div class="stage-icon success">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+      </div>
+      <div class="flex-1 min-w-0">
+        <h2 id="p08-title-success" class="font-heading text-lg font-semibold leading-tight">
+          <span data-zh>安装完成</span><span data-en>Install completed</span> · <span class="font-mono text-primary">git</span>
+        </h2>
+        <p class="text-sm text-fg-muted mt-1">
+          <span data-zh>目标对象</span><span data-en>Target</span>:
+          <span class="font-mono text-fg">git</span>
+          ·
+          <span data-zh>耗时</span><span data-en>Took</span>:
+          <span class="font-mono text-fg">12.4s</span>
+        </p>
+      </div>
+    </div>
+    <button class="btn-close absolute top-3 right-3" aria-label="Close" title="Close (Esc)">
+      <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+    </button>
+  </header>
+
+  <div class="px-6 py-5 space-y-4">
+    <div>
+      <div class="flex items-baseline justify-between mb-2">
+        <p class="text-sm">
+          <span class="text-fg-muted"><span data-zh>当前阶段</span><span data-en>Stage</span>:</span>
+          <span class="font-medium text-fg ml-1">
+            <span data-zh>安装中</span><span data-en>Installing</span>
+          </span>
+          <span class="font-mono text-xs text-fg-muted ml-2">stage=<span class="text-primary">installing</span></span>
+        </p>
+        <span class="font-mono text-sm font-medium text-primary">100%</span>
+      </div>
+      <div class="progress-track">
+        <div class="progress-fill fill-success" style="width: 100%;"></div>
+      </div>
+      <p class="font-mono text-xs text-fg-subtle mt-2">
+        <span data-zh>安装完成 · 已将 git 加入 PATH</span><span data-en>Install OK · git added to PATH</span>
+      </p>
+    </div>
+
+    <div>
+      <div class="flex items-center justify-between mb-2">
+        <span class="text-xs uppercase tracking-wide text-fg-subtle">
+          <span data-zh>原始日志</span><span data-en>Raw log</span>
+        </span>
+        <span class="font-mono text-[10px] text-fg-subtle">tail -f scoop.log</span>
+      </div>
+      <div class="log-area">
+        <div class="log-line ok">[10:23:28] 'git' (2.45.0) was installed successfully!</div>
+        <div class="log-line dim">[10:23:28] Updating shortcuts...</div>
+        <div class="log-line ok">[10:23:28] Done. Run 'git --version' to verify.</div>
+        <div class="log-line">Installing 'git' (2.45.0) [64bit]</div>
+        <div class="log-line">Loading git-2.45.0 from https://github.com/git-for-windows/git/releases/download/v2.45.0.windows.1/</div>
+        <div class="log-line ok">Downloading git-2.45.0.zip (3.16 MB)... 100%</div>
+        <div class="log-line">  100% |████████████████████████| 3.16 MB / 3.16 MB</div>
+        <div class="log-line dim">[10:23:18] Checksum OK | git-2.45.0.zip#22c55e...</div>
+        <div class="log-line">Extracting git-2.45.0.zip to C:\Users\demo\scoop\apps\git</div>
+      </div>
+    </div>
+  </div>
+
+  <footer class="px-6 py-4 border-t border-border flex items-center justify-between gap-3">
+    <span class="font-mono text-xs text-fg-subtle">
+      jobId=<span class="text-primary">a1f3c8e2-...</span>
+    </span>
+    <div class="flex items-center gap-3">
+      <button class="btn btn-secondary text-sm">
+        <span data-zh>查看日志</span><span data-en>View log</span>
+      </button>
+      <button class="btn btn-primary text-sm">
+        <span data-zh>完成</span><span data-en>Done</span>
+      </button>
+    </div>
+  </footer>
+</div>
+
+<!-- ============================== 场景 3 · 失败 ============================== -->
+<div class="dialog-shell scene-panel scene-failed" role="dialog" aria-modal="false" aria-labelledby="p08-title-failed">
+  <header class="relative px-6 pt-5 pb-4 border-b border-border">
+    <div class="flex items-start gap-4 pr-12">
+      <div class="stage-icon failed">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="m15 9-6 6"/><path d="m9 9 6 6"/></svg>
+      </div>
+      <div class="flex-1 min-w-0">
+        <h2 id="p08-title-failed" class="font-heading text-lg font-semibold leading-tight">
+          <span data-zh>安装失败</span><span data-en>Install failed</span> · <span class="font-mono text-destructive">nodejs</span>
+        </h2>
+        <p class="text-sm text-fg-muted mt-1">
+          <span data-zh>目标对象</span><span data-en>Target</span>:
+          <span class="font-mono text-fg">nodejs</span>
+          ·
+          <span data-zh>源</span><span data-en>Source</span>:
+          <span class="font-mono text-fg">main</span>
+        </p>
+      </div>
+    </div>
+    <button class="btn-close absolute top-3 right-3" aria-label="Close" title="Close (Esc)">
+      <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+    </button>
+  </header>
+
+  <div class="px-6 py-5 space-y-4">
+    <!-- 失败描述卡片 -->
+    <div class="rounded-lg p-3" style="background-color: rgba(239, 68, 68, 0.08); border: 1px solid rgba(239, 68, 68, 0.30);">
+      <div class="flex items-start gap-3">
+        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-destructive flex-shrink-0 mt-0.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        <div class="flex-1 min-w-0">
+          <div class="flex items-center gap-2 flex-wrap mb-1">
+            <span class="err-tag">E_SCOOP_INSTALL_FAILED</span>
+            <span class="font-mono text-xs text-fg-subtle">stage=<span class="text-destructive">installing</span></span>
+          </div>
+          <p class="text-sm text-fg">
+            <span data-zh>Scoop 命令执行失败。请查看日志后重试。</span><span data-en>Scoop command failed. See logs and retry.</span>
+          </p>
+          <p class="text-xs text-fg-muted mt-1">
+            <span data-zh>目标</span><span data-en>Target</span>: <span class="font-mono">nodejs</span>
+            · <span data-zh>耗时</span><span data-en>Took</span>: <span class="font-mono">8.2s</span>
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- 进度条(67%,destructive) -->
+    <div>
+      <div class="flex items-baseline justify-between mb-2">
+        <p class="text-sm">
+          <span class="text-fg-muted"><span data-zh>当前阶段</span><span data-en>Stage</span>:</span>
+          <span class="font-medium text-fg ml-1">
+            <span data-zh>安装中</span><span data-en>Installing</span>
+          </span>
+        </p>
+        <span class="font-mono text-sm font-medium text-destructive">67%</span>
+      </div>
+      <div class="progress-track">
+        <div class="progress-fill fill-destructive" style="width: 67%;"></div>
+      </div>
+      <p class="font-mono text-xs text-fg-subtle mt-2">
+        <span data-zh>失败于 install.ps1 第 42 行:访问被拒绝</span><span data-en>Failed at install.ps1 line 42: Access denied</span>
+      </p>
+    </div>
+
+    <div>
+      <div class="flex items-center justify-between mb-2">
+        <span class="text-xs uppercase tracking-wide text-fg-subtle">
+          <span data-zh>原始日志</span><span data-en>Raw log</span>
+        </span>
+        <span class="font-mono text-[10px] text-fg-subtle">tail -f scoop.log</span>
+      </div>
+      <div class="log-area">
+        <div class="log-line err">[10:42:11] ERROR Access is denied. (0x80070005)</div>
+        <div class="log-line err">[10:42:11] install.ps1: Line 42 | Add-Content -Path C:\ProgramData\scoop\apps\nodejs\current\install.json</div>
+        <div class="log-line dim">[10:42:11] scoop install nodejs exited with code 1</div>
+        <div class="log-line">Installing 'nodejs' (20.10.0) [64bit]</div>
+        <div class="log-line">Loading nodejs-20.10.0-win-x64.zip from https://nodejs.org/dist/v20.10.0/</div>
+        <div class="log-line ok">Downloading nodejs-20.10.0-win-x64.zip (28.4 MB)... 100%</div>
+        <div class="log-line">Extracting nodejs-20.10.0-win-x64.zip</div>
+        <div class="log-line">Linking C:\Users\demo\scoop\apps\nodejs\current</div>
+      </div>
+    </div>
+  </div>
+
+  <footer class="px-6 py-4 border-t border-border flex items-center justify-between gap-3">
+    <span class="font-mono text-xs text-fg-subtle">
+      jobId=<span class="text-destructive">b9d4e7f1-...</span>
+    </span>
+    <div class="flex items-center gap-3">
+      <button class="btn btn-secondary text-sm">
+        <span data-zh>关闭</span><span data-en>Close</span>
+      </button>
+      <button class="btn btn-primary text-sm">
+        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/><path d="M16 16h5v5"/></svg>
+        <span data-zh>重试</span><span data-en>Retry</span>
+      </button>
+    </div>
+  </footer>
+</div>
+
+<!-- ============================== 场景 4 · 取消 ============================== -->
+<div class="dialog-shell scene-panel scene-cancelled" role="dialog" aria-modal="false" aria-labelledby="p08-title-cancelled">
+  <header class="relative px-6 pt-5 pb-4 border-b border-border">
+    <div class="flex items-start gap-4 pr-12">
+      <div class="stage-icon cancelled">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="m4.93 4.93 14.14 14.14"/></svg>
+      </div>
+      <div class="flex-1 min-w-0">
+        <h2 id="p08-title-cancelled" class="font-heading text-lg font-semibold leading-tight">
+          <span data-zh>已取消</span><span data-en>Cancelled</span> · <span class="font-mono text-fg-muted">ffmpeg</span>
+        </h2>
+        <p class="text-sm text-fg-muted mt-1">
+          <span data-zh>目标对象保持动作前的状态</span><span data-en>Target remains in pre-action state</span>
+        </p>
+      </div>
+    </div>
+    <button class="btn-close absolute top-3 right-3" aria-label="Close" title="Close (Esc)">
+      <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+    </button>
+  </header>
+
+  <div class="px-6 py-5 space-y-4">
+    <!-- 取消提示(中性灰,非 destructive) -->
+    <div class="rounded-lg p-3" style="background-color: rgba(161, 170, 184, 0.08); border: 1px solid rgba(161, 170, 184, 0.30);">
+      <div class="flex items-start gap-3">
+        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-fg-muted flex-shrink-0 mt-0.5"><circle cx="12" cy="12" r="10"/><path d="M9 12h6"/></svg>
+        <div class="flex-1 min-w-0">
+          <div class="flex items-center gap-2 flex-wrap mb-1">
+            <span class="font-mono text-xs px-2 py-0.5 rounded-sm" style="border: 1px solid var(--fg-muted); color: var(--fg-muted); background-color: rgba(161, 170, 184, 0.10);">E_JOB_CANCELLED</span>
+          </div>
+          <p class="text-sm text-fg">
+            <span data-zh>已取消。目标对象保持动作前的状态。</span><span data-en>Cancelled. Target object remains in pre-action state.</span>
+          </p>
+          <p class="text-xs text-fg-muted mt-1">
+            <span data-zh>目标</span><span data-en>Target</span>: <span class="font-mono">ffmpeg</span>
+            ·
+            <span data-zh>取消于解压阶段</span><span data-en>Cancelled at extracting</span>
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- 进度条(30%,fg-muted 中性灰) -->
+    <div>
+      <div class="flex items-baseline justify-between mb-2">
+        <p class="text-sm">
+          <span class="text-fg-muted"><span data-zh>当前阶段</span><span data-en>Stage</span>:</span>
+          <span class="font-medium text-fg-muted ml-1">
+            <span data-zh>解压中</span><span data-en>Extracting</span>
+          </span>
+          <span class="font-mono text-xs text-fg-subtle ml-2">stage=<span style="color: var(--fg-muted);">extracting</span></span>
+        </p>
+        <span class="font-mono text-sm font-medium text-fg-muted">30%</span>
+      </div>
+      <div class="progress-track">
+        <div class="progress-fill fill-muted" style="width: 30%;"></div>
+      </div>
+      <p class="font-mono text-xs text-fg-subtle mt-2">
+        <span data-zh>用户主动取消于 10:51:42</span><span data-en>User cancelled at 10:51:42</span>
+      </p>
+    </div>
+
+    <div>
+      <div class="flex items-center justify-between mb-2">
+        <span class="text-xs uppercase tracking-wide text-fg-subtle">
+          <span data-zh>原始日志</span><span data-en>Raw log</span>
+        </span>
+        <span class="font-mono text-[10px] text-fg-subtle">tail -f scoop.log</span>
+      </div>
+      <div class="log-area">
+        <div class="log-line" style="color: var(--fg-muted);">[10:51:42] User cancelled. Killing subprocess...</div>
+        <div class="log-line dim">[10:51:42] Job b7c2e1a3 cancelled by user</div>
+        <div class="log-line">Extracting ffmpeg-6.1.0.zip to C:\Users\demo\scoop\apps\ffmpeg</div>
+        <div class="log-line">  30% |███████░░░░░░░░░░░░░░░░| partial</div>
+        <div class="log-line dim">[10:51:38] Checksum OK | ffmpeg-6.1.0.zip</div>
+        <div class="log-line">Downloading ffmpeg-6.1.0.zip (76.8 MB)... 100%</div>
+        <div class="log-line">Loading ffmpeg-6.1.0 from https://github.com/ScoopInstaller/Extras</div>
+        <div class="log-line">Installing 'ffmpeg' (6.1.0) [64bit]</div>
+      </div>
+    </div>
+  </div>
+
+  <footer class="px-6 py-4 border-t border-border flex items-center justify-between gap-3">
+    <span class="font-mono text-xs text-fg-subtle">
+      jobId=<span style="color: var(--fg-muted);">c4e8a2d6-...</span>
+    </span>
+    <div class="flex items-center gap-3">
+      <button class="btn btn-secondary text-sm">
+        <span data-zh>关闭</span><span data-en>Close</span>
+      </button>
+    </div>
+  </footer>
+</div>
+
+<!-- ============================== 场景 5 · 批量更新 ============================== -->
+<div class="dialog-shell scene-panel scene-batch" role="dialog" aria-modal="false" aria-labelledby="p08-title-batch" style="max-width: 768px;">
+  <div class="gradient-bar"></div>
+  <header class="relative px-6 pt-5 pb-4 border-b border-border">
+    <div class="flex items-start gap-4 pr-12">
+      <div class="stage-icon running">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="animate-spin"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>
+      </div>
+      <div class="flex-1 min-w-0">
+        <h2 id="p08-title-batch" class="font-heading text-lg font-semibold leading-tight">
+          <span data-zh>批量更新</span><span data-en>Batch update</span> · <span class="font-mono text-primary">7 apps</span>
+        </h2>
+        <p class="text-sm text-fg-muted mt-1">
+          <span data-zh>正在处理</span><span data-en>Processing</span>
+          <span class="font-mono text-fg">3/7</span>
+          ·
+          <span data-zh>已完成</span><span data-en>Done</span>
+          <span class="font-mono text-primary">2</span>
+          ·
+          <span data-zh>失败</span><span data-en>Failed</span>
+          <span class="font-mono text-destructive">1</span>
+        </p>
+      </div>
+    </div>
+    <button class="btn-close absolute top-3 right-3" aria-label="Close" title="Close (Esc)">
+      <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+    </button>
+  </header>
+
+  <div class="px-6 py-5 space-y-4">
+    <!-- 综合进度 -->
+    <div>
+      <div class="flex items-baseline justify-between mb-2">
+        <p class="text-sm">
+          <span class="font-medium text-fg">
+            <span data-zh>总体进度</span><span data-en>Overall</span>
+          </span>
+        </p>
+        <span class="font-mono text-sm font-medium text-primary">43%</span>
+      </div>
+      <div class="progress-track">
+        <div class="progress-fill fill-primary" style="width: 43%;"></div>
+      </div>
+    </div>
+
+    <!-- 批量项列表(展开) -->
+    <div>
+      <div class="flex items-center justify-between mb-2">
+        <span class="text-xs uppercase tracking-wide text-fg-subtle">
+          <span data-zh>批量项</span><span data-en>Items</span>
+          <span class="font-mono ml-1">7</span>
+        </span>
+        <button class="link-btn">
+          <span data-zh>折叠</span><span data-en>Collapse</span> ▲
+        </button>
+      </div>
+      <div class="rounded-lg overflow-hidden border border-border bg-bg-overlay">
+        <!-- 已完成 -->
+        <div class="batch-row">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-primary flex-shrink-0"><path d="M20 6 9 17l-5-5"/></svg>
+          <span class="font-mono text-fg flex-shrink-0">7zip</span>
+          <span class="font-mono text-xs text-fg-subtle flex-shrink-0">24.07 → 24.08</span>
+          <span class="ml-auto badge badge-primary"><span data-zh>已完成</span><span data-en>Done</span></span>
+        </div>
+        <div class="batch-row">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-primary flex-shrink-0"><path d="M20 6 9 17l-5-5"/></svg>
+          <span class="font-mono text-fg flex-shrink-0">curl</span>
+          <span class="font-mono text-xs text-fg-subtle flex-shrink-0">8.6.0 → 8.7.1</span>
+          <span class="ml-auto badge badge-primary"><span data-zh>已完成</span><span data-en>Done</span></span>
+        </div>
+        <!-- 进行中 -->
+        <div class="batch-row" style="background-color: rgba(34, 197, 94, 0.05);">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-primary flex-shrink-0 animate-spin"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>
+          <span class="font-mono text-fg flex-shrink-0">git</span>
+          <span class="font-mono text-xs text-fg-subtle flex-shrink-0">2.45.0 → 2.46.0</span>
+          <div class="ml-auto flex items-center gap-2">
+            <div class="progress-track" style="height: 4px; width: 80px;">
+              <div class="progress-fill fill-primary" style="width: 75%;"></div>
+            </div>
+            <span class="font-mono text-xs text-primary">75%</span>
+          </div>
+        </div>
+        <!-- 失败 -->
+        <div class="batch-row" style="background-color: rgba(239, 68, 68, 0.05);">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-destructive flex-shrink-0"><circle cx="12" cy="12" r="10"/><path d="m15 9-6 6"/><path d="m9 9 6 6"/></svg>
+          <span class="font-mono text-fg flex-shrink-0">nodejs</span>
+          <span class="font-mono text-xs text-fg-subtle flex-shrink-0">20.9.0 → 20.10.0</span>
+          <div class="ml-auto flex items-center gap-2">
+            <span class="err-tag">E_SCOOP_INSTALL_FAILED</span>
+            <button class="link-btn text-primary" style="color: var(--primary);">
+              <span data-zh>该项重试</span><span data-en>Retry</span>
+            </button>
+          </div>
+        </div>
+        <!-- 等待中 -->
+        <div class="batch-row">
+          <span class="w-4 h-4 rounded-full flex-shrink-0" style="background-color: var(--border-strong);"></span>
+          <span class="font-mono text-fg-muted flex-shrink-0">ffmpeg</span>
+          <span class="font-mono text-xs text-fg-subtle flex-shrink-0">6.1.0 → 6.1.1</span>
+          <span class="ml-auto badge badge-muted"><span data-zh>等待中</span><span data-en>Queued</span></span>
+        </div>
+        <div class="batch-row">
+          <span class="w-4 h-4 rounded-full flex-shrink-0" style="background-color: var(--border-strong);"></span>
+          <span class="font-mono text-fg-muted flex-shrink-0">python</span>
+          <span class="font-mono text-xs text-fg-subtle flex-shrink-0">3.12.4 → 3.13.0</span>
+          <span class="ml-auto badge badge-muted"><span data-zh>等待中</span><span data-en>Queued</span></span>
+        </div>
+        <div class="batch-row">
+          <span class="w-4 h-4 rounded-full flex-shrink-0" style="background-color: var(--border-strong);"></span>
+          <span class="font-mono text-fg-muted flex-shrink-0">ripgrep</span>
+          <span class="font-mono text-xs text-fg-subtle flex-shrink-0">14.0.0 → 14.1.0</span>
+          <span class="ml-auto badge badge-muted"><span data-zh>等待中</span><span data-en>Queued</span></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 当前选中项的日志(展示 git 的进行中日志) -->
+    <div>
+      <div class="flex items-center justify-between mb-2">
+        <span class="text-xs uppercase tracking-wide text-fg-subtle">
+          <span data-zh>当前日志</span><span data-en>Current log</span> ·
+          <span class="font-mono text-primary">git</span>
+        </span>
+        <span class="font-mono text-[10px] text-fg-subtle">tail -f scoop.log</span>
+      </div>
+      <div class="log-area" style="height: 160px;">
+        <div class="log-line">Installing 'git' (2.46.0) [64bit]</div>
+        <div class="log-line ok">Downloading git-2.46.0.zip... 75%</div>
+        <div class="log-line">  75% |██████████████████░░░░░░| 2.4 MB / 3.2 MB</div>
+        <div class="log-line dim">[10:54:21] Checksum OK | git-2.46.0.zip#60a5fa...</div>
+      </div>
+    </div>
+  </div>
+
+  <footer class="px-6 py-4 border-t border-border flex items-center justify-between gap-3">
+    <span class="font-mono text-xs text-fg-subtle">
+      jobId=<span class="text-primary">e5f1a9c3-...</span>
+    </span>
+    <div class="flex items-center gap-3">
+      <button class="btn btn-secondary text-sm">
+        <span data-zh>后台运行</span><span data-en>Run in background</span>
+      </button>
+      <button class="btn btn-destructive text-sm">
+        <span data-zh>停止</span><span data-en>Stop</span>
+      </button>
+    </div>
+  </footer>
+</div>
+
+<!-- ============================== 场景 6 · 多任务并存 ============================== -->
+<!-- 任务 A · 进行中 -->
+<div class="dialog-shell scene-panel scene-multi offset-1" role="dialog" aria-modal="false" aria-labelledby="p08-title-multi-a" style="max-width: 560px;">
+  <div class="gradient-bar"></div>
+  <header class="relative px-5 pt-4 pb-3 border-b border-border">
+    <div class="flex items-start gap-3 pr-10">
+      <div class="stage-icon running" style="width: 32px; height: 32px;">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="animate-spin"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>
+      </div>
+      <div class="flex-1 min-w-0">
+        <h2 id="p08-title-multi-a" class="font-heading text-base font-semibold leading-tight">
+          <span data-zh>正在安装</span><span data-en>Installing</span> · <span class="font-mono text-primary">git</span>
+        </h2>
+        <p class="text-xs text-fg-muted mt-1">
+          <span class="font-mono text-fg">downloading</span>
+          <span class="font-mono text-primary ml-1">62%</span>
+        </p>
+      </div>
+    </div>
+    <button class="btn-close absolute top-2 right-2" aria-label="Close" title="Close (Esc)" style="width: 32px; height: 32px;">
+      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+    </button>
+  </header>
+  <div class="px-5 py-3">
+    <div class="progress-track">
+      <div class="progress-fill fill-primary" style="width: 62%;"></div>
+    </div>
+  </div>
+  <footer class="px-5 py-3 border-t border-border flex items-center justify-end gap-2">
+    <button class="btn btn-ghost text-xs" style="height: 32px; padding: 0 10px;">
+      <span data-zh>后台</span><span data-en>BG</span>
+    </button>
+    <button class="btn btn-destructive text-xs" style="height: 32px; padding: 0 10px;">
+      <span data-zh>停止</span><span data-en>Stop</span>
+    </button>
+  </footer>
+</div>
+
+<!-- 任务 B · 已成功(更近发起,z 更高) -->
+<div class="dialog-shell scene-panel scene-multi" role="dialog" aria-modal="false" aria-labelledby="p08-title-multi-b" style="max-width: 560px;">
+  <header class="relative px-5 pt-4 pb-3 border-b border-border">
+    <div class="flex items-start gap-3 pr-10">
+      <div class="stage-icon success" style="width: 32px; height: 32px;">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+      </div>
+      <div class="flex-1 min-w-0">
+        <h2 id="p08-title-multi-b" class="font-heading text-base font-semibold leading-tight">
+          <span data-zh>安装完成</span><span data-en>Install completed</span> · <span class="font-mono text-primary">7zip</span>
+        </h2>
+        <p class="text-xs text-fg-muted mt-1">
+          <span data-zh>24.07 → 24.08</span><span data-en>24.07 → 24.08</span>
+        </p>
+      </div>
+    </div>
+    <button class="btn-close absolute top-2 right-2" aria-label="Close" title="Close (Esc)" style="width: 32px; height: 32px;">
+      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+    </button>
+  </header>
+  <div class="px-5 py-3">
+    <div class="progress-track">
+      <div class="progress-fill fill-success" style="width: 100%;"></div>
+    </div>
+    <p class="font-mono text-xs text-fg-subtle mt-2">
+      <span data-zh>耗时 6.2s · 已加入 PATH</span><span data-en>Took 6.2s · Added to PATH</span>
+    </p>
+  </div>
+  <footer class="px-5 py-3 border-t border-border flex items-center justify-end gap-2">
+    <button class="btn btn-primary text-xs" style="height: 32px; padding: 0 10px;">
+      <span data-zh>完成</span><span data-en>Done</span>
+    </button>
+  </footer>
+</div>
+
+<!-- ====== 设计说明 · 角标 ====== -->
+<div class="fixed bottom-4 right-4 max-w-xs z-[60]">
+  <div class="rounded-lg p-3 text-xs bg-bg-elevated border border-border shadow-lg">
+    <div class="font-heading font-semibold mb-2 text-fg">
+      <span data-zh>v2 设计要点</span><span data-en>v2 Design notes</span>
+    </div>
+    <ul class="space-y-1 text-fg-muted font-mono text-[11px] leading-relaxed">
+      <li>· <span data-zh>非 modal:bg-black/30 backdrop-blur-sm</span><span data-en>non-modal overlay</span></li>
+      <li>· <span data-zh>顶部 gradient bar(running)</span><span data-en>top gradient (running)</span></li>
+      <li>· <span data-zh>进度条填充 box-shadow: glow-primary</span><span data-en>progress fill glow</span></li>
+      <li>· <span data-zh>日志:font-mono · bg-bg/50 · h-64</span><span data-en>log: mono · bg-bg/50 · h-64</span></li>
+      <li>· <span data-zh>cancel = fg-muted(非 destructive)</span><span data-en>cancel = fg-muted</span></li>
+      <li>· <span data-zh>X 始终可见 + aria-label</span><span data-en>close X always visible</span></li>
+    </ul>
+  </div>
+</div>
+
+<script>
+  function setScene(name) {
+    document.body.setAttribute('data-scene', name);
+    document.querySelectorAll('[data-scene-btn]').forEach(btn => {
+      if (btn.getAttribute('data-scene-btn') === name) {
+        btn.classList.add('active');
+      } else {
+        btn.classList.remove('active');
+      }
+    });
+  }
+  function setLang(lang) {
+    if (lang === 'en') {
+      document.body.classList.add('lang-en');
+      document.documentElement.setAttribute('lang', 'en-US');
+    } else {
+      document.body.classList.remove('lang-en');
+      document.documentElement.setAttribute('lang', 'zh-CN');
+    }
+  }
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      const active = document.body.getAttribute('data-scene');
+      console.log('[P08] Esc pressed · scene=' + active);
+    }
+  });
+</script>
+
+</body>
+</html>
