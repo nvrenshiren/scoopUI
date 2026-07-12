@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+  - name: 讨论 / 提问
+    url: https://github.com/nvrenshiren/scoopUI/discussions
+    about: 使用疑问、想法交流等非 Bug/需求类内容,请前往 Discussions 发起讨论

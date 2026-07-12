@@ -1,0 +1,72 @@
+name: Bug 报告
+description: 报告 Scoop GUI 中的问题
+title: "[Bug] "
+labels: ["bug"]
+body:
+  - type: textarea
+    id: description
+    attributes:
+      label: 问题描述
+      description: 清晰简洁地描述遇到的问题
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: 复现步骤
+      description: 详细列出复现该问题的操作步骤
+      placeholder: |
+        1. 打开「已装软件包」页面
+        2. 点击 ...
+        3. 出现 ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: 期望行为
+      description: 你期望发生什么
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: 实际行为
+      description: 实际发生了什么;如有报错请附完整信息或截图
+    validations:
+      required: true
+
+  - type: input
+    id: app-version
+    attributes:
+      label: Scoop GUI 版本
+      placeholder: 例如 0.1.0 / latest 持续构建
+    validations:
+      required: true
+
+  - type: input
+    id: os-version
+    attributes:
+      label: Windows 版本
+      placeholder: 例如 Windows 11 24H2
+    validations:
+      required: true
+
+  - type: input
+    id: package
+    attributes:
+      label: 相关软件包 / 桶(如适用)
+      placeholder: 例如 googlechrome / extras 桶
+    validations:
+      required: false
+
+  - type: textarea
+    id: extra
+    attributes:
+      label: 补充信息
+      description: 其他有助于定位问题的信息(日志、任务进度面板输出等)
+    validations:
+      required: false

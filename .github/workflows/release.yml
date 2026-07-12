@@ -1,0 +1,65 @@
+name: Release
+
+on:
+  push:
+    branches: [master]
+  workflow_dispatch:
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build & publish continuous build
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Rust cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: "./src-tauri -> target"
+
+      - name: Install frontend dependencies
+        run: npm ci
+
+      - name: Run Rust tests
+        run: cargo test --manifest-path src-tauri/Cargo.toml
+
+      - name: Build Tauri app (NSIS installer)
+        run: npm run tauri build
+
+      - name: Collect build metadata
+        id: meta
+        shell: bash
+        run: |
+          echo "sha_short=$(git rev-parse --short HEAD)" >> "$GITHUB_OUTPUT"
+          echo "version=$(node -p "require('./src-tauri/tauri.conf.json').version")" >> "$GITHUB_OUTPUT"
+
+      - name: Publish rolling "latest" release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release delete latest --yes --cleanup-tag || true
+          gh release create latest \
+            --title "持续构建 v${{ steps.meta.outputs.version }} (${{ steps.meta.outputs.sha_short }})" \
+            --notes "自动构建版本,基于提交 ${{ github.sha }} 生成。随 master 分支每次提交自动更新,可能包含未完全测试的改动,日常使用建议关注正式 Release。" \
+            --prerelease \
+            --latest=false \
+            --target "${{ github.sha }}" \
+            src-tauri/target/release/bundle/nsis/*.exe
