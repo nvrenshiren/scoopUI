@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=1280">
+<title>P09 · 设置与语言切换页 · scoop-gui</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=JetBrains+Mono:wght@400;500&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script>
+  tailwind.config = {
+    theme: {
+      extend: {
+        colors: {
+          background: 'var(--background)',
+          foreground: 'var(--foreground)',
+          card: 'var(--card)',
+          primary: 'var(--primary)',
+          secondary: 'var(--secondary)',
+          muted: 'var(--muted)',
+          border: 'var(--border)',
+          subtle: 'var(--subtle)',
+        },
+      },
+    },
+  };
+</script>
+<style>
+  /* ============================================================
+     P09 设计 token · docs/design/systems/web.md §2/§3/§11.1
+     命名对齐真实实现 src/index.css 的 shadcn 语义变量;
+     取值改用 §11.1 要求的 oklch() 表达式(与该文档 §2/§3 表格给出的数值一一对应)。
+     ============================================================ */
+  :root {
+    color-scheme: dark;
+    --background: oklch(0.13 0.02 250);          /* #0B1220 */
+    --foreground: oklch(0.96 0.005 250);         /* #F5F7FA */
+    --card: oklch(0.17 0.02 250);                /* #111827 · bg-elevated */
+    --card-foreground: oklch(0.96 0.005 250);
+    --primary: oklch(0.72 0.18 145);             /* #22C55E · run-green */
+    --primary-hover: oklch(0.76 0.18 145);       /* #34D672 */
+    --primary-foreground: oklch(0.18 0.05 150);
+    --secondary: oklch(0.20 0.02 250);           /* #1A2332 · bg-overlay */
+    --muted-foreground: oklch(0.72 0.01 250);    /* #A1AAB8 */
+    --subtle: oklch(0.55 0.01 250);              /* #6B7280 */
+    --border: oklch(0.30 0.01 250);              /* #374151 */
+    --border-strong: oklch(0.45 0.01 250);       /* #5B6678 */
+    --info: oklch(0.70 0.16 250);                /* #60A5FA · 设计系统称 --accent */
+    --warning: oklch(0.80 0.16 80);              /* #F59E0B */
+    --destructive: oklch(0.65 0.22 25);          /* #EF4444 */
+
+    --primary-glow: oklch(0.72 0.18 145 / 0.25);
+    --primary-glow-soft: oklch(0.72 0.18 145 / 0.10);
+    --info-glow: oklch(0.70 0.16 250 / 0.25);
+    --warning-15: oklch(0.80 0.16 80 / 0.15);
+
+    --radius-sm: 4px;
+    --radius-md: 8px;
+    --radius-lg: 12px;
+    --radius-xl: 16px;
+
+    --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.5), 0 2px 4px -2px rgb(0 0 0 / 0.4);
+    --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.6), 0 4px 6px -4px rgb(0 0 0 / 0.4);
+    --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.7), 0 8px 10px -6px rgb(0 0 0 / 0.5);
+
+    --font-heading: 'Space Grotesk', system-ui, sans-serif;
+    --font-body: 'DM Sans', 'Microsoft YaHei UI', system-ui, sans-serif;
+    --font-mono: 'JetBrains Mono', 'Cascadia Code', Consolas, monospace;
+  }
+
+  /* 亮色备选(设计系统 §3;P09 是唯一提供该切换入口的页面) */
+  :root.light {
+    color-scheme: light;
+    --background: oklch(0.99 0.005 250);         /* #FAFBFC */
+    --foreground: oklch(0.18 0.02 250);          /* #0F172A */
+    --card: oklch(1 0 0);                        /* #FFFFFF */
+    --card-foreground: oklch(0.18 0.02 250);
+    --primary: oklch(0.55 0.18 145);             /* #16A34A */
+    --primary-hover: #15803d;
+    --primary-foreground: #ffffff;
+    --secondary: oklch(0.96 0.005 250);          /* #F4F6F8 */
+    --muted-foreground: oklch(0.45 0.01 250);    /* #475569 */
+    --subtle: #94a3b8;
+    --border: oklch(0.88 0.01 250);              /* #D1D5DB */
+    --border-strong: #94a3b8;
+    --primary-glow: rgba(22, 163, 74, 0.20);
+    --primary-glow-soft: rgba(22, 163, 74, 0.08);
+    --warning-15: rgba(245, 158, 11, 0.12);
+    --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.08), 0 2px 4px -2px rgb(0 0 0 / 0.06);
+    --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.10), 0 4px 6px -4px rgb(0 0 0 / 0.06);
+    --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.12), 0 8px 10px -6px rgb(0 0 0 / 0.08);
+  }
+
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+  body {
+    min-height: 100vh;
+    background:
+      radial-gradient(ellipse 900px 420px at 50% -18%, oklch(0.72 0.18 145 / 0.10), transparent 58%),
+      radial-gradient(ellipse 740px 360px at 95% 8%, oklch(0.70 0.16 250 / 0.08), transparent 60%),
+      var(--background);
+    color: var(--foreground);
+    font-family: var(--font-body);
+    -webkit-font-smoothing: antialiased;
+  }
+  h1, h2, h3 { font-family: var(--font-heading); line-height: 1.2; margin: 0; }
+  button { font: inherit; }
+  .font-heading { font-family: var(--font-heading); }
+  .font-mono { font-family: var(--font-mono); }
+
+  /* 科技感叠加层(设计系统 §2.1 / index.css 同名工具类) */
+  .bg-grid {
+    background-image:
+      linear-gradient(to right, oklch(0.30 0.01 250 / 0.10) 1px, transparent 1px),
+      linear-gradient(to bottom, oklch(0.30 0.01 250 / 0.10) 1px, transparent 1px);
+    background-size: 32px 32px;
+  }
+  :root.light .bg-grid {
+    background-image:
+      linear-gradient(to right, oklch(0.18 0.02 250 / 0.05) 1px, transparent 1px),
+      linear-gradient(to bottom, oklch(0.18 0.02 250 / 0.05) 1px, transparent 1px);
+  }
+  .bg-glow-top {
+    background: radial-gradient(ellipse 800px 200px at 50% -50%, var(--primary-glow), transparent);
+  }
+  .gradient-line {
+    height: 1px;
+    background: linear-gradient(to right, transparent, var(--primary), transparent);
+    flex-shrink: 0;
+  }
+
+  .window-shell {
+    width: 1280px;
+    height: 800px;
+    background: var(--background);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-xl);
+    box-shadow: var(--shadow-xl);
+    overflow: hidden;
+  }
+
+  /* -------------------- Sidebar(壳层上下文,非本页交付物本体) -------------------- */
+  .sidebar { width: 240px; flex-shrink: 0; background: var(--card); border-right: 1px solid var(--border); }
+  .logo-box {
+    width: 36px; height: 36px; border-radius: var(--radius-md);
+    display: flex; align-items: center; justify-content: center;
+    border: 1px solid var(--primary-glow); background: var(--primary-glow-soft); color: var(--primary);
+  }
+  .nav-item {
+    display: flex; align-items: center; gap: 10px; width: 100%; height: 40px; padding: 0 12px;
+    border: 0; border-radius: var(--radius-md); background: transparent; color: var(--muted-foreground);
+    font-size: 13px; font-weight: 500; cursor: pointer; transition: background .15s ease, color .15s ease;
+  }
+  .nav-item:hover { background: var(--secondary); color: var(--foreground); }
+  .nav-item.active { background: var(--primary-glow-soft); color: var(--primary); box-shadow: inset 2px 0 0 var(--primary); }
+  .nav-item .lbl { flex: 1; text-align: left; }
+
+  .badge { display: inline-flex; height: 20px; align-items: center; gap: 4px; border-radius: var(--radius-sm); border: 1px solid; padding: 0 8px; font-size: 12px; font-weight: 500; white-space: nowrap; }
+  .badge-warning { border-color: color-mix(in oklab, var(--warning) 30%, transparent); background: var(--warning-15); color: var(--warning); }
+  .badge-info { border-color: color-mix(in oklab, var(--info) 30%, transparent); background: color-mix(in oklab, var(--info) 10%, transparent); color: var(--info); }
+  .spin { animation: spin 1s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* -------------------- P09 主体:Section 卡片(真相源 SettingsView.tsx) -------------------- */
+  .section-card {
+    margin-bottom: 12px;
+    max-width: 720px;
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--border);
+    background: var(--card);
+    padding: 20px;
+    box-shadow: var(--shadow-md);
+  }
+  .section-head { display: flex; align-items: center; gap: 8px; }
+  .section-icon { color: var(--primary); flex-shrink: 0; display: flex; }
+  .section-title { font-family: var(--font-heading); font-size: 13px; font-weight: 600; }
+  .section-desc { margin-top: 2px; font-size: 12px; color: var(--muted-foreground); }
+  .choice-row { margin-top: 14px; display: flex; gap: 12px; }
+
+  .choice-btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+    height: 40px; padding: 0 16px; border-radius: var(--radius-md); border: 1px solid transparent;
+    font-size: 14px; font-weight: 500; white-space: nowrap; cursor: pointer;
+    transition: background .1s ease, box-shadow .1s ease, border-color .1s ease, color .1s ease;
+  }
+  .choice-btn:active { transform: scale(0.98); filter: brightness(0.92); }
+  .choice-btn .chk { display: none; }
+  .choice-btn[data-selected="true"] {
+    background: var(--primary); color: var(--primary-foreground);
+    box-shadow: 0 0 12px var(--primary-glow);
+  }
+  .choice-btn[data-selected="true"]:hover {
+    background: var(--primary-hover);
+    box-shadow: 0 0 20px var(--primary-glow), 0 0 40px var(--primary-glow);
+  }
+  .choice-btn[data-selected="true"] .chk { display: inline-flex; }
+  .choice-btn[data-selected="false"] { background: transparent; color: var(--foreground); border-color: var(--border); }
+  .choice-btn[data-selected="false"]:hover { background: var(--secondary); }
+
+  .dl-grid { margin-top: 12px; display: grid; grid-template-columns: 240px 1fr; row-gap: 6px; column-gap: 16px; font-family: var(--font-mono); font-size: 12px; }
+  .dl-grid dt { margin: 0; color: var(--subtle); }
+  .dl-grid dd { margin: 0; word-break: break-all; user-select: text; }
+  .empty-note { margin-top: 12px; font-size: 13px; color: var(--subtle); }
+
+  /* -------------------- Toast(Sonner info 态,非 destructive) -------------------- */
+  .toast-info {
+    position: absolute; top: 20px; right: 20px; width: 372px; z-index: 40;
+    display: none; align-items: flex-start; gap: 12px; padding: 14px;
+    background: var(--card); border: 1px solid var(--border); border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-lg);
+  }
+  .toast-info.show { display: flex; }
+  .toast-icon {
+    width: 28px; height: 28px; border-radius: var(--radius-md); flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    background: color-mix(in oklab, var(--info) 15%, transparent); color: var(--info);
+  }
+
+  /* -------------------- 原型自检专用(非生产 UI) -------------------- */
+  .proto-affordance {
+    position: absolute; right: 20px; bottom: 20px; z-index: 30;
+    display: inline-flex; align-items: center; gap: 6px;
+    height: 30px; padding: 0 12px; border-radius: var(--radius-md);
+    border: 1px dashed var(--border-strong); background: var(--secondary); color: var(--subtle);
+    font-size: 11px; font-weight: 600; cursor: pointer;
+  }
+  .proto-affordance:hover { color: var(--foreground); border-color: var(--primary); }
+
+  /* -------------------- 双语演示(data-zh/data-en,沿用项目既有原型惯例) -------------------- */
+  [data-en] { display: none; }
+  .lang-en [data-zh] { display: none; }
+  .lang-en [data-en] { display: inline; }
+  .invariant { /* 语言自称名 / install.ps1 参数原名 / 字面版本号:不随语言切换,见设计提示词第 3/5/6 节 */ }
+
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+</style>
+</head>
+<body class="lang-zh">
+<div class="min-h-screen w-full flex items-center justify-center p-6">
+  <div id="window" class="window-shell relative flex flex-col overflow-hidden">
+    <div class="gradient-line"></div>
+    <div class="relative flex flex-1 min-h-0">
+
+      <!-- ============== Sidebar(P03 壳层上下文,供设计对照,不属于本页交付范围) ============== -->
+      <aside class="sidebar flex flex-col pb-3">
+        <div class="flex items-center gap-2.5 px-4 pt-4 pb-3.5">
+          <div class="logo-box">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19h8"/><path d="m4 17 6-6-6-6"/></svg>
+          </div>
+          <div class="min-w-0">
+            <div class="font-heading text-[15px] font-bold">Scoop GUI</div>
+            <div class="font-mono text-[10px] text-subtle">0.5.3</div>
+          </div>
+        </div>
+        <nav class="flex flex-col gap-0.5 px-3">
+          <button type="button" class="nav-item">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 21.73a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73z"/><path d="M12 22V12"/><polyline points="3.29 7 12 12 20.71 7"/><path d="m7.5 4.27 9 5.15"/></svg>
+            <span class="lbl"><span data-zh>已装软件</span><span data-en>Installed</span></span>
+            <span class="badge badge-warning">3</span>
+          </button>
+          <button type="button" class="nav-item">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21 21-4.34-4.34"/><circle cx="11" cy="11" r="8"/></svg>
+            <span class="lbl"><span data-zh>浏览软件包</span><span data-en>Browse</span></span>
+          </button>
+          <button type="button" class="nav-item">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83z"/><path d="M2 12a1 1 0 0 0 .58.91l8.6 3.91a2 2 0 0 0 1.65 0l8.58-3.9A1 1 0 0 0 22 12"/><path d="M2 17a1 1 0 0 0 .58.91l8.6 3.91a2 2 0 0 0 1.65 0l8.58-3.9A1 1 0 0 0 22 17"/></svg>
+            <span class="lbl"><span data-zh>桶管理</span><span data-en>Buckets</span></span>
+          </button>
+          <button type="button" class="nav-item active">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 8h4"/><path d="M12 21v-9"/><path d="M12 8V3"/><path d="M17 16h4"/><path d="M19 12V3"/><path d="M19 21v-5"/><path d="M3 14h4"/><path d="M5 10V3"/><path d="M5 21v-7"/></svg>
+            <span class="lbl"><span data-zh>设置</span><span data-en>Settings</span></span>
+          </button>
+        </nav>
+        <div class="flex-1"></div>
+        <div class="px-3">
+          <button type="button" class="nav-item">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 5h.01"/><path d="M3 12h.01"/><path d="M3 19h.01"/><path d="M8 5h13"/><path d="M8 12h13"/><path d="M8 19h13"/></svg>
+            <span class="lbl"><span data-zh>任务</span><span data-en>Jobs</span></span>
+            <span class="badge badge-info">
+              <svg class="spin" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>
+              1
+            </span>
+          </button>
+        </div>
+      </aside>
+
+      <!-- ============== 主区:P09 设置页本体(真相源 src/pages/SettingsView.tsx) ============== -->
+      <main class="relative flex-1 min-w-0 flex flex-col overflow-hidden">
+
+        <div class="bg-grid relative px-7 pt-6 pb-4">
+          <div class="bg-glow-top pointer-events-none absolute inset-0"></div>
+          <div class="relative">
+            <h1 class="text-2xl font-semibold"><span data-zh>设置</span><span data-en>Settings</span></h1>
+            <p class="mt-1 text-[13px]" style="color:var(--muted-foreground);"><span data-zh>界面语言与外观</span><span data-en>Language and appearance</span></p>
+          </div>
+        </div>
+
+        <div class="min-h-0 flex-1 overflow-auto px-7 pb-6">
+
+          <!-- Section 1 · 界面语言(F14) -->
+          <section class="section-card">
+            <div class="section-head">
+              <span class="section-icon">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg>
+              </span>
+              <div class="min-w-0 flex-1">
+                <div class="section-title"><span data-zh>界面语言</span><span data-en>Language</span></div>
+                <div class="section-desc"><span data-zh>切换后立即生效,并保存在本机</span><span data-en>Takes effect immediately and is saved on this machine</span></div>
+              </div>
+            </div>
+            <div class="choice-row">
+              <button type="button" id="lang-zh-btn" class="choice-btn lang-choice" data-selected="true">
+                <svg class="chk" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+                <span class="invariant">中文</span>
+              </button>
+              <button type="button" id="lang-en-btn" class="choice-btn lang-choice" data-selected="false">
+                <svg class="chk" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+                <span class="invariant">English</span>
+              </button>
+            </div>
+          </section>
+
+          <!-- Section 2 · 主题(暗色默认;亮/暗/跟随系统三选一,设计系统 §9 硬约束) -->
+          <section class="section-card">
+            <div class="section-head">
+              <span class="section-icon">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 8h4"/><path d="M12 21v-9"/><path d="M12 8V3"/><path d="M17 16h4"/><path d="M19 12V3"/><path d="M19 21v-5"/><path d="M3 14h4"/><path d="M5 10V3"/><path d="M5 21v-7"/></svg>
+              </span>
+              <div class="min-w-0 flex-1">
+                <div class="section-title"><span data-zh>主题</span><span data-en>Theme</span></div>
+              </div>
+            </div>
+            <div class="choice-row">
+              <button type="button" id="theme-dark-btn" class="choice-btn theme-choice" data-selected="true">
+                <svg class="chk" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+                <span data-zh>暗色</span><span data-en>Dark</span>
+              </button>
+              <button type="button" id="theme-light-btn" class="choice-btn theme-choice" data-selected="false">
+                <svg class="chk" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+                <span data-zh>亮色</span><span data-en>Light</span>
+              </button>
+              <button type="button" id="theme-system-btn" class="choice-btn theme-choice" data-selected="false">
+                <svg class="chk" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+                <span data-zh>跟随系统</span><span data-en>System</span>
+              </button>
+            </div>
+          </section>
+
+          <!-- Section 3 · 上次确认的 Scoop 安装配置(F16 持久化结果,只读回显) -->
+          <section class="section-card">
+            <div class="section-head">
+              <span class="section-icon">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15V3"/><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/></svg>
+              </span>
+              <div class="min-w-0 flex-1">
+                <div class="section-title"><span data-zh>上次确认的 Scoop 安装配置</span><span data-en>Last confirmed Scoop install options</span></div>
+                <div class="section-desc"><span data-zh>协助安装 Scoop 时确认过的配置,重装时自动带入</span><span data-en>Options confirmed during assisted install; pre-filled on reinstall</span></div>
+              </div>
+            </div>
+            <dl class="dl-grid">
+              <dt class="invariant">ScoopDir</dt><dd class="invariant">D:\Scoop</dd>
+              <dt class="invariant">ScoopGlobalDir</dt><dd class="invariant">C:\ProgramData\scoop</dd>
+              <dt class="invariant">Proxy</dt><dd class="invariant">http://127.0.0.1:7890</dd>
+              <dt class="invariant">RunAsAdmin</dt><dd class="invariant">true</dd>
+            </dl>
+            <!-- 空态参考(本机 Scoop 非本产品协助安装时呈现,与上方二选一,此处仅注释说明不重复渲染):
+                 <div class="empty-note">尚未通过本产品安装过 Scoop / Scoop has not been installed through this app</div> -->
+          </section>
+
+          <!-- Section 4 · 关于 -->
+          <section class="section-card">
+            <div class="section-head">
+              <span class="section-icon">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
+              </span>
+              <div class="min-w-0 flex-1">
+                <div class="section-title"><span data-zh>关于</span><span data-en>About</span></div>
+              </div>
+            </div>
+            <dl class="dl-grid">
+              <dt><span data-zh>应用版本</span><span data-en>App version</span></dt><dd class="invariant">Scoop GUI 0.1.0</dd>
+              <dt><span data-zh>Scoop 版本</span><span data-en>Scoop version</span></dt><dd class="invariant">0.5.3</dd>
+            </dl>
+          </section>
+
+        </div>
+      </main>
+
+      <!-- 持久化失败提示(Sonner info 态;非 destructive——即时生效与持久化失败是两件独立的事,详见设计提示词第 8.3 条) -->
+      <div id="persist-toast" class="toast-info" role="status" aria-live="polite">
+        <span class="toast-icon">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
+        </span>
+        <div class="min-w-0 flex-1 text-sm" style="color:var(--foreground);">
+          <span data-zh>设置已生效,但保存到本机失败;下次启动可能恢复旧值</span>
+          <span data-en>Applied, but saving failed — the old value may return on next launch</span>
+        </div>
+      </div>
+
+      <!-- 原型自检专用:场景 4(保存失败)在真实产品中概率触发,原型用按钮手动演示,不代表生产 UI -->
+      <button type="button" id="simulate-fail-btn" class="proto-affordance">
+        <span data-zh>原型自检 · 模拟保存失败提示</span><span data-en>Prototype check · Simulate save failure</span>
+      </button>
+
+    </div>
+  </div>
+</div>
+<script>
+(function () {
+  var html = document.documentElement;
+  var body = document.body;
+
+  // ---------------- 双语演示(场景 2/3):切换后所有 data-zh/data-en 文案与语言按钮选中态一起立即变化 ----------------
+  function setLangDemo(lang) {
+    body.classList.toggle('lang-en', lang === 'en');
+    body.classList.toggle('lang-zh', lang !== 'en');
+    html.lang = lang === 'en' ? 'en' : 'zh-CN';
+  }
+
+  function selectChoice(className, targetBtn) {
+    var nodes = document.getElementsByClassName(className);
+    for (var i = 0; i < nodes.length; i++) {
+      nodes[i].dataset.selected = String(nodes[i] === targetBtn);
+    }
+  }
+
+  var zhBtn = document.getElementById('lang-zh-btn');
+  var enBtn = document.getElementById('lang-en-btn');
+  zhBtn.addEventListener('click', function () {
+    if (zhBtn.dataset.selected === 'true') return; // 与 store.switchLanguage 一致:选中当前语言时静默 no-op
+    selectChoice('lang-choice', zhBtn);
+    setLangDemo('zh');
+  });
+  enBtn.addEventListener('click', function () {
+    if (enBtn.dataset.selected === 'true') return;
+    selectChoice('lang-choice', enBtn);
+    setLangDemo('en');
+  });
+
+  // ---------------- 主题演示(镜像 src/store.ts 的 applyTheme):system 态会持续跟随系统偏好变化 ----------------
+  var media = window.matchMedia('(prefers-color-scheme: dark)');
+  var currentTheme = 'dark';
+  function applyThemeDemo(theme) {
+    currentTheme = theme;
+    var dark = theme === 'dark' || (theme === 'system' && media.matches);
+    html.classList.toggle('light', !dark);
+  }
+  media.addEventListener('change', function () {
+    if (currentTheme === 'system') applyThemeDemo('system');
+  });
+  ['dark', 'light', 'system'].forEach(function (theme) {
+    var btn = document.getElementById('theme-' + theme + '-btn');
+    btn.addEventListener('click', function () {
+      selectChoice('theme-choice', btn);
+      applyThemeDemo(theme);
+    });
+  });
+
+  // ---------------- 场景 4:持久化失败 info Toast(原型自检按钮触发,默认 4s 自动消失,同设计系统 §8.10) ----------------
+  var toast = document.getElementById('persist-toast');
+  var toastTimer;
+  document.getElementById('simulate-fail-btn').addEventListener('click', function () {
+    toast.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { toast.classList.remove('show'); }, 4000);
+  });
+})();
+</script>
+</body>
+</html>

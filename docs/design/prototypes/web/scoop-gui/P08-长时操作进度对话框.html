@@ -1,0 +1,876 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>P08 · 长时操作进度对话框 · scoop-gui 设计原型 v2</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+  /* ============================================================
+     设计 token(docs/design/systems/web.md §11.1,暗色默认 · run-green)
+     ============================================================ */
+  :root {
+    color-scheme: dark;
+    --color-bg: oklch(0.13 0.02 250);
+    --color-bg-elevated: oklch(0.17 0.02 250);
+    --color-bg-overlay: oklch(0.20 0.02 250);
+    --color-surface-glass: oklch(0.22 0.02 250 / 0.6);
+
+    --color-fg: oklch(0.96 0.005 250);
+    --color-fg-muted: oklch(0.72 0.01 250);
+    --color-fg-subtle: oklch(0.55 0.01 250);
+
+    --color-border: oklch(0.30 0.01 250);
+    --color-border-strong: oklch(0.45 0.01 250);
+
+    --color-primary: oklch(0.72 0.18 145);
+    --color-primary-hover: oklch(0.76 0.18 145);
+    --color-primary-glow: oklch(0.72 0.18 145 / 0.25);
+    --color-primary-glow-soft: oklch(0.72 0.18 145 / 0.1);
+
+    --color-info: oklch(0.70 0.16 250);
+    --color-info-glow: oklch(0.70 0.16 250 / 0.25);
+    --color-info-soft: oklch(0.70 0.16 250 / 0.1);
+
+    --color-warning: oklch(0.80 0.16 80);
+    --color-warning-soft: oklch(0.80 0.16 80 / 0.15);
+    --color-warning-glow: oklch(0.80 0.16 80 / 0.05);
+
+    --color-destructive: oklch(0.65 0.22 25);
+    --color-destructive-glow: oklch(0.65 0.22 25 / 0.20);
+
+    --font-heading: 'Space Grotesk', system-ui, sans-serif;
+    --font-body: 'DM Sans', system-ui, sans-serif;
+    --font-mono: 'JetBrains Mono', 'Cascadia Code', Consolas, monospace;
+
+    --radius-sm: 4px;
+    --radius-md: 8px;
+    --radius-lg: 12px;
+    --radius-xl: 16px;
+
+    --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.5), 0 2px 4px -2px rgb(0 0 0 / 0.4);
+    --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.6), 0 4px 6px -4px rgb(0 0 0 / 0.4);
+    --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.7), 0 8px 10px -6px rgb(0 0 0 / 0.5);
+  }
+
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+  body {
+    background: var(--color-bg);
+    color: var(--color-fg);
+    font-family: var(--font-body);
+    font-size: 14px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+    padding: 20px 16px 48px;
+  }
+  h1, h2, h3 { font-family: var(--font-heading); line-height: 1.2; margin: 0; }
+  .mono { font-family: var(--font-mono); }
+  ::selection { background: var(--color-primary-glow); }
+  ::-webkit-scrollbar { width: 9px; height: 9px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--color-border); border-radius: 5px; border: 2px solid transparent; background-clip: content-box; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--color-border-strong); background-clip: content-box; }
+
+  /* ---------------- 科技感叠加层(设计系统 §2.1 / §11.2) ---------------- */
+  .bg-grid {
+    background-image:
+      linear-gradient(to right, oklch(0.30 0.01 250 / 0.08) 1px, transparent 1px),
+      linear-gradient(to bottom, oklch(0.30 0.01 250 / 0.08) 1px, transparent 1px);
+    background-size: 32px 32px;
+  }
+  .bg-glow-top {
+    position: absolute; inset: 0; pointer-events: none;
+    background: radial-gradient(ellipse 800px 200px at 50% -50%, var(--color-primary-glow), transparent);
+  }
+  .gradient-line { height: 1px; flex-shrink: 0; background: linear-gradient(to right, transparent, var(--color-primary), transparent); }
+
+  /* 顶部工具条 + 说明卡片 */
+  .top-bar, .notes-card { width: min(1280px, 94vw); margin: 0 auto; }
+  .top-bar {
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    margin-bottom: 14px; font-size: 13px; color: var(--color-fg-muted);
+  }
+  .top-bar .doc-title { color: var(--color-fg); font-family: var(--font-heading); font-weight: 600; font-size: 15px; }
+  .top-bar .doc-sub { font-size: 12px; color: var(--color-fg-subtle); margin-top: 2px; }
+  .top-actions { display: flex; align-items: center; gap: 8px; }
+
+  /* ---------------- 窗口帧(模拟 1280x800 桌面应用窗口) ---------------- */
+  .window-frame {
+    position: relative;
+    width: min(1280px, 94vw);
+    height: min(800px, 78vh);
+    min-height: 540px;
+    margin: 0 auto;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    box-shadow: var(--shadow-xl);
+    background: var(--color-bg);
+  }
+  .app-shell { display: flex; height: 100%; }
+
+  /* 侧边栏(P03 主界面壳,仅作背景陪衬) */
+  .sidebar { width: 240px; flex-shrink: 0; display: flex; flex-direction: column; border-right: 1px solid var(--color-border); background: var(--color-bg-elevated); padding-bottom: 12px; }
+  .sidebar-brand { display: flex; align-items: center; gap: 10px; padding: 16px 16px 14px; }
+  .brand-icon { width: 36px; height: 36px; border-radius: var(--radius-md); border: 1px solid var(--color-primary-glow); background: var(--color-primary-glow-soft); color: var(--color-primary); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .brand-icon svg { width: 18px; height: 18px; }
+  .brand-name { font-family: var(--font-heading); font-size: 15px; font-weight: 700; }
+  .brand-version { font-family: var(--font-mono); font-size: 10px; color: var(--color-fg-subtle); max-width: 160px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .nav { display: flex; flex-direction: column; gap: 2px; padding: 0 12px; }
+  .nav-item { display: flex; align-items: center; gap: 10px; height: 40px; padding: 0 12px; border-radius: var(--radius-md); font-size: 13px; font-weight: 500; color: var(--color-fg-muted); cursor: pointer; border: none; background: transparent; width: 100%; text-align: left; font-family: var(--font-body); }
+  .nav-item svg { width: 16px; height: 16px; flex-shrink: 0; }
+  .nav-item:hover { background: var(--color-bg-overlay); color: var(--color-fg); }
+  .nav-item.active { background: var(--color-primary-glow-soft); color: var(--color-primary); box-shadow: inset 2px 0 0 var(--color-primary); }
+  .nav-item .nav-spacer { flex: 1; }
+  .sidebar-fill { flex: 1; }
+
+  /* 主内容区(模拟 P04 已装软件包列表页,仅作背景陪衬) */
+  .main-area { flex: 1; min-width: 0; overflow: auto; position: relative; }
+  .page-head { position: relative; padding: 22px 26px 14px; }
+  .page-head-row { position: relative; z-index: 1; display: flex; align-items: center; gap: 10px; }
+  .page-title { font-size: 21px; font-weight: 600; }
+  .page-desc { margin-top: 5px; font-size: 12.5px; color: var(--color-fg-muted); max-width: 560px; }
+  .page-body { position: relative; z-index: 1; padding: 0 26px 24px; }
+  .toolbar { display: flex; gap: 8px; margin-bottom: 12px; }
+  .search-wrap { position: relative; flex: 1; }
+  .search-wrap svg { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); width: 15px; height: 15px; color: var(--color-fg-subtle); }
+  .search-input { width: 100%; height: 34px; padding: 0 12px 0 32px; border-radius: var(--radius-md); border: 1px solid var(--color-border); background: var(--color-bg-overlay); color: var(--color-fg); font-size: 12.5px; font-family: var(--font-body); }
+  .search-input::placeholder { color: var(--color-fg-subtle); }
+
+  .mock-table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+  .mock-table th { text-align: left; height: 32px; padding: 0 10px; font-weight: 500; color: var(--color-fg-muted); border-bottom: 1px solid var(--color-border); }
+  .mock-table td { height: 38px; padding: 0 10px; border-bottom: 1px solid var(--color-border); vertical-align: middle; }
+  .mock-table tr.outdated td { background: var(--color-warning-glow); }
+  .cell-actions { text-align: right; }
+  .muted { color: var(--color-fg-muted); }
+  .subtle { color: var(--color-fg-subtle); }
+
+  /* ---------------- 通用:按钮 / 徽标 ---------------- */
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+    white-space: nowrap; border-radius: var(--radius-md); font-family: var(--font-body);
+    font-weight: 500; font-size: 12.5px; height: 32px; padding: 0 12px; border: 1px solid transparent;
+    cursor: pointer; transition: all .1s ease; color: var(--color-fg);
+  }
+  .btn:active { transform: scale(0.98); filter: brightness(0.92); }
+  .btn:disabled { opacity: .5; cursor: not-allowed; }
+  .btn svg { width: 13px; height: 13px; flex-shrink: 0; }
+  .btn--primary { background: var(--color-primary); color: #06130a; box-shadow: 0 0 12px var(--color-primary-glow); border-color: transparent; }
+  .btn--primary:hover:not(:disabled) { background: var(--color-primary-hover); box-shadow: 0 0 20px var(--color-primary-glow), 0 0 40px var(--color-primary-glow); }
+  .btn--outline { background: transparent; border-color: var(--color-border); }
+  .btn--outline:hover:not(:disabled) { background: var(--color-bg-overlay); }
+  .btn--ghost { background: transparent; border-color: transparent; color: var(--color-fg-muted); }
+  .btn--ghost:hover:not(:disabled) { background: var(--color-bg-overlay); color: var(--color-fg); }
+  .btn--destructive { background: transparent; color: var(--color-destructive); border-color: transparent; }
+  .btn--destructive:hover:not(:disabled) { background: var(--color-destructive-glow); }
+  /* 取消 ≠ 失败:中性灰(设计系统 §8.5 正文 + §9 硬约束,禁用 destructive) */
+  .btn--cancel { background: var(--color-bg-overlay); border-color: var(--color-border); color: var(--color-fg-muted); }
+  .btn--cancel:hover:not(:disabled) { border-color: var(--color-border-strong); color: var(--color-fg); }
+  .btn--xs { height: 22px; padding: 0 8px; font-size: 11.5px; border-radius: var(--radius-sm); }
+  .btn--icon { width: 30px; height: 30px; padding: 0; border-radius: var(--radius-md); background: transparent; color: var(--color-fg-muted); border: none; }
+  .btn--icon:hover { background: var(--color-bg-overlay); color: var(--color-fg); }
+
+  .badge { display: inline-flex; align-items: center; gap: 4px; height: 19px; padding: 0 7px; border-radius: var(--radius-sm); font-size: 10.5px; font-weight: 500; white-space: nowrap; border: 1px solid transparent; font-family: var(--font-body); }
+  .badge svg { width: 10px; height: 10px; }
+  .badge--default { border-color: var(--color-border); background: var(--color-bg-overlay); color: var(--color-fg-muted); }
+  .badge--success { border-color: var(--color-primary-glow); background: var(--color-primary-glow-soft); color: var(--color-primary); }
+  .badge--warning { border-color: oklch(0.80 0.16 80 / 0.3); background: var(--color-warning-soft); color: var(--color-warning); }
+  .badge--destructive { border-color: oklch(0.65 0.22 25 / 0.3); background: var(--color-destructive-glow); color: var(--color-destructive); }
+  .badge--info { border-color: oklch(0.70 0.16 250 / 0.3); background: var(--color-info-soft); color: var(--color-info); }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .spin { animation: spin 1s linear infinite; }
+
+  /* ============================================================
+     P08 · 任务进度浮层(JobsPanel.tsx 真实结构:右下角悬浮 · 非 modal)
+     ============================================================ */
+  .jobs-panel {
+    position: absolute;
+    right: 24px; bottom: 56px;
+    z-index: 40;
+    width: min(480px, calc(100% - 48px));
+    max-height: min(560px, calc(100% - 120px));
+    display: flex; flex-direction: column; overflow: hidden;
+    border-radius: var(--radius-xl);
+    border: 1px solid var(--color-border);
+    box-shadow: var(--shadow-xl);
+    background: var(--color-surface-glass);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+  }
+  /* 顶部渐变条:仅当存在"执行中"任务时渲染(不是隐藏,是不占位) */
+  .running-bar {
+    height: 2px; flex-shrink: 0;
+    background: linear-gradient(90deg, var(--color-primary), var(--color-info), var(--color-primary));
+    background-size: 200% 100%;
+    animation: slide-bar 1.6s linear infinite;
+  }
+  @keyframes slide-bar { from { background-position: 0% 0; } to { background-position: 200% 0; } }
+
+  .panel-header { display: flex; align-items: center; gap: 8px; padding: 11px 10px 11px 15px; flex-shrink: 0; }
+  .panel-header svg.head-icon { width: 15px; height: 15px; color: var(--color-fg-muted); }
+  .panel-title { font-family: var(--font-heading); font-size: 13.5px; font-weight: 600; }
+  .spacer { flex: 1; }
+
+  .job-list { display: flex; flex-direction: column; gap: 2px; max-height: 180px; overflow: auto; padding: 0 8px; flex-shrink: 0; }
+  .job-row { display: flex; align-items: center; gap: 8px; padding: 6px 8px; border-radius: var(--radius-md); font-size: 12.5px; cursor: pointer; outline: none; }
+  .job-row:hover { background: var(--color-bg-overlay); }
+  .job-row.selected { background: var(--color-primary-glow-soft); box-shadow: inset 2px 0 0 var(--color-primary); }
+  .job-row:focus-visible { box-shadow: 0 0 0 2px var(--color-primary); }
+  .state-glyph { width: 14px; height: 14px; flex-shrink: 0; }
+  .state-glyph--running { color: var(--color-primary); }
+  .state-glyph--succeeded { color: var(--color-primary); }
+  .state-glyph--failed { color: var(--color-destructive); }
+  .state-glyph--cancelled, .state-glyph--queued { color: var(--color-fg-subtle); }
+  .job-row__title { max-width: 190px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+  .job-detail { border-top: 1px solid var(--color-border); padding: 10px 15px 14px; flex-shrink: 0; }
+  .detail-title { margin-bottom: 6px; font-size: 11.5px; color: var(--color-fg-subtle); }
+  .progress { position: relative; height: 8px; width: 100%; overflow: hidden; border-radius: 999px; background: var(--color-bg-overlay); margin-bottom: 8px; }
+  .progress-fill { position: absolute; top: 0; height: 100%; width: 32%; left: -32%; border-radius: 999px; background: var(--color-primary); box-shadow: 0 0 12px var(--color-primary-glow); animation: indet 1.4s ease-in-out infinite; }
+  @keyframes indet { 0% { left: -32%; } 100% { left: 100%; } }
+
+  .log-box { height: 176px; background: rgba(0,0,0,.35); border: 1px solid var(--color-border); border-radius: var(--radius-md); font-family: var(--font-mono); font-size: 11.5px; line-height: 1.65; padding: 9px 11px; overflow: auto; white-space: pre-wrap; word-break: break-all; user-select: text; color: var(--color-fg); opacity: .92; }
+
+  .job-empty { padding: 26px 16px; text-align: center; font-size: 12.5px; color: var(--color-fg-muted); }
+
+  /* 关闭后的"重新打开"浮标(对应真实侧边栏"任务" nav item 被再次点击) */
+  .reopen-fab {
+    position: absolute; right: 24px; bottom: 24px; z-index: 40;
+    display: flex; align-items: center; gap: 8px; height: 38px; padding: 0 15px;
+    border-radius: var(--radius-md); border: 1px solid var(--color-border);
+    background: var(--color-bg-elevated); color: var(--color-fg-muted);
+    cursor: pointer; box-shadow: var(--shadow-md); font-size: 12.5px; font-family: var(--font-body);
+  }
+  .reopen-fab:hover { color: var(--color-fg); border-color: var(--color-border-strong); }
+  .reopen-fab svg { width: 15px; height: 15px; }
+  .fab-badge { display: inline-flex; align-items: center; gap: 4px; height: 18px; padding: 0 6px; border-radius: var(--radius-sm); background: var(--color-info-soft); color: var(--color-info); font-size: 10.5px; border: 1px solid oklch(0.70 0.16 250 / 0.3); }
+  .fab-badge svg { width: 10px; height: 10px; }
+
+  /* Toast(设计系统 §8.10,用于演示取消/成功反馈,非 P08 组件自身范围) */
+  .toast-region { position: absolute; top: 16px; right: 16px; z-index: 60; display: flex; flex-direction: column; gap: 8px; align-items: flex-end; pointer-events: none; }
+  .toast {
+    display: flex; align-items: center; gap: 8px; padding: 10px 14px; border-radius: var(--radius-lg);
+    background: var(--color-bg-elevated); border: 1px solid var(--color-border); box-shadow: var(--shadow-lg);
+    font-size: 12.5px; border-left: 2px solid var(--color-info); max-width: 280px; opacity: 0;
+    transform: translateY(-6px); transition: all .22s ease;
+  }
+  .toast.show { opacity: 1; transform: translateY(0); }
+  .toast--success { border-left-color: var(--color-primary); }
+  .toast--error { border-left-color: var(--color-destructive); }
+
+  /* ---------------- 说明卡片(行为标注,非产品 UI 本身) ---------------- */
+  .notes-card { margin: 18px auto 40px; padding: 18px 22px; border-radius: var(--radius-lg); border: 1px solid var(--color-border); background: var(--color-bg-elevated); font-size: 12.5px; line-height: 1.75; color: var(--color-fg-muted); }
+  .notes-card h2 { font-size: 14.5px; color: var(--color-fg); margin-bottom: 10px; }
+  .notes-card ul { margin: 0 0 4px; padding-left: 18px; }
+  .notes-card li { margin-bottom: 6px; }
+  .notes-card code { font-family: var(--font-mono); font-size: 11.5px; color: var(--color-fg); background: var(--color-bg-overlay); padding: 1px 5px; border-radius: 4px; }
+  .notes-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0 28px; }
+  @media (max-width: 900px) { .notes-grid { grid-template-columns: 1fr; } }
+  .demo-controls { display: flex; gap: 8px; margin-top: 14px; flex-wrap: wrap; }
+  .hint-strip { display:flex; align-items:center; gap:8px; margin-top:10px; padding:8px 12px; border-radius: var(--radius-md); background: var(--color-info-soft); border:1px solid oklch(0.70 0.16 250 / .25); color: var(--color-fg); font-size: 12px; }
+  .hint-strip svg { width:14px; height:14px; color: var(--color-info); flex-shrink:0; }
+
+  [hidden] { display: none !important; }
+</style>
+</head>
+<body class="bg-grid">
+
+<!-- 图标 sprite(近似 lucide 线性图标,stroke=currentColor) -->
+<svg width="0" height="0" style="position:absolute">
+  <defs>
+    <symbol id="i-list" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/>
+      <line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/>
+    </symbol>
+    <symbol id="i-x" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+    </symbol>
+    <symbol id="i-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <polyline points="20 6 9 17 4 12"/>
+    </symbol>
+    <symbol id="i-alert" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z"/>
+      <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+    </symbol>
+    <symbol id="i-loader" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M21 12a9 9 0 1 1-6.219-8.56"/>
+    </symbol>
+    <symbol id="i-terminal" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/>
+    </symbol>
+    <symbol id="i-package" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/>
+      <path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/>
+    </symbol>
+    <symbol id="i-search" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+    </symbol>
+    <symbol id="i-layers" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/>
+    </symbol>
+    <symbol id="i-sliders" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/>
+      <line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/>
+      <line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/>
+    </symbol>
+    <symbol id="i-refresh" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/>
+      <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+    </symbol>
+    <symbol id="i-info" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/>
+    </symbol>
+  </defs>
+</svg>
+
+<div class="top-bar">
+  <div>
+    <div class="doc-title">P08 · 长时操作进度对话框 — 设计原型 v2</div>
+    <div class="doc-sub">scoop-gui · web 端 · 真相源 src/components/JobsPanel.tsx · 暗色默认</div>
+  </div>
+  <div class="top-actions">
+    <button class="btn btn--outline" id="langBtn" type="button">EN</button>
+  </div>
+</div>
+
+<div class="window-frame" id="windowFrame">
+  <div class="app-shell">
+    <!-- ============ 背景陪衬:P03 主界面壳 + P04 已装软件包列表(简化 mock) ============ -->
+    <aside class="sidebar">
+      <div class="gradient-line"></div>
+      <div class="sidebar-brand">
+        <div class="brand-icon"><svg><use href="#i-terminal"/></svg></div>
+        <div>
+          <div class="brand-name">Scoop GUI</div>
+          <div class="brand-version mono">2.45.1 (scoop)</div>
+        </div>
+      </div>
+      <nav class="nav">
+        <button class="nav-item active"><svg><use href="#i-package"/></svg><span data-i18n="nav.installed">已装软件</span></button>
+        <button class="nav-item"><svg><use href="#i-search"/></svg><span data-i18n="nav.browse">浏览软件包</span></button>
+        <button class="nav-item"><svg><use href="#i-layers"/></svg><span data-i18n="nav.buckets">桶管理</span></button>
+        <button class="nav-item"><svg><use href="#i-sliders"/></svg><span data-i18n="nav.settings">设置</span></button>
+      </nav>
+      <div class="sidebar-fill"></div>
+      <div class="nav" style="padding:0 12px;">
+        <button class="nav-item active" id="jobsNavItem">
+          <svg><use href="#i-list"/></svg>
+          <span class="nav-spacer" data-i18n="nav.jobs">任务</span>
+          <span class="badge badge--info" id="navJobBadge"><svg class="spin"><use href="#i-loader"/></svg><span id="navJobCount">3</span></span>
+        </button>
+      </div>
+    </aside>
+
+    <main class="main-area">
+      <div class="page-head bg-grid">
+        <div class="bg-glow-top"></div>
+        <div class="page-head-row">
+          <div style="flex:1; min-width:0;">
+            <h1 class="page-title" data-i18n="installed.title">已装软件包</h1>
+            <p class="page-desc" data-i18n="installed.desc">本机已通过 Scoop 安装的软件包;存在新版本的软件包会标记为"过期"。</p>
+          </div>
+          <button class="btn btn--outline"><svg><use href="#i-refresh"/></svg><span data-i18n="installed.checkUpdates">检查更新</span></button>
+          <button class="btn btn--primary"><svg><use href="#i-check"/></svg><span data-i18n="installed.updateAll">更新全部过期</span></button>
+        </div>
+      </div>
+      <div class="page-body">
+        <div class="toolbar">
+          <div class="search-wrap">
+            <svg><use href="#i-search"/></svg>
+            <input class="search-input" data-i18n-ph="installed.filter" placeholder="过滤已装软件包…" />
+          </div>
+          <button class="btn btn--outline btn--icon" aria-label="refresh"><svg><use href="#i-refresh"/></svg></button>
+        </div>
+        <table class="mock-table">
+          <thead>
+            <tr>
+              <th data-i18n="common.name">名称</th>
+              <th data-i18n="common.version">版本</th>
+              <th data-i18n="installed.latest">可用版本</th>
+              <th data-i18n="common.source">来源桶</th>
+              <th data-i18n="common.status">状态</th>
+              <th class="cell-actions" data-i18n="common.actions">操作</th>
+            </tr>
+          </thead>
+          <tbody id="mockTableBody">
+            <!-- 由 JS 渲染:nodejs(与面板"更新 nodejs"任务联动) / python(与"更新 python"失败任务联动,可现场重试) / 其余静态行 -->
+          </tbody>
+        </table>
+      </div>
+    </main>
+  </div>
+
+  <!-- ============ P08 本体:任务进度浮层(非 modal · 右下角悬浮) ============ -->
+  <div class="jobs-panel" id="jobsPanel">
+    <div class="running-bar" id="runningBar" hidden></div>
+    <div class="panel-header">
+      <svg class="head-icon"><use href="#i-list"/></svg>
+      <span class="panel-title" data-i18n="jobs.title">任务进度</span>
+      <span class="spacer"></span>
+      <button class="btn btn--ghost btn--icon" id="closeBtn" aria-label="关闭" title="关闭(不影响后台任务继续执行)">
+        <svg><use href="#i-x"/></svg>
+      </button>
+    </div>
+
+    <div id="jobEmpty" class="job-empty" hidden data-i18n="jobs.empty">暂无任务</div>
+
+    <div class="job-list" id="jobList"></div>
+    <div class="job-detail" id="jobDetail">
+      <div class="detail-title">
+        <span data-i18n="jobs.log">任务日志</span> · <span class="mono" id="detailTitle">安装 git</span>
+      </div>
+      <div class="progress" id="progressWrap"><div class="progress-fill"></div></div>
+      <div class="log-box mono" id="logBox"></div>
+    </div>
+  </div>
+
+  <!-- 关闭后的重新打开入口(镜像真实侧边栏"任务" nav item 的再次点击) -->
+  <button class="reopen-fab" id="reopenFab" hidden type="button">
+    <svg><use href="#i-list"/></svg>
+    <span data-i18n="nav.jobs">任务</span>
+    <span class="fab-badge" id="fabBadge"><svg class="spin"><use href="#i-loader"/></svg><span id="fabBadgeCount">3</span></span>
+  </button>
+
+  <div class="toast-region" id="toastRegion" data-sonner-toaster></div>
+</div>
+
+<div class="notes-card">
+  <h2>设计与行为标注(非产品 UI 本身,供评审阅读)</h2>
+  <div class="notes-grid">
+    <ul>
+      <li><b>非 modal、无遮罩</b>:面板本身不带任何背景遮罩,底层页面(此处以 P04 已装软件包列表模拟)保持完全可交互、不变暗。悬浮定位为窗口<b>右下角</b>(<code>right 24px / bottom 56px</code>),不是设计系统骨架图暗示的"居中浮层"——已按 <code>JobsPanel.tsx</code> 真实实现校正。</li>
+      <li><b>列表 + 详情双区</b>,不是单任务对话框:上方是全部任务的列表(本例 6 条,覆盖排队中/执行中/已成功/已失败(可重试)/已取消五态),下方详情区只展示"当前选中"的一条。</li>
+      <li><b>自动跟随规则</b>:在你手动点击任何一行之前,详情区会自动跟随"当前执行中"的任务——试试不要点列表,观察 git 安装完成后详情区如何自动切到刚开始执行的 ffmpeg。手动点击过某一行后,详情区"钉住"该行,不再自动跳转。</li>
+      <li><b>进度条恒为不确定态</b>(扫动动画),没有百分比数值——Scoop CLI 不产出结构化进度,产品也没有编造一个,仅在该任务为"排队中/执行中"时渲染。</li>
+      <li><b>取消 ≠ 失败</b>:取消按钮用中性灰(<code>--fg-muted</code>),不用 destructive 红色;只出现在"排队中/执行中"的任务行内联位置,可同时存在多个。点击 nodejs 或 ffmpeg 行的"取消"试试。</li>
+    </ul>
+    <ul>
+      <li><b>关闭按钮不受忙碌状态影响</b>:面板头部右上角 X 任何时候都可点击关闭,任务不会因此中断——这是"非 modal"的核心体现。关闭后右下角出现"任务"重新打开入口(镜像真实侧边栏的任务导航项)。</li>
+      <li><b>点击外部关闭并吞掉该次点击</b>:面板打开时点击背景任意位置(如侧边栏、表格),面板会关闭,但<b>不会</b>触发被点到的控件——需要再点一次才会真正生效。试着点一下背景里的"检查更新"按钮观察效果。</li>
+      <li><b>面板本身不提供"重试"按钮</b>:失败任务(python)只显示徽标,没有内联重试操作;"重试"通过返回来源页重新发起同类动作实现——下方 mock 表格里 python 行的"更新"按钮是可点的,点击会在面板里生成一条全新排队中任务,演示这条真实路径。</li>
+      <li><b>F16(协助安装 Scoop)不在本组件范围内</b>:P01 首次启动协助安装的进度/日志由 <code>BootView.tsx</code> 自行绘制成居中卡片,不经过这个右下角面板,本原型不重复呈现该场景。</li>
+      <li><b>日志内容不参与翻译</b>:切换右上角语言只影响面板文案(标题/徽标/按钮),日志区文本始终是 Scoop CLI 原始输出。</li>
+    </ul>
+  </div>
+  <div class="hint-strip"><svg><use href="#i-info"/></svg>本页为静态设计原型,交互均为前端模拟(vanilla JS),不连接真实 Tauri IPC;计时器与状态跃迁仅用于演示真实组件的状态机与选中逻辑。</div>
+  <div class="demo-controls">
+    <button class="btn btn--outline" id="emptyToggleBtn" type="button">查看空状态(jobs.empty)</button>
+    <button class="btn btn--outline" id="resetBtn" type="button">重置演示</button>
+  </div>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  // ---------------- i18n 字典(逐条抄自 src/i18n.ts,不新造译文) ----------------
+  var dict = {
+    "jobs.title": { zh: "任务进度", en: "Tasks" },
+    "jobs.state.queued": { zh: "排队中", en: "Queued" },
+    "jobs.state.running": { zh: "执行中", en: "Running" },
+    "jobs.state.succeeded": { zh: "已成功", en: "Succeeded" },
+    "jobs.state.failed": { zh: "已失败(可重试)", en: "Failed (retryable)" },
+    "jobs.state.cancelled": { zh: "已取消", en: "Cancelled" },
+    "jobs.kind.install": { zh: "安装", en: "Install" },
+    "jobs.kind.uninstall": { zh: "卸载", en: "Uninstall" },
+    "jobs.kind.update": { zh: "更新", en: "Update" },
+    "jobs.kind.bucket-add": { zh: "添加桶", en: "Add bucket" },
+    "jobs.kind.bucket-remove": { zh: "移除桶", en: "Remove bucket" },
+    "jobs.empty": { zh: "暂无任务", en: "No tasks yet" },
+    "jobs.log": { zh: "任务日志", en: "Task log" },
+    "jobs.succeededToast": { zh: "{title} 已成功", en: "{title} succeeded" },
+    "jobs.cancelledToast": { zh: "{title} 已取消", en: "{title} cancelled" },
+    "common.cancel": { zh: "取消", en: "Cancel" },
+    "common.close": { zh: "关闭", en: "Close" },
+    "common.update": { zh: "更新", en: "Update" },
+    "common.name": { zh: "名称", en: "Name" },
+    "common.version": { zh: "版本", en: "Version" },
+    "common.source": { zh: "来源桶", en: "Bucket" },
+    "common.status": { zh: "状态", en: "Status" },
+    "common.actions": { zh: "操作", en: "Actions" },
+    "nav.installed": { zh: "已装软件", en: "Installed" },
+    "nav.browse": { zh: "浏览软件包", en: "Browse" },
+    "nav.buckets": { zh: "桶管理", en: "Buckets" },
+    "nav.settings": { zh: "设置", en: "Settings" },
+    "nav.jobs": { zh: "任务", en: "Jobs" },
+    "installed.title": { zh: "已装软件包", en: "Installed Apps" },
+    "installed.desc": { zh: "本机已通过 Scoop 安装的软件包;存在新版本的软件包会标记为“过期”。", en: "Apps installed via Scoop on this machine. Apps with a newer version available are marked as outdated." },
+    "installed.checkUpdates": { zh: "检查更新", en: "Check updates" },
+    "installed.updateAll": { zh: "更新全部过期", en: "Update all outdated" },
+    "installed.filter": { zh: "过滤已装软件包…", en: "Filter installed apps…" },
+    "installed.outdated": { zh: "过期", en: "Outdated" },
+    "installed.upToDate": { zh: "最新", en: "Up to date" }
+  };
+  var lang = "zh";
+  function tr(key) { var e = dict[key]; return e ? e[lang] : key; }
+  function fmt(key, params) {
+    var s = tr(key);
+    for (var k in params) s = s.split("{" + k + "}").join(params[k]);
+    return s;
+  }
+
+  // ---------------- 任务数据模型(结构对应 src/types.ts 的 JobDto) ----------------
+  var nextId = 47;
+  var jobs = [
+    { id: 46, kind: "update", target: "nodejs", state: "queued" },
+    { id: 45, kind: "install", target: "ffmpeg", state: "queued" },
+    { id: 44, kind: "install", target: "git", state: "running" },
+    { id: 43, kind: "bucket-add", target: "extras", state: "succeeded" },
+    { id: 42, kind: "update", target: "python", state: "failed" },
+    { id: 41, kind: "uninstall", target: "vim", state: "cancelled" }
+  ];
+  var logs = {
+    44: [
+      "Installing 'git' (2.45.1) [64bit] from 'main' bucket",
+      "Downloading PortableGit-2.45.1-64-bit.7z.exe (48.2 MB) ...",
+      "Checking hash of PortableGit-2.45.1-64-bit.7z.exe ... ok."
+    ],
+    45: [],
+    43: [
+      "Adding bucket 'extras' from 'https://github.com/ScoopInstaller/Extras'",
+      "Checking repo... ok.",
+      "The 'extras' bucket was added successfully."
+    ],
+    42: [
+      "Updating 'python' (3.11.6 -> 3.12.3)",
+      "Downloading python-3.12.3-amd64.7z (24.6 MB) ...",
+      "Checking hash of python-3.12.3-amd64.7z ... ok.",
+      "Extracting python-3.12.3-amd64.7z ... failed.",
+      "ERROR Hash check failed for one or more files; installation aborted."
+    ],
+    41: [
+      "Uninstalling 'vim' (9.0.2100)",
+      "Removing shim 'vim.exe'",
+      "Operation cancelled by user."
+    ]
+  };
+  var gitTailLines = [
+    "Extracting PortableGit-2.45.1-64-bit.7z.exe ... done.",
+    "Linking ~\\scoop\\apps\\git\\current => ~\\scoop\\apps\\git\\2.45.1",
+    "Creating shim 'git.exe'",
+    "Adding ~\\scoop\\apps\\git\\current\\cmd to PATH"
+  ];
+
+  var pinnedId = 0;      // 0 = 未手动选择,自动跟随执行中任务
+  var emptyView = false; // 演示用:查看空状态
+  var panelOpen = true;
+
+  function byIdDesc() { return jobs.slice().sort(function (a, b) { return b.id - a.id; }); }
+  function jobTitle(job) { return tr("jobs.kind." + job.kind) + " " + job.target; }
+  function badgeVariant(state) {
+    if (state === "succeeded") return "success";
+    if (state === "failed") return "destructive";
+    if (state === "running") return "info";
+    return "default"; // queued 与 cancelled 共用中性灰(与源码 stateBadgeVariant 一致)
+  }
+  function glyphRef(state) {
+    if (state === "running") return "#i-loader";
+    if (state === "succeeded") return "#i-check";
+    if (state === "failed") return "#i-alert";
+    if (state === "cancelled") return "#i-x";
+    return "#i-list"; // queued
+  }
+  function getSelected() {
+    if (pinnedId) {
+      var pinned = jobs.filter(function (j) { return j.id === pinnedId; })[0];
+      if (pinned) return pinned;
+    }
+    var running = jobs.filter(function (j) { return j.state === "running"; })[0];
+    if (running) return running;
+    return byIdDesc()[0];
+  }
+  function activeCount() {
+    return jobs.filter(function (j) { return j.state === "queued" || j.state === "running"; }).length;
+  }
+
+  // ---------------- DOM 引用 ----------------
+  var runningBar = document.getElementById("runningBar");
+  var jobListEl = document.getElementById("jobList");
+  var jobEmptyEl = document.getElementById("jobEmpty");
+  var jobDetailEl = document.getElementById("jobDetail");
+  var detailTitleEl = document.getElementById("detailTitle");
+  var progressWrap = document.getElementById("progressWrap");
+  var logBoxEl = document.getElementById("logBox");
+  var jobsPanel = document.getElementById("jobsPanel");
+  var closeBtn = document.getElementById("closeBtn");
+  var reopenFab = document.getElementById("reopenFab");
+  var fabBadgeCount = document.getElementById("fabBadgeCount");
+  var navJobCount = document.getElementById("navJobCount");
+  var navJobBadge = document.getElementById("navJobBadge");
+  var toastRegion = document.getElementById("toastRegion");
+  var emptyToggleBtn = document.getElementById("emptyToggleBtn");
+  var resetBtn = document.getElementById("resetBtn");
+  var langBtn = document.getElementById("langBtn");
+  var mockTableBody = document.getElementById("mockTableBody");
+
+  // ---------------- 渲染 ----------------
+  function renderPanel() {
+    var anyRunning = jobs.some(function (j) { return j.state === "running"; });
+    runningBar.hidden = !anyRunning;
+
+    var sorted = byIdDesc();
+    var showEmpty = emptyView || sorted.length === 0;
+    jobEmptyEl.hidden = !showEmpty;
+    jobListEl.hidden = showEmpty;
+    jobDetailEl.hidden = showEmpty;
+    if (showEmpty) {
+      jobEmptyEl.textContent = tr("jobs.empty");
+    } else {
+      var selected = getSelected();
+      var rowsHtml = sorted.map(function (job) {
+        var canCancel = job.state === "queued" || job.state === "running";
+        var isSel = job.id === selected.id;
+        return (
+          '<div class="job-row' + (isSel ? " selected" : "") + '" data-id="' + job.id + '" tabindex="0" role="button">' +
+            '<svg class="state-glyph state-glyph--' + job.state + (job.state === "running" ? " spin" : "") + '"><use href="' + glyphRef(job.state) + '"/></svg>' +
+            '<span class="job-row__title">' + jobTitle(job) + "</span>" +
+            '<span class="spacer"></span>' +
+            '<span class="badge badge--' + badgeVariant(job.state) + '">' + tr("jobs.state." + job.state) + "</span>" +
+            (canCancel ? '<button class="btn btn--cancel btn--xs" data-cancel="' + job.id + '">' + tr("common.cancel") + "</button>" : "") +
+          "</div>"
+        );
+      }).join("");
+      jobListEl.innerHTML = rowsHtml;
+
+      detailTitleEl.textContent = jobTitle(selected);
+      var isActive = selected.state === "queued" || selected.state === "running";
+      progressWrap.hidden = !isActive;
+      var lines = logs[selected.id] || [];
+      logBoxEl.textContent = lines.length ? lines.join("\n") : "…";
+      logBoxEl.scrollTop = logBoxEl.scrollHeight;
+    }
+
+    var n = activeCount();
+    navJobCount.textContent = String(n);
+    navJobBadge.hidden = n === 0;
+    fabBadgeCount.textContent = String(n);
+    document.getElementById("fabBadge").hidden = n === 0;
+
+    renderMockTable();
+  }
+
+  function renderMockTable() {
+    var nodejsJob = jobs.filter(function (j) { return j.target === "nodejs" && (j.state === "queued" || j.state === "running"); })[0];
+    var pythonHasActiveJob = jobs.some(function (j) { return j.target === "python" && (j.state === "queued" || j.state === "running"); });
+
+    var rows = [];
+    rows.push(rowHtml({
+      name: "nodejs", version: "18.19.1", outdated: true, latest: "20.15.0", source: "main",
+      busyKind: nodejsJob ? nodejsJob.kind : null
+    }));
+    rows.push(rowHtml({
+      name: "python", version: "3.11.6", outdated: true, latest: "3.12.3", source: "main",
+      busyKind: pythonHasActiveJob ? "update" : null, retryTarget: !pythonHasActiveJob
+    }));
+    rows.push(rowHtml({ name: "7zip", version: "23.1.0", outdated: false, source: "main" }));
+    rows.push(rowHtml({ name: "vim", version: "9.0.2100", outdated: false, source: "extras" }));
+    mockTableBody.innerHTML = rows.join("");
+  }
+
+  function rowHtml(row) {
+    var statusCell;
+    if (row.busyKind) {
+      statusCell = '<span class="badge badge--info"><svg class="spin"><use href="#i-loader"/></svg>' + tr("jobs.kind." + row.busyKind) + "</span>";
+    } else if (row.outdated) {
+      statusCell = '<span class="badge badge--warning"><svg><use href="#i-alert"/></svg>' + tr("installed.outdated") + "</span>";
+    } else {
+      statusCell = '<span class="badge badge--success"><svg><use href="#i-check"/></svg>' + tr("installed.upToDate") + "</span>";
+    }
+    var actionCell = "";
+    if (row.busyKind) {
+      actionCell = '<span class="subtle" style="font-size:11.5px;">…</span>';
+    } else if (row.retryTarget) {
+      actionCell = '<button class="btn btn--primary btn--xs" data-retry="' + row.name + '">' + tr("common.update") + "</button>";
+    } else if (row.outdated) {
+      actionCell = '<button class="btn btn--primary btn--xs" disabled>' + tr("common.update") + "</button>";
+    }
+    return (
+      '<tr class="' + (row.outdated ? "outdated" : "") + '">' +
+        '<td class="mono">' + row.name + "</td>" +
+        '<td class="mono muted">' + row.version + "</td>" +
+        '<td class="mono">' + (row.latest ? '<span style="color:var(--color-warning)">' + row.latest + "</span>" : '<span class="subtle">—</span>') + "</td>" +
+        '<td class="muted">' + row.source + "</td>" +
+        "<td>" + statusCell + "</td>" +
+        '<td class="cell-actions">' + actionCell + "</td>" +
+      "</tr>"
+    );
+  }
+
+  // ---------------- 事件:列表点击 / 取消 ----------------
+  jobListEl.addEventListener("click", function (e) {
+    var cancelBtn = e.target.closest("[data-cancel]");
+    if (cancelBtn) {
+      e.stopPropagation();
+      handleCancel(Number(cancelBtn.getAttribute("data-cancel")));
+      return;
+    }
+    var row = e.target.closest(".job-row");
+    if (row) {
+      pinnedId = Number(row.getAttribute("data-id"));
+      renderPanel();
+    }
+  });
+
+  function handleCancel(id) {
+    var job = jobs.filter(function (j) { return j.id === id; })[0];
+    if (!job || (job.state !== "queued" && job.state !== "running")) return;
+    var wasRunning = job.state === "running";
+    job.state = "cancelled";
+    showToast("info", fmt("jobs.cancelledToast", { title: jobTitle(job) }));
+    if (wasRunning) promoteNextQueued();
+    renderPanel();
+  }
+
+  function promoteNextQueued() {
+    var queued = jobs.filter(function (j) { return j.state === "queued"; });
+    if (!queued.length) return;
+    var next = queued.reduce(function (a, b) { return a.id < b.id ? a : b; });
+    next.state = "running";
+    startLogStream(next.id);
+  }
+
+  // ---------------- 演示:git 安装中日志流式追加 → 成功 → 提升下一条排队任务 ----------------
+  var gitTimer = null;
+  function startGitStream() {
+    var step = 0;
+    gitTimer = setInterval(function () {
+      var job = jobs.filter(function (j) { return j.id === 44; })[0];
+      if (!job || job.state !== "running") { clearInterval(gitTimer); return; }
+      if (step >= gitTailLines.length) {
+        clearInterval(gitTimer);
+        job.state = "succeeded";
+        showToast("success", fmt("jobs.succeededToast", { title: jobTitle(job) }));
+        promoteNextQueued();
+        renderPanel();
+        return;
+      }
+      logs[44].push(gitTailLines[step++]);
+      renderPanel();
+    }, 1700);
+  }
+
+  function startLogStream(id) {
+    if (id === 45) {
+      logs[45] = logs[45] || [];
+      setTimeout(function () {
+        var j = jobs.filter(function (x) { return x.id === 45; })[0];
+        if (j && j.state === "running") { logs[45].push("Installing 'ffmpeg' (7.0.1) [64bit] from 'main' bucket"); renderPanel(); }
+      }, 900);
+      setTimeout(function () {
+        var j = jobs.filter(function (x) { return x.id === 45; })[0];
+        if (j && j.state === "running") { logs[45].push("Downloading ffmpeg-7.0.1-full_build.7z (118 MB) ..."); renderPanel(); }
+      }, 2000);
+    }
+  }
+
+  // ---------------- Toast(演示用,§8.10) ----------------
+  function showToast(kind, text) {
+    var el = document.createElement("div");
+    el.className = "toast toast--" + kind;
+    el.textContent = text;
+    toastRegion.appendChild(el);
+    requestAnimationFrame(function () { el.classList.add("show"); });
+    setTimeout(function () {
+      el.classList.remove("show");
+      setTimeout(function () { el.remove(); }, 250);
+    }, 3400);
+  }
+
+  // ---------------- 面板开关 + 外部点击关闭并吞掉该次点击(还原 JobsPanel.tsx 真实逻辑) ----------------
+  var jobsNavItemEl = null; // 赋值见文件末尾初始化区(jobsNavItem 在 DOM 中的引用)
+  function closePanel() {
+    panelOpen = false;
+    jobsPanel.hidden = true;
+    reopenFab.hidden = false;
+    if (jobsNavItemEl) jobsNavItemEl.classList.remove("active");
+  }
+  function openPanel() {
+    panelOpen = true;
+    jobsPanel.hidden = false;
+    reopenFab.hidden = true;
+    if (jobsNavItemEl) jobsNavItemEl.classList.add("active");
+    renderPanel();
+  }
+  closeBtn.addEventListener("click", closePanel);
+  reopenFab.addEventListener("click", openPanel);
+  // 镜像真实侧边栏"任务" nav item 的开关行为;注意当面板已打开时点它属于"面板外部点击",
+  // 会先被下方的外部点击关闭逻辑吞掉这次 click——与真实 App.tsx 的行为一致(需要再点一次才能重新打开)。
+  document.getElementById("jobsNavItem").addEventListener("click", function () {
+    if (panelOpen) { closePanel(); } else { openPanel(); }
+  });
+
+  var suppressNextClick = false;
+  var suppressTimer = 0;
+  document.addEventListener("pointerdown", function (e) {
+    if (!panelOpen) return;
+    if (jobsPanel.contains(e.target)) return;
+    if (e.target.closest("[data-sonner-toaster]")) return;
+    closePanel();
+    e.stopPropagation();
+    e.preventDefault();
+    suppressNextClick = true;
+    window.clearTimeout(suppressTimer);
+    suppressTimer = window.setTimeout(function () { suppressNextClick = false; }, 500);
+  }, true);
+  document.addEventListener("click", function (e) {
+    if (!suppressNextClick) return;
+    suppressNextClick = false;
+    window.clearTimeout(suppressTimer);
+    e.stopPropagation();
+    e.preventDefault();
+  }, true);
+
+  // ---------------- 背景表格:python 行现场"重试"演示(P08 不提供内联重试,回到来源页重新发起) ----------------
+  mockTableBody.addEventListener("click", function (e) {
+    var retryBtn = e.target.closest("[data-retry]");
+    if (!retryBtn) return;
+    var target = retryBtn.getAttribute("data-retry");
+    var id = nextId++;
+    jobs.unshift({ id: id, kind: "update", target: target, state: "queued" });
+    logs[id] = [];
+    if (!panelOpen) openPanel();
+    renderPanel();
+  });
+
+  // ---------------- 演示控制:空状态 / 重置 ----------------
+  var emptyBtnLabel = { zh: ["查看空状态(jobs.empty)", "返回任务列表"], en: ["Show empty state (jobs.empty)", "Back to task list"] };
+  emptyToggleBtn.addEventListener("click", function () {
+    emptyView = !emptyView;
+    emptyToggleBtn.textContent = emptyBtnLabel[lang][emptyView ? 1 : 0];
+    renderPanel();
+  });
+  resetBtn.addEventListener("click", function () { window.location.reload(); });
+
+  // ---------------- 语言切换(仅影响界面文案,不影响日志原文) ----------------
+  function applyStaticLang() {
+    document.querySelectorAll("[data-i18n]").forEach(function (el) {
+      var key = el.getAttribute("data-i18n");
+      if (dict[key]) el.textContent = dict[key][lang];
+    });
+    document.querySelectorAll("[data-i18n-ph]").forEach(function (el) {
+      var key = el.getAttribute("data-i18n-ph");
+      if (dict[key]) el.setAttribute("placeholder", dict[key][lang]);
+    });
+    emptyToggleBtn.textContent = emptyBtnLabel[lang][emptyView ? 1 : 0];
+    resetBtn.textContent = lang === "zh" ? "重置演示" : "Reset demo";
+  }
+  langBtn.addEventListener("click", function () {
+    lang = lang === "zh" ? "en" : "zh";
+    langBtn.textContent = lang === "zh" ? "EN" : "中文";
+    document.documentElement.lang = lang === "zh" ? "zh-CN" : "en";
+    applyStaticLang();
+    renderPanel();
+  });
+
+  // ---------------- 初始化 ----------------
+  jobsNavItemEl = document.getElementById("jobsNavItem");
+  applyStaticLang();
+  renderPanel();
+  startGitStream();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,1329 @@
+<!doctype html>
+<!--
+  P07 · 软件包详情对话框 · HTML 设计原型(设计系统 v2:暗色默认 + run-green + 科技感)
+  真相源:src/components/DetailDialog.tsx;色板/圆角/阴影/字体 token 取自 src/index.css、
+  src/components/ui/{dialog,badge,button}.tsx,并与 docs/design/systems/web.md §11.1 的 oklch 定义等价。
+
+  本文件独立自包含,可直接双击用浏览器打开预览,无需构建。
+  左下角"原型状态演示"面板为原型专用工具,非产品界面,用于在同一份文件内切换 P07 的六种真实状态;
+  对话框本体(含右上角 X / 底部按钮 / 遮罩 / Esc)均可交互,行为对照 DetailDialog.tsx 的真实实现。
+  点击"安装/更新"或在"卸载"二次确认中点击"卸载"后,会以简化 toast 提示模拟转入 P08 的任务面板交接——
+  P08(长时操作进度对话框)本身不在本文件范围内,仅作示意。
+-->
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>P07 · 软件包详情对话框 · 设计原型</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      /* ===================== 设计系统 v2 token(§11.1;数值取自 src/index.css 真实实现) ===================== */
+      :root {
+        color-scheme: dark;
+        --bg: #0b1220;
+        --bg-elevated: #111827; /* = --card */
+        --bg-overlay: #1a2332; /* = --secondary / --muted */
+        --fg: #f5f7fa;
+        --fg-muted: #a1aab8;
+        --fg-subtle: #6b7280;
+        --border: #374151;
+        --border-strong: #5b6678;
+        --primary: #22c55e; /* run-green */
+        --primary-hover: #34d672;
+        --primary-foreground: #06130a;
+        --primary-glow: rgba(34, 197, 94, 0.25);
+        --primary-glow-soft: rgba(34, 197, 94, 0.1);
+        --info: #60a5fa;
+        --warning: #f59e0b;
+        --warning-15: rgba(245, 158, 11, 0.15);
+        --destructive: #ef4444;
+        --destructive-glow: rgba(239, 68, 68, 0.2);
+
+        --font-heading: "Space Grotesk", system-ui, sans-serif;
+        --font-body: "DM Sans", "Microsoft YaHei UI", system-ui, sans-serif;
+        --font-mono: "JetBrains Mono", "Cascadia Code", Consolas, monospace;
+
+        --radius-sm: 4px;
+        --radius-md: 8px;
+        --radius-lg: 12px;
+        --radius-xl: 16px;
+
+        --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.6), 0 4px 6px -4px rgb(0 0 0 / 0.4);
+        --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.7), 0 8px 10px -6px rgb(0 0 0 / 0.5);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        height: 100%;
+        margin: 0;
+      }
+      body {
+        background: var(--bg);
+        color: var(--fg);
+        font-family: var(--font-body);
+        font-size: 14px;
+        line-height: 1.5;
+        overflow: hidden;
+        -webkit-font-smoothing: antialiased;
+      }
+      h1,
+      h3 {
+        font-family: var(--font-heading);
+        line-height: 1.2;
+        margin: 0;
+      }
+      ::selection {
+        background: var(--primary-glow);
+      }
+      button {
+        font: inherit;
+        color: inherit;
+      }
+
+      /* ===================== 科技感叠加层(设计系统 §2.1 / §9) ===================== */
+      .bg-grid {
+        background-image: linear-gradient(to right, rgba(55, 65, 81, 0.25) 1px, transparent 1px),
+          linear-gradient(to bottom, rgba(55, 65, 81, 0.25) 1px, transparent 1px);
+        background-size: 32px 32px;
+      }
+      .bg-glow-top {
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+        background: radial-gradient(ellipse 800px 200px at 50% -50%, var(--primary-glow), transparent);
+      }
+      .gradient-line {
+        height: 1px;
+        flex-shrink: 0;
+        background: linear-gradient(to right, transparent, var(--primary), transparent);
+      }
+      .mono {
+        font-family: var(--font-mono);
+      }
+
+      /* ===================== 背景语境:P04 已装列表(仅供理解 P07 叠加关系,非本文件验收对象) ===================== */
+      .shell {
+        display: flex;
+        height: 100vh;
+      }
+      .shell-sidebar {
+        width: 240px;
+        flex-shrink: 0;
+        display: flex;
+        flex-direction: column;
+        border-right: 1px solid var(--border);
+        background: var(--bg-elevated);
+        padding-bottom: 12px;
+      }
+      .shell-logo {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 16px 16px 14px;
+      }
+      .shell-logo-icon {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 36px;
+        height: 36px;
+        border-radius: var(--radius-md);
+        border: 1px solid var(--primary-glow);
+        background: var(--primary-glow-soft);
+        color: var(--primary);
+      }
+      .shell-logo-icon svg {
+        width: 18px;
+        height: 18px;
+      }
+      .shell-logo-name {
+        font-family: var(--font-heading);
+        font-size: 15px;
+        font-weight: 700;
+      }
+      .shell-logo-version {
+        font-size: 10px;
+        color: var(--fg-subtle);
+      }
+      .shell-nav {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        padding: 0 12px;
+      }
+      .shell-nav-item {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        height: 40px;
+        padding: 0 12px;
+        border-radius: var(--radius-md);
+        font-size: 13px;
+        font-weight: 500;
+        color: var(--fg-muted);
+      }
+      .shell-nav-item svg {
+        width: 16px;
+        height: 16px;
+        flex-shrink: 0;
+      }
+      .shell-nav-item.active {
+        background: var(--primary-glow-soft);
+        color: var(--primary);
+        box-shadow: inset 2px 0 0 var(--primary);
+      }
+      .shell-main {
+        flex: 1;
+        min-width: 0;
+        display: flex;
+        flex-direction: column;
+      }
+      .shell-header {
+        position: relative;
+        padding: 24px 28px 16px;
+      }
+      .shell-header h1 {
+        font-size: 24px;
+        font-weight: 600;
+      }
+      .shell-header p {
+        position: relative;
+        margin: 4px 0 0;
+        font-size: 13px;
+        color: var(--fg-muted);
+      }
+      .shell-table-wrap {
+        margin: 0 28px 24px;
+        border: 1px solid var(--border);
+        border-radius: var(--radius-lg);
+        overflow: auto;
+      }
+      table.shell-table {
+        width: 100%;
+        border-collapse: collapse;
+      }
+      .shell-table th {
+        text-align: left;
+        font-size: 12px;
+        font-weight: 500;
+        color: var(--fg-muted);
+        padding: 0 16px;
+        height: 36px;
+        background: var(--bg-elevated);
+        border-bottom: 1px solid var(--border);
+        position: sticky;
+        top: 0;
+      }
+      .shell-table td {
+        padding: 0 16px;
+        height: 40px;
+        border-bottom: 1px solid var(--border);
+        font-size: 13px;
+      }
+      .shell-table tbody tr:last-child td {
+        border-bottom: none;
+      }
+      .shell-table tr.clickable {
+        cursor: pointer;
+      }
+      .shell-table tr.selected td {
+        background: var(--primary-glow-soft);
+      }
+      .shell-table tr.selected td:first-child {
+        box-shadow: inset 2px 0 0 var(--primary);
+      }
+
+      /* ===================== Badge(设计系统 §8.9) ===================== */
+      .badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        height: 20px;
+        padding: 0 8px;
+        border-radius: var(--radius-sm);
+        border: 1px solid transparent;
+        font-size: 12px;
+        font-weight: 500;
+        white-space: nowrap;
+      }
+      .badge svg {
+        width: 11px;
+        height: 11px;
+      }
+      .badge-success {
+        border-color: var(--primary-glow);
+        background: var(--primary-glow-soft);
+        color: var(--primary);
+      }
+      .badge-warning {
+        border-color: rgba(245, 158, 11, 0.3);
+        background: var(--warning-15);
+        color: var(--warning);
+      }
+
+      /* ===================== 遮罩与对话框(设计系统 §8.4 / §10.3) ===================== */
+      .overlay {
+        position: fixed;
+        inset: 0;
+        z-index: 40;
+        background: rgba(0, 0, 0, 0.6);
+        backdrop-filter: blur(4px);
+        -webkit-backdrop-filter: blur(4px);
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 150ms ease;
+      }
+      .overlay.is-open {
+        opacity: 1;
+        pointer-events: auto;
+      }
+
+      .dialog {
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        z-index: 41;
+        width: min(672px, calc(100vw - 64px));
+        max-height: calc(100vh - 96px);
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+        border-radius: var(--radius-xl);
+        border: 1px solid var(--border);
+        background: var(--bg-elevated);
+        box-shadow: var(--shadow-xl);
+        opacity: 0;
+        pointer-events: none;
+        transform: translate(-50%, -50%) scale(0.96);
+        transition: opacity 150ms ease, transform 150ms ease;
+      }
+      .dialog.is-open {
+        opacity: 1;
+        pointer-events: auto;
+        transform: translate(-50%, -50%) scale(1);
+      }
+
+      .dialog-close {
+        position: absolute;
+        top: 16px;
+        right: 16px;
+        width: 32px;
+        height: 32px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: var(--radius-md);
+        border: none;
+        background: transparent;
+        color: var(--fg-muted);
+        cursor: pointer;
+      }
+      .dialog-close:hover {
+        background: var(--bg-overlay);
+        color: var(--fg);
+      }
+      .dialog-close svg {
+        width: 16px;
+        height: 16px;
+      }
+
+      .dialog-header {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 20px 24px 12px;
+      }
+      .dialog-icon {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+        width: 44px;
+        height: 44px;
+        border-radius: var(--radius-md);
+        border: 1px solid var(--primary-glow);
+        background: var(--primary-glow-soft);
+        color: var(--primary);
+      }
+      .dialog-icon svg {
+        width: 22px;
+        height: 22px;
+      }
+      .dialog-titlewrap {
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+        row-gap: 6px;
+        gap: 10px;
+        min-width: 0;
+        flex: 1;
+        padding-right: 32px; /* 避让右上角关闭按钮 */
+      }
+      .dialog-name {
+        font-family: var(--font-mono);
+        font-size: 18px;
+        font-weight: 600;
+      }
+      .dialog-version {
+        font-family: var(--font-mono);
+        font-size: 13px;
+        color: var(--fg-muted);
+      }
+
+      /* ===================== 字段展示区 ===================== */
+      .dialog-body {
+        min-height: 120px;
+        overflow: auto;
+        padding: 4px 24px;
+        flex: 1;
+      }
+      .state-loading {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        padding: 32px 0;
+        color: var(--fg-muted);
+        font-size: 13px;
+      }
+      .state-error {
+        display: flex;
+        align-items: flex-start;
+        gap: 8px;
+        padding: 16px 0;
+        color: var(--destructive);
+        font-size: 13px;
+      }
+      .state-error > svg {
+        width: 16px;
+        height: 16px;
+        flex-shrink: 0;
+        margin-top: 2px;
+      }
+      .state-error .err-detail {
+        margin-top: 4px;
+        font-family: var(--font-mono);
+        font-size: 12px;
+        word-break: break-all;
+        white-space: pre-wrap;
+        user-select: text;
+      }
+      .spin {
+        width: 16px;
+        height: 16px;
+        color: var(--primary);
+        animation: spin 0.9s linear infinite;
+      }
+      @keyframes spin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+
+      .field-grid {
+        display: grid;
+        grid-template-columns: 120px 1fr;
+        gap: 8px 16px;
+        margin: 8px 0;
+        font-size: 13px;
+      }
+      .field-label {
+        color: var(--fg-subtle);
+      }
+      .field-value {
+        margin: 0;
+        word-break: break-word;
+        white-space: pre-wrap;
+        user-select: text;
+        font-family: var(--font-mono);
+      }
+      .field-value.prose {
+        font-family: var(--font-body);
+      }
+      .field-value a {
+        color: var(--info);
+        text-decoration: none;
+      }
+      .field-value a:hover {
+        text-decoration: underline;
+      }
+
+      /* ===================== 底部操作区 ===================== */
+      .dialog-footer {
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        gap: 8px;
+        padding: 16px 24px;
+        border-top: 1px solid var(--border);
+      }
+      .busy-indicator {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 13px;
+        color: var(--fg-muted);
+      }
+
+      /* ===================== 按钮(设计系统 §8.1) ===================== */
+      .btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        height: 40px;
+        padding: 0 16px;
+        border-radius: var(--radius-md);
+        border: 1px solid transparent;
+        font-size: 14px;
+        font-weight: 500;
+        white-space: nowrap;
+        cursor: pointer;
+        background: transparent;
+        transition: transform 100ms ease, filter 100ms ease, box-shadow 150ms ease, background 150ms ease,
+          border-color 150ms ease;
+      }
+      .btn svg {
+        width: 16px;
+        height: 16px;
+      }
+      .btn:active {
+        transform: scale(0.98);
+        filter: brightness(0.9);
+      }
+      .btn:focus-visible {
+        outline: none;
+        box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.4);
+      }
+      .btn-secondary {
+        background: var(--bg-overlay);
+        border-color: var(--border);
+        color: var(--fg);
+      }
+      .btn-secondary:hover {
+        border-color: var(--border-strong);
+      }
+      .btn-primary {
+        background: var(--primary);
+        color: var(--primary-foreground);
+        box-shadow: 0 0 12px var(--primary-glow);
+      }
+      .btn-primary:hover {
+        background: var(--primary-hover);
+        box-shadow: 0 0 20px var(--primary-glow), 0 0 40px var(--primary-glow);
+      }
+      .btn-destructive {
+        background: var(--destructive);
+        color: #fff;
+      }
+      .btn-destructive:hover {
+        box-shadow: 0 0 16px var(--destructive-glow);
+      }
+
+      /* ===================== 卸载二次确认(小型对话框,复用 ConfirmDialog 形态) ===================== */
+      .confirm-overlay {
+        position: fixed;
+        inset: 0;
+        z-index: 60;
+        background: rgba(0, 0, 0, 0.6);
+        backdrop-filter: blur(4px);
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 150ms ease;
+      }
+      .confirm-overlay.is-open {
+        opacity: 1;
+        pointer-events: auto;
+      }
+      .confirm-dialog {
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        z-index: 61;
+        width: min(480px, calc(100vw - 64px));
+        border-radius: var(--radius-xl);
+        border: 1px solid var(--border);
+        background: var(--bg-elevated);
+        box-shadow: var(--shadow-xl);
+        opacity: 0;
+        pointer-events: none;
+        transform: translate(-50%, -50%) scale(0.96);
+        transition: opacity 150ms ease, transform 150ms ease;
+      }
+      .confirm-dialog.is-open {
+        opacity: 1;
+        pointer-events: auto;
+        transform: translate(-50%, -50%) scale(1);
+      }
+      .confirm-dialog .ch {
+        padding: 24px 24px 4px;
+        font-family: var(--font-heading);
+        font-size: 18px;
+        font-weight: 600;
+      }
+      .confirm-dialog .cd {
+        padding: 8px 24px 0;
+        font-size: 13px;
+        color: var(--fg-muted);
+      }
+      .confirm-dialog .cf {
+        display: flex;
+        justify-content: flex-end;
+        gap: 8px;
+        padding: 20px 24px 24px;
+      }
+
+      /* ===================== Toast(设计系统 §8.10,模拟转入 P08 的交接提示) ===================== */
+      .toast {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        z-index: 80;
+        min-width: 260px;
+        max-width: 360px;
+        padding: 12px 14px;
+        border-radius: var(--radius-lg);
+        background: var(--bg-elevated);
+        border: 1px solid var(--border);
+        border-left: 2px solid var(--primary);
+        box-shadow: var(--shadow-lg);
+        font-size: 13px;
+        color: var(--fg);
+        opacity: 0;
+        transform: translateY(-8px);
+        pointer-events: none;
+        transition: opacity 200ms ease, transform 200ms ease;
+      }
+      .toast.is-open {
+        opacity: 1;
+        transform: translateY(0);
+      }
+
+      /* ===================== 原型专用:状态演示面板(非产品界面) ===================== */
+      .proto-panel {
+        position: fixed;
+        left: 20px;
+        bottom: 20px;
+        z-index: 90;
+        width: 300px;
+        border-radius: var(--radius-lg);
+        border: 1px dashed var(--border-strong);
+        background: rgba(17, 24, 39, 0.92);
+        backdrop-filter: blur(6px);
+        padding: 14px;
+        font-size: 12px;
+        color: var(--fg-muted);
+      }
+      .proto-panel-title {
+        font-family: var(--font-heading);
+        font-size: 13px;
+        font-weight: 600;
+        color: var(--fg);
+        margin-bottom: 8px;
+      }
+      .proto-panel-title span {
+        font-family: var(--font-body);
+        font-size: 11px;
+        font-weight: 400;
+        color: var(--fg-subtle);
+      }
+      .proto-buttons {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        margin-bottom: 10px;
+      }
+      .proto-buttons button {
+        border: 1px solid var(--border);
+        background: var(--bg-overlay);
+        color: var(--fg-muted);
+        border-radius: var(--radius-sm);
+        padding: 5px 8px;
+        font-size: 11px;
+        cursor: pointer;
+      }
+      .proto-buttons button.active {
+        border-color: var(--primary);
+        color: var(--primary);
+        background: var(--primary-glow-soft);
+      }
+      .proto-note {
+        line-height: 1.5;
+        margin-bottom: 10px;
+      }
+      .proto-reopen {
+        width: 100%;
+        height: 32px;
+        border-radius: var(--radius-md);
+        border: 1px solid var(--primary);
+        background: var(--primary-glow-soft);
+        color: var(--primary);
+        cursor: pointer;
+        font-size: 12px;
+      }
+    </style>
+  </head>
+  <body>
+    <!-- ============ 背景语境:P04 已装列表(仅示意 P07 叠加于列表页之上,非本文件验收对象) ============ -->
+    <div class="shell" aria-hidden="true">
+      <aside class="shell-sidebar">
+        <div class="gradient-line"></div>
+        <div class="shell-logo">
+          <div class="shell-logo-icon"><svg><use href="#icon-terminal"></use></svg></div>
+          <div>
+            <div class="shell-logo-name">Scoop GUI</div>
+            <div class="shell-logo-version mono">0.5.3</div>
+          </div>
+        </div>
+        <nav class="shell-nav">
+          <div class="shell-nav-item active"><svg><use href="#icon-package"></use></svg><span>已装软件</span></div>
+          <div class="shell-nav-item"><svg><use href="#icon-search"></use></svg><span>浏览软件包</span></div>
+          <div class="shell-nav-item"><svg><use href="#icon-layers"></use></svg><span>桶管理</span></div>
+          <div class="shell-nav-item"><svg><use href="#icon-settings"></use></svg><span>设置</span></div>
+        </nav>
+      </aside>
+      <main class="shell-main">
+        <div class="shell-header bg-grid">
+          <div class="bg-glow-top"></div>
+          <h1>已装软件包</h1>
+          <p>本机已通过 Scoop 安装的软件包;存在新版本的软件包会标记为"过期"。</p>
+        </div>
+        <div class="shell-table-wrap">
+          <table class="shell-table">
+            <thead>
+              <tr>
+                <th>名称</th>
+                <th>版本</th>
+                <th>可用版本</th>
+                <th>来源桶</th>
+                <th>状态</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr class="clickable" data-preset="installedLatest">
+                <td class="mono">git</td>
+                <td class="mono">2.49.0</td>
+                <td class="mono" style="color: var(--fg-subtle)">—</td>
+                <td>main</td>
+                <td><span class="badge badge-success"><svg><use href="#icon-check"></use></svg>已装</span></td>
+              </tr>
+              <tr class="clickable selected" id="shellRow" data-preset="installedOutdated">
+                <td class="mono">7zip</td>
+                <td class="mono">26.00</td>
+                <td class="mono" style="color: var(--warning)">26.02</td>
+                <td>main</td>
+                <td><span class="badge badge-warning"><svg><use href="#icon-triangle-alert"></use></svg>过期</span></td>
+              </tr>
+              <tr class="clickable" data-preset="installedOutdated">
+                <td class="mono">nodejs</td>
+                <td class="mono">23.6.0</td>
+                <td class="mono" style="color: var(--warning)">24.1.0</td>
+                <td>main</td>
+                <td><span class="badge badge-warning"><svg><use href="#icon-triangle-alert"></use></svg>过期</span></td>
+              </tr>
+              <tr class="clickable" data-preset="installedLatest">
+                <td class="mono">yazi</td>
+                <td class="mono">26.5.6</td>
+                <td class="mono" style="color: var(--fg-subtle)">—</td>
+                <td>main</td>
+                <td><span class="badge badge-success"><svg><use href="#icon-check"></use></svg>已装</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </main>
+    </div>
+
+    <!-- ============ P07 详情对话框本体 ============ -->
+    <div class="overlay" id="overlay"></div>
+    <div class="dialog" id="dialog" role="dialog" aria-modal="true" aria-labelledby="dlgName">
+      <button class="dialog-close" id="closeX" aria-label="关闭"><svg><use href="#icon-x"></use></svg></button>
+
+      <div class="dialog-header">
+        <div class="dialog-icon"><svg><use href="#icon-package"></use></svg></div>
+        <div class="dialog-titlewrap">
+          <h3 class="dialog-name" id="dlgName">7zip</h3>
+          <span class="dialog-version" id="dlgVersion"></span>
+          <span class="badge" id="dlgBadge"></span>
+        </div>
+      </div>
+
+      <div class="dialog-body" id="dlgBody"></div>
+
+      <div class="dialog-footer" id="dlgFooter"></div>
+    </div>
+
+    <!-- ============ 卸载二次确认(点击 P07 内"卸载"后关闭详情、切到 P04 语境弹出) ============ -->
+    <div class="confirm-overlay" id="confirmOverlay"></div>
+    <div class="confirm-dialog" id="confirmDialog" role="alertdialog" aria-modal="true" aria-labelledby="confirmTitle">
+      <div class="ch" id="confirmTitle">卸载确认</div>
+      <div class="cd" id="confirmMsg">确定要从本机卸载 7zip 吗?</div>
+      <div class="cf">
+        <button class="btn btn-secondary" id="confirmCancel">取消</button>
+        <button class="btn btn-destructive" id="confirmOk"><svg><use href="#icon-trash"></use></svg>卸载</button>
+      </div>
+    </div>
+
+    <!-- ============ Toast(模拟转入 P08 的交接提示) ============ -->
+    <div class="toast" id="toast"></div>
+
+    <!-- ============ 原型专用状态演示面板(非产品界面) ============ -->
+    <div class="proto-panel">
+      <div class="proto-panel-title">原型状态演示 <span>· 非产品界面,仅供设计评审切换</span></div>
+      <div class="proto-buttons" id="presetButtons"></div>
+      <div class="proto-note">
+        "正在读取详情/读取失败"只替换头部版本号与中部字段区,状态徽标与底部操作按钮保持不变(与真实实现一致)。
+        点击"已装"状态下的"卸载"按钮可观察:关闭详情 → 切到已装列表语境 → 二次确认(与"安装/更新"直接执行不同)。
+        "可装 · 未安装"状态字段区末行 Shim 为字典未收录字段名的原样回退演示。
+      </div>
+      <button class="proto-reopen" id="reopenBtn" hidden>重新打开对话框</button>
+    </div>
+
+    <!-- ============ 图标符号定义(lucide 风格线性图标,24×24,stroke 2) ============ -->
+    <svg style="position: absolute; width: 0; height: 0; overflow: hidden" aria-hidden="true">
+      <defs>
+        <symbol
+          id="icon-package"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <path
+            d="M11 21.73a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73Z"
+          />
+          <path d="M12 22V12" />
+          <path d="M3.29 7 12 12l8.71-5" />
+          <path d="m7.5 4.27 9 5.15" />
+        </symbol>
+        <symbol
+          id="icon-x"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <path d="M18 6 6 18" />
+          <path d="m6 6 12 12" />
+        </symbol>
+        <symbol
+          id="icon-check"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <path d="M20 6 9 17l-5-5" />
+        </symbol>
+        <symbol
+          id="icon-triangle-alert"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <path
+            d="m21.73 18-8-14a2 2 0 0 0-3.46 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"
+          />
+          <path d="M12 9v4" />
+          <path d="M12 17h.01" />
+        </symbol>
+        <symbol
+          id="icon-download"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+          <polyline points="7 10 12 15 17 10" />
+          <line x1="12" y1="15" x2="12" y2="3" />
+        </symbol>
+        <symbol
+          id="icon-trash"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <path d="M3 6h18" />
+          <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6" />
+          <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+          <line x1="10" y1="11" x2="10" y2="17" />
+          <line x1="14" y1="11" x2="14" y2="17" />
+        </symbol>
+        <symbol
+          id="icon-circle-arrow-up"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <circle cx="12" cy="12" r="10" />
+          <path d="m16 12-4-4-4 4" />
+          <line x1="12" y1="16" x2="12" y2="8" />
+        </symbol>
+        <symbol
+          id="icon-loader"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <path d="M12 2a10 10 0 0 1 10 10" />
+        </symbol>
+        <symbol
+          id="icon-terminal"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <polyline points="4 17 10 11 4 5" />
+          <line x1="12" y1="19" x2="20" y2="19" />
+        </symbol>
+        <symbol
+          id="icon-search"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <circle cx="11" cy="11" r="8" />
+          <line x1="21" y1="21" x2="16.65" y2="16.65" />
+        </symbol>
+        <symbol
+          id="icon-layers"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <polygon points="12 2 2 7 12 12 22 7 12 2" />
+          <polyline points="2 17 12 22 22 17" />
+          <polyline points="2 12 12 17 22 12" />
+        </symbol>
+        <symbol
+          id="icon-settings"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <line x1="4" y1="21" x2="4" y2="14" />
+          <line x1="4" y1="10" x2="4" y2="3" />
+          <line x1="12" y1="21" x2="12" y2="12" />
+          <line x1="12" y1="8" x2="12" y2="3" />
+          <line x1="20" y1="21" x2="20" y2="16" />
+          <line x1="20" y1="12" x2="20" y2="3" />
+          <line x1="1" y1="14" x2="7" y2="14" />
+          <line x1="9" y1="8" x2="15" y2="8" />
+          <line x1="17" y1="16" x2="23" y2="16" />
+        </symbol>
+      </defs>
+    </svg>
+
+    <script>
+      (function () {
+        // ---------------------------------------------------------------
+        // 字段名双语字典(节选自 src/i18n.ts 的 detail.field.* 词条,zh 值)
+        // ---------------------------------------------------------------
+        var FIELD_LABELS = {
+          Name: "名称",
+          Description: "描述",
+          Version: "版本",
+          Source: "来源桶",
+          Bucket: "来源桶",
+          Website: "官方网站",
+          License: "许可证",
+          "Updated at": "更新时间",
+          "Updated by": "更新者",
+          Installed: "已装版本",
+          Binaries: "可执行文件",
+          Shortcuts: "快捷方式",
+          Notes: "备注",
+          Dependencies: "依赖",
+          Suggestions: "建议安装",
+          Environment: "环境变量",
+          "Path Added": "加入 PATH",
+          Includes: "包含",
+          Persist: "持久化数据",
+          Manifest: "清单文件",
+        };
+
+        // 与 src/utils.ts bucketNameOf() 完全一致的规范化规则
+        function bucketNameOf(source) {
+          var m = /[\\/]buckets[\\/]([^\\/]+)[\\/]/i.exec(source);
+          return m ? m[1] : source;
+        }
+
+        function escapeHtml(s) {
+          return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+        }
+
+        // ---------------------------------------------------------------
+        // 三种业务身份的示例数据(字段内容取自真实 scoop 0.5.3 输出样例 /
+        // src-tauri/src/parse.rs 单测夹具、src/api.ts 浏览器 mock,细节见设计提示词)
+        // ---------------------------------------------------------------
+        var ENTITIES = {
+          available: {
+            name: "wget",
+            version: "1.21.4",
+            badge: null,
+            footerMode: "install",
+            fields: [
+              ["Name", "wget"],
+              ["Description", "A free utility for non-interactive download of files from the web."],
+              ["Version", "1.21.4"],
+              ["Source", "D:\\Scoop\\buckets\\main\\bucket\\wget.json"],
+              ["Website", "https://www.gnu.org/software/wget/"],
+              ["License", "GPL-3.0-or-later"],
+              ["Shim", "wget.exe"],
+            ],
+          },
+          installedLatest: {
+            name: "git",
+            version: "2.49.0",
+            badge: "success",
+            footerMode: "uninstall",
+            fields: [
+              ["Name", "git"],
+              ["Description", "A free and open source distributed version control system."],
+              ["Version", "2.49.0"],
+              ["Source", "main"],
+              ["Website", "https://git-scm.com"],
+              ["Binaries", "git.exe | git-shell.exe | git-cmd.exe"],
+            ],
+          },
+          installedOutdated: {
+            name: "7zip",
+            version: "26.00 (Update to 26.02 available)",
+            badge: "warning",
+            footerMode: "uninstall-update",
+            fields: [
+              ["Name", "7zip"],
+              ["Description", "A multi-format file archiver with high compression ratios."],
+              ["Version", "26.00 (Update to 26.02 available)"],
+              ["Source", "main"],
+              ["Website", "https://www.7-zip.org"],
+              [
+                "Notes",
+                'To register the context menu entry, please execute the following command:\nreg import "<root>\\install-context.reg"',
+              ],
+            ],
+          },
+        };
+
+        var PRESETS = [
+          { key: "available", label: "可装 · 未安装", entity: "available", body: "ready" },
+          { key: "installedLatest", label: "已装 · 最新", entity: "installedLatest", body: "ready" },
+          { key: "installedOutdated", label: "已装 · 过期", entity: "installedOutdated", body: "ready" },
+          {
+            key: "busy",
+            label: "操作进行中",
+            entity: "installedOutdated",
+            body: "ready",
+            footerOverride: "busy",
+          },
+          { key: "loading", label: "正在读取详情", entity: "installedOutdated", body: "loading" },
+          {
+            key: "error",
+            label: "详情读取失败",
+            entity: "installedOutdated",
+            body: "error",
+            errorText: 'Error invoking scoop_info: failed to run "cmd /d /c scoop info 7zip" (exit code 1)',
+          },
+        ];
+
+        var currentPreset = "installedOutdated";
+
+        // ---------------------------------------------------------------
+        // DOM 引用
+        // ---------------------------------------------------------------
+        var dlgName = document.getElementById("dlgName");
+        var dlgVersion = document.getElementById("dlgVersion");
+        var dlgBadge = document.getElementById("dlgBadge");
+        var dlgBody = document.getElementById("dlgBody");
+        var dlgFooter = document.getElementById("dlgFooter");
+        var overlay = document.getElementById("overlay");
+        var dialog = document.getElementById("dialog");
+        var reopenBtn = document.getElementById("reopenBtn");
+        var confirmOverlay = document.getElementById("confirmOverlay");
+        var confirmDialog = document.getElementById("confirmDialog");
+        var confirmMsg = document.getElementById("confirmMsg");
+        var toastEl = document.getElementById("toast");
+        var presetButtonsEl = document.getElementById("presetButtons");
+
+        function presetOf(key) {
+          for (var i = 0; i < PRESETS.length; i++) if (PRESETS[i].key === key) return PRESETS[i];
+          return PRESETS[0];
+        }
+        function currentEntity() {
+          return ENTITIES[presetOf(currentPreset).entity];
+        }
+
+        // ---------------------------------------------------------------
+        // 渲染:头部 Badge
+        // ---------------------------------------------------------------
+        function renderBadge(kind) {
+          if (!kind) {
+            dlgBadge.style.display = "none";
+            dlgBadge.innerHTML = "";
+            return;
+          }
+          dlgBadge.style.display = "";
+          if (kind === "success") {
+            dlgBadge.className = "badge badge-success";
+            dlgBadge.innerHTML = '<svg><use href="#icon-check"></use></svg>已安装';
+          } else {
+            dlgBadge.className = "badge badge-warning";
+            dlgBadge.innerHTML = '<svg><use href="#icon-triangle-alert"></use></svg>过期';
+          }
+        }
+
+        // ---------------------------------------------------------------
+        // 渲染:中部字段区(读取中 / 读取失败 / 正常三态)
+        // ---------------------------------------------------------------
+        function renderBody(preset, entity) {
+          if (preset.body === "loading") {
+            dlgBody.innerHTML =
+              '<div class="state-loading"><svg class="spin"><use href="#icon-loader"></use></svg>正在读取详情…</div>';
+            return;
+          }
+          if (preset.body === "error") {
+            dlgBody.innerHTML =
+              '<div class="state-error"><svg><use href="#icon-triangle-alert"></use></svg>' +
+              '<div>详情读取失败<div class="err-detail"></div></div></div>';
+            dlgBody.querySelector(".err-detail").textContent = preset.errorText || "";
+            return;
+          }
+          var rows = entity.fields
+            .map(function (pair) {
+              var key = pair[0];
+              var value = pair[1];
+              var label = FIELD_LABELS[key] || key;
+              var isProse = key === "Description" || key === "Notes";
+              var valueHtml;
+              if (key === "Website") {
+                var href = escapeHtml(value);
+                valueHtml = '<a href="' + href + '" target="_blank" rel="noreferrer">' + href + "</a>";
+              } else if (key === "Source" || key === "Bucket") {
+                var titleAttr = escapeHtml(value).replace(/"/g, "&quot;");
+                valueHtml = '<span title="' + titleAttr + '">' + escapeHtml(bucketNameOf(value)) + "</span>";
+              } else {
+                valueHtml = escapeHtml(value);
+              }
+              return (
+                '<div class="field-label">' +
+                escapeHtml(label) +
+                '</div><div class="field-value' +
+                (isProse ? " prose" : "") +
+                '">' +
+                valueHtml +
+                "</div>"
+              );
+            })
+            .join("");
+          dlgBody.innerHTML = '<div class="field-grid">' + rows + "</div>";
+        }
+
+        // ---------------------------------------------------------------
+        // 渲染:底部操作区(状态矩阵,见设计提示词第 6 节)
+        // ---------------------------------------------------------------
+        function renderFooter(mode) {
+          if (mode === "busy") {
+            dlgFooter.innerHTML =
+              '<button class="btn btn-secondary" id="btnClose">关闭</button>' +
+              '<span class="busy-indicator"><svg class="spin"><use href="#icon-loader"></use></svg>加载中…</span>';
+          } else if (mode === "install") {
+            dlgFooter.innerHTML =
+              '<button class="btn btn-secondary" id="btnClose">关闭</button>' +
+              '<button class="btn btn-primary" id="btnInstall"><svg><use href="#icon-download"></use></svg>安装</button>';
+          } else if (mode === "uninstall") {
+            dlgFooter.innerHTML =
+              '<button class="btn btn-secondary" id="btnClose">关闭</button>' +
+              '<button class="btn btn-destructive" id="btnUninstall"><svg><use href="#icon-trash"></use></svg>卸载</button>';
+          } else {
+            // "uninstall-update":已装且过期
+            dlgFooter.innerHTML =
+              '<button class="btn btn-secondary" id="btnClose">关闭</button>' +
+              '<button class="btn btn-destructive" id="btnUninstall"><svg><use href="#icon-trash"></use></svg>卸载</button>' +
+              '<button class="btn btn-primary" id="btnUpdate"><svg><use href="#icon-circle-arrow-up"></use></svg>更新</button>';
+          }
+          bindFooterEvents();
+        }
+
+        function bindFooterEvents() {
+          var closeBtn = document.getElementById("btnClose");
+          if (closeBtn) closeBtn.addEventListener("click", function () { setDialogOpen(false); });
+
+          var installBtn = document.getElementById("btnInstall");
+          if (installBtn)
+            installBtn.addEventListener("click", function () {
+              var entity = currentEntity();
+              setDialogOpen(false);
+              showToast("已加入任务队列 · 安装 " + entity.name);
+            });
+
+          var updateBtn = document.getElementById("btnUpdate");
+          if (updateBtn)
+            updateBtn.addEventListener("click", function () {
+              var entity = currentEntity();
+              setDialogOpen(false);
+              showToast("已加入任务队列 · 更新 " + entity.name);
+            });
+
+          var uninstallBtn = document.getElementById("btnUninstall");
+          if (uninstallBtn)
+            uninstallBtn.addEventListener("click", function () {
+              // 真实实现:卸载不直接入队,而是关闭详情、切到 P04 语境弹出二次确认
+              setDialogOpen(false);
+              openConfirm();
+            });
+        }
+
+        // ---------------------------------------------------------------
+        // 应用某个预设状态到对话框(不改变开关状态)
+        // ---------------------------------------------------------------
+        function applyPreset(key) {
+          currentPreset = key;
+          var preset = presetOf(key);
+          var entity = ENTITIES[preset.entity];
+
+          dlgName.textContent = entity.name;
+          var showVersion = preset.body === "ready";
+          dlgVersion.textContent = showVersion ? entity.version : "";
+          dlgVersion.style.display = showVersion ? "" : "none";
+
+          renderBadge(entity.badge);
+          renderBody(preset, entity);
+          renderFooter(preset.footerOverride || entity.footerMode);
+
+          var buttons = presetButtonsEl.querySelectorAll("button");
+          for (var i = 0; i < buttons.length; i++) {
+            buttons[i].classList.toggle("active", buttons[i].getAttribute("data-preset") === key);
+          }
+        }
+
+        // ---------------------------------------------------------------
+        // 开关:主详情对话框
+        // ---------------------------------------------------------------
+        function setDialogOpen(open) {
+          overlay.classList.toggle("is-open", open);
+          dialog.classList.toggle("is-open", open);
+          reopenBtn.hidden = open;
+        }
+
+        function selectPreset(key) {
+          closeConfirm();
+          toastEl.classList.remove("is-open");
+          applyPreset(key);
+          setDialogOpen(true);
+        }
+
+        document.getElementById("closeX").addEventListener("click", function () { setDialogOpen(false); });
+        overlay.addEventListener("click", function () { setDialogOpen(false); });
+        reopenBtn.addEventListener("click", function () { setDialogOpen(true); });
+        document.getElementById("shellRow").addEventListener("click", function () {}); // 见下方通用行绑定
+
+        var shellRows = document.querySelectorAll(".shell-table tr[data-preset]");
+        for (var i = 0; i < shellRows.length; i++) {
+          (function (row) {
+            row.addEventListener("click", function () {
+              selectPreset(row.getAttribute("data-preset"));
+            });
+          })(shellRows[i]);
+        }
+
+        // ---------------------------------------------------------------
+        // 卸载二次确认(小型对话框)
+        // ---------------------------------------------------------------
+        function openConfirm() {
+          var entity = currentEntity();
+          confirmMsg.textContent = "确定要从本机卸载 " + entity.name + " 吗?";
+          confirmOverlay.classList.add("is-open");
+          confirmDialog.classList.add("is-open");
+        }
+        function closeConfirm() {
+          confirmOverlay.classList.remove("is-open");
+          confirmDialog.classList.remove("is-open");
+        }
+        document.getElementById("confirmCancel").addEventListener("click", closeConfirm);
+        confirmOverlay.addEventListener("click", closeConfirm);
+        document.getElementById("confirmOk").addEventListener("click", function () {
+          var entity = currentEntity();
+          closeConfirm();
+          showToast("已加入任务队列 · 卸载 " + entity.name);
+        });
+
+        document.addEventListener("keydown", function (e) {
+          if (e.key !== "Escape") return;
+          if (confirmDialog.classList.contains("is-open")) closeConfirm();
+          else if (dialog.classList.contains("is-open")) setDialogOpen(false);
+        });
+
+        // ---------------------------------------------------------------
+        // Toast(模拟转入 P08 的交接提示,P08 本身不在本文件范围内)
+        // ---------------------------------------------------------------
+        var toastTimer;
+        function showToast(msg) {
+          toastEl.textContent = msg;
+          toastEl.classList.add("is-open");
+          clearTimeout(toastTimer);
+          toastTimer = setTimeout(function () {
+            toastEl.classList.remove("is-open");
+          }, 2200);
+        }
+
+        // ---------------------------------------------------------------
+        // 状态演示面板按钮
+        // ---------------------------------------------------------------
+        PRESETS.forEach(function (p) {
+          var b = document.createElement("button");
+          b.textContent = p.label;
+          b.setAttribute("data-preset", p.key);
+          b.addEventListener("click", function () {
+            selectPreset(p.key);
+          });
+          presetButtonsEl.appendChild(b);
+        });
+
+        // 初始状态:已装 · 过期(与背景列表中高亮的 7zip 行一致)
+        applyPreset("installedOutdated");
+        setDialogOpen(true);
+      })();
+    </script>
+  </body>
+</html>

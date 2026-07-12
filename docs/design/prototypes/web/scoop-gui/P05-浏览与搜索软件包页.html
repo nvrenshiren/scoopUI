@@ -1,0 +1,581 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>P05 · 浏览与搜索软件包页 · 设计原型</title>
+<!--
+  scoop-gui · web 端设计系统 v2 原型(docs/design/systems/web.md)
+  页面:P05 浏览与搜索软件包页
+  上游:docs/design/prompts/web/scoop-gui/P05-浏览与搜索软件包页.md
+  真相源核对:src/pages/BrowseView.tsx(表格 5 列、无二次确认、无 binaries 列等均与真实实现对齐)
+  本文件独立自包含,仅用原生 HTML/CSS/JS,不依赖构建工具或外部框架。
+-->
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+  /* ============ 设计系统 §11.1 @theme token(dark 默认,見 §2) ============ */
+  :root {
+    color-scheme: dark;
+    --color-bg: oklch(0.13 0.02 250);
+    --color-bg-elevated: oklch(0.17 0.02 250);
+    --color-bg-overlay: oklch(0.20 0.02 250);
+    --color-fg: oklch(0.96 0.005 250);
+    --color-fg-muted: oklch(0.72 0.01 250);
+    --color-fg-subtle: oklch(0.55 0.01 250);
+    --color-border: oklch(0.30 0.01 250);
+    --color-border-strong: oklch(0.45 0.01 250);
+    --color-primary: oklch(0.72 0.18 145);
+    --color-primary-hover: oklch(0.76 0.18 145);
+    --color-primary-glow: oklch(0.72 0.18 145 / 0.25);
+    --color-primary-glow-soft: oklch(0.72 0.18 145 / 0.10);
+    --color-accent: oklch(0.70 0.16 250);
+    --color-accent-glow: oklch(0.70 0.16 250 / 0.25);
+    --color-accent-soft: oklch(0.70 0.16 250 / 0.10);
+    --color-warning: oklch(0.80 0.16 80);
+    --color-warning-border: oklch(0.80 0.16 80 / 0.30);
+    --color-warning-soft: oklch(0.80 0.16 80 / 0.15);
+    --color-destructive: oklch(0.65 0.22 25);
+    --color-destructive-glow: oklch(0.65 0.22 25 / 0.20);
+
+    --font-heading: 'Space Grotesk', system-ui, sans-serif;
+    --font-body: 'DM Sans', system-ui, sans-serif;
+    --font-mono: 'JetBrains Mono', 'Cascadia Code', Consolas, monospace;
+
+    --radius-sm: 4px;
+    --radius-md: 8px;
+    --radius-lg: 12px;
+    --radius-xl: 16px;
+
+    --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.5), 0 2px 4px -2px rgb(0 0 0 / 0.4);
+    --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.6), 0 4px 6px -4px rgb(0 0 0 / 0.4);
+    --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.7), 0 8px 10px -6px rgb(0 0 0 / 0.5);
+
+    --glow-primary: 0 0 20px var(--color-primary-glow), 0 0 40px var(--color-primary-glow);
+    --ring-primary: 0 0 0 1px var(--color-primary), 0 0 0 4px var(--color-primary-glow);
+  }
+
+  /* 亮色备选(设计系统 §3),点击侧边栏主题切换按钮演示 */
+  html.light {
+    color-scheme: light;
+    --color-bg: oklch(0.99 0.005 250);
+    --color-bg-elevated: oklch(1 0 0);
+    --color-bg-overlay: oklch(0.96 0.005 250);
+    --color-fg: oklch(0.18 0.02 250);
+    --color-fg-muted: oklch(0.45 0.01 250);
+    --color-fg-subtle: oklch(0.60 0.01 250);
+    --color-border: oklch(0.88 0.01 250);
+    --color-border-strong: oklch(0.75 0.01 250);
+    --color-primary: oklch(0.55 0.18 145);
+    --color-primary-hover: oklch(0.50 0.18 145);
+    --color-primary-glow: oklch(0.55 0.18 145 / 0.18);
+    --color-primary-glow-soft: oklch(0.55 0.18 145 / 0.08);
+    --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.08), 0 2px 4px -2px rgb(0 0 0 / 0.06);
+    --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.06);
+    --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.12), 0 8px 10px -6px rgb(0 0 0 / 0.08);
+  }
+
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+  body {
+    background: var(--color-bg);
+    color: var(--color-fg);
+    font-family: var(--font-body);
+    font-size: 14px;
+    line-height: 1.5;
+    min-width: 1024px;
+    min-height: 600px;
+    -webkit-font-smoothing: antialiased;
+  }
+  h1, h2, h3 { font-family: var(--font-heading); line-height: 1.2; margin: 0; }
+  button, input { font-family: inherit; color: inherit; }
+  ::selection { background: var(--color-primary-glow); }
+
+  /* ============ 图标(简单几何 SVG,§8 各处复用) ============ */
+  .icon { width: 16px; height: 16px; stroke: currentColor; stroke-width: 2; fill: none; stroke-linecap: round; stroke-linejoin: round; flex-shrink: 0; }
+  .icon.spin { animation: icon-spin 1s linear infinite; }
+  @keyframes icon-spin { to { transform: rotate(360deg); } }
+
+  /* ============ 科技感叠加(§2.1 / §11.2) ============ */
+  .bg-grid {
+    background-image:
+      linear-gradient(to right, oklch(0.30 0.01 250 / 0.08) 1px, transparent 1px),
+      linear-gradient(to bottom, oklch(0.30 0.01 250 / 0.08) 1px, transparent 1px);
+    background-size: 32px 32px;
+  }
+  html.light .bg-grid {
+    background-image:
+      linear-gradient(to right, oklch(0.18 0.02 250 / 0.05) 1px, transparent 1px),
+      linear-gradient(to bottom, oklch(0.18 0.02 250 / 0.05) 1px, transparent 1px);
+  }
+  .bg-glow-top {
+    position: absolute; inset: 0; pointer-events: none;
+    background: radial-gradient(ellipse 800px 200px at 50% -50%, var(--color-primary-glow), transparent);
+  }
+  .gradient-line { height: 1px; flex-shrink: 0; background: linear-gradient(to right, transparent, var(--color-primary), transparent); }
+
+  /* ============ 整体版面 ============ */
+  .app-shell { display: flex; flex-direction: column; height: 100vh; }
+  .layout { display: flex; flex: 1; min-height: 0; }
+
+  /* ---- Sidebar(§8.7,240px 固定) ---- */
+  .sidebar { width: 240px; flex-shrink: 0; display: flex; flex-direction: column; background: var(--color-bg-elevated); border-right: 1px solid var(--color-border); padding-bottom: 12px; }
+  .sidebar-brand { display: flex; align-items: center; gap: 10px; padding: 16px 16px 14px; }
+  .brand-icon { width: 36px; height: 36px; border-radius: var(--radius-md); border: 1px solid var(--color-primary-glow); background: var(--color-primary-glow-soft); color: var(--color-primary); display: flex; align-items: center; justify-content: center; }
+  .brand-name { font-family: var(--font-heading); font-size: 15px; font-weight: 700; }
+  .brand-version { font-family: var(--font-mono); font-size: 10px; color: var(--color-fg-subtle); }
+
+  .nav { display: flex; flex-direction: column; gap: 2px; padding: 0 12px; }
+  .nav-item { display: flex; align-items: center; gap: 10px; height: 40px; padding: 0 12px; border-radius: var(--radius-md); font-size: 13px; font-weight: 500; color: var(--color-fg-muted); cursor: pointer; border: none; background: transparent; width: 100%; text-align: left; transition: background-color .1s, color .1s; }
+  .nav-item:hover { background: var(--color-bg-overlay); color: var(--color-fg); }
+  .nav-item.active { background: var(--color-primary-glow-soft); color: var(--color-primary); box-shadow: inset 2px 0 0 var(--color-primary); }
+  .nav-item .label { flex: 1; }
+  .nav-badge { display: inline-flex; align-items: center; gap: 4px; height: 18px; padding: 0 6px; border-radius: var(--radius-sm); font-size: 11px; font-weight: 500; border: 1px solid; }
+  .nav-badge.warning { border-color: var(--color-warning-border); background: var(--color-warning-soft); color: var(--color-warning); }
+  .nav-badge.info { border-color: var(--color-accent-glow); background: var(--color-accent-soft); color: var(--color-accent); }
+  .nav-badge .icon { width: 10px; height: 10px; }
+
+  .sidebar-spacer { flex: 1; }
+  .sidebar-footer { padding: 10px 12px 0; margin: 8px 12px 0; border-top: 1px solid var(--color-border); }
+  .theme-toggle { display: flex; gap: 4px; padding: 4px; margin-top: 8px; background: var(--color-bg-overlay); border: 1px solid var(--color-border); border-radius: var(--radius-md); }
+  .theme-btn { flex: 1; height: 28px; border: none; border-radius: calc(var(--radius-md) - 2px); background: transparent; color: var(--color-fg-subtle); cursor: pointer; display: flex; align-items: center; justify-content: center; }
+  .theme-btn.active { background: var(--color-bg-elevated); color: var(--color-primary); box-shadow: var(--shadow-md); }
+
+  /* ---- 主区 ---- */
+  .content { flex: 1; min-width: 0; display: flex; flex-direction: column; overflow: hidden; }
+
+  .page-header { position: relative; padding: 24px 28px 16px; flex-shrink: 0; }
+  .page-header-row { position: relative; display: flex; align-items: center; gap: 8px; }
+  .page-title { font-size: 24px; font-weight: 600; }
+  .page-desc { margin: 4px 0 0; font-size: 13px; color: var(--color-fg-muted); }
+
+  .content-body { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 12px; padding: 0 28px 24px; }
+
+  /* ---- 原型专用状态切换器(非生产 UI,见文末说明) ---- */
+  .proto-switcher { flex-shrink: 0; display: flex; align-items: center; flex-wrap: wrap; gap: 8px; padding: 8px 12px; border: 1px dashed var(--color-border-strong); border-radius: var(--radius-md); font-size: 12px; color: var(--color-fg-subtle); }
+  .proto-switcher .label { font-weight: 500; color: var(--color-fg-muted); }
+  .proto-btn { height: 24px; padding: 0 10px; border-radius: 999px; border: 1px solid var(--color-border); background: transparent; color: var(--color-fg-muted); font-size: 12px; cursor: pointer; }
+  .proto-btn.active { background: var(--color-primary-glow-soft); border-color: var(--color-primary-glow); color: var(--color-primary); }
+
+  /* ---- 搜索框(§8.3 Input,見設計提示詞第 4 節) ---- */
+  .search-row { position: relative; flex-shrink: 0; }
+  .search-row .icon { position: absolute; left: 12px; top: 12px; color: var(--color-fg-subtle); }
+  .input { width: 100%; height: 40px; border-radius: var(--radius-md); border: 1px solid var(--color-border); background: var(--color-bg-overlay); color: var(--color-fg); padding: 0 12px 0 36px; font-size: 14px; outline: none; transition: border-color .1s, box-shadow .1s; }
+  .input::placeholder { color: var(--color-fg-subtle); }
+  .input:focus { border-color: var(--color-primary); box-shadow: var(--ring-primary); }
+
+  /* ---- 按钮(§8.1) ---- */
+  .btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; height: 40px; padding: 0 16px; border-radius: var(--radius-md); font-size: 14px; font-weight: 500; border: none; cursor: pointer; white-space: nowrap; transition: filter .1s, background-color .1s, box-shadow .1s, border-color .1s; }
+  .btn:active:not(:disabled) { transform: scale(0.98); filter: brightness(0.9); }
+  .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+  .btn-primary { background: var(--color-primary); color: #06130a; box-shadow: 0 0 12px var(--color-primary-glow); }
+  .btn-primary:hover:not(:disabled) { background: var(--color-primary-hover); box-shadow: var(--glow-primary); }
+  .btn-outline { background: transparent; border: 1px solid var(--color-border); color: var(--color-fg); }
+  .btn-outline:hover:not(:disabled) { background: var(--color-bg-overlay); }
+  .btn-secondary { background: var(--color-bg-overlay); border: 1px solid var(--color-border); color: var(--color-fg); }
+  .btn-secondary:hover:not(:disabled) { border-color: var(--color-border-strong); }
+  .btn-sm { height: 32px; padding: 0 12px; font-size: 13px; border-radius: var(--radius-md); }
+
+  /* ---- 表格(§8.6) ---- */
+  .table-wrap { flex: 1; min-height: 0; overflow-y: auto; overflow-x: hidden; border: 1px solid var(--color-border); border-radius: var(--radius-lg); background: var(--color-bg-elevated); }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  thead th { position: sticky; top: 0; z-index: 1; height: 40px; background: var(--color-bg-elevated); padding: 0 12px; text-align: left; font-weight: 500; color: var(--color-fg-muted); white-space: nowrap; border-bottom: 1px solid var(--color-border); }
+  tbody tr { border-bottom: 1px solid var(--color-border); cursor: pointer; transition: background-color .1s; }
+  tbody tr:last-child { border-bottom: none; }
+  tbody tr:hover { background: var(--color-bg-overlay); }
+  tbody tr:focus-visible { outline: none; box-shadow: inset 0 0 0 2px var(--color-primary); }
+  td { height: 40px; padding: 0 12px; max-width: 360px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; vertical-align: middle; }
+  .text-right { text-align: right; }
+  .cell-name { font-family: var(--font-mono); font-weight: 500; }
+  .cell-version { font-family: var(--font-mono); color: var(--color-fg-muted); }
+  .cell-source { color: var(--color-fg-muted); cursor: help; }
+
+  /* ---- Badge(§8.9) ---- */
+  .badge { display: inline-flex; align-items: center; gap: 4px; height: 20px; padding: 0 8px; border-radius: var(--radius-sm); border: 1px solid; font-size: 12px; font-weight: 500; white-space: nowrap; }
+  .badge .icon { width: 11px; height: 11px; }
+  .badge-success { border-color: var(--color-primary-glow); background: var(--color-primary-glow-soft); color: var(--color-primary); }
+  .badge-info { border-color: var(--color-accent-glow); background: var(--color-accent-soft); color: var(--color-accent); }
+  .badge-warning { border-color: var(--color-warning-border); background: var(--color-warning-soft); color: var(--color-warning); }
+
+  .footer-note { flex-shrink: 0; font-size: 12px; color: var(--color-fg-subtle); }
+
+  /* ---- 空态 / 加载 / 错误(P10 子状态,見設計提示詞第 7-8 節) ---- */
+  .state-block { display: none; flex-direction: column; align-items: center; justify-content: center; gap: 12px; flex: 1; min-height: 0; padding: 48px 24px; text-align: center; color: var(--color-fg-muted); }
+  .empty-icon-box { width: 56px; height: 56px; border-radius: var(--radius-lg); border: 1px solid var(--color-border); background: var(--color-bg-overlay); color: var(--color-fg-subtle); display: flex; align-items: center; justify-content: center; margin-bottom: 4px; }
+  .empty-icon-box .icon { width: 28px; height: 28px; }
+  .empty-icon-box.error { border-color: var(--color-warning-border); background: var(--color-warning-soft); color: var(--color-warning); }
+  .state-title { font-size: 15px; font-weight: 500; color: var(--color-fg); }
+  .state-hint { max-width: 480px; font-size: 13px; color: var(--color-fg-muted); }
+  .loading-icon { width: 32px; height: 32px; color: var(--color-primary); }
+
+  #normalBlock { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 12px; }
+</style>
+</head>
+<body>
+
+<!-- ============ 图标符号表(几何简化图形,非任何第三方图标库的精确拷贝) ============ -->
+<svg style="position:absolute;width:0;height:0;overflow:hidden" aria-hidden="true">
+  <symbol id="icon-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></symbol>
+  <symbol id="icon-refresh" viewBox="0 0 24 24"><path d="M3 12a9 9 0 0 1 15.5-6.3L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-15.5 6.3L3 16"/><path d="M3 21v-5h5"/></symbol>
+  <symbol id="icon-download" viewBox="0 0 24 24"><path d="M12 3v12"/><path d="M7 10l5 5 5-5"/><path d="M5 21h14"/></symbol>
+  <symbol id="icon-check" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></symbol>
+  <symbol id="icon-spinner" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" opacity="0.25"/><path d="M21 12a9 9 0 0 0-9-9"/></symbol>
+  <symbol id="icon-alert" viewBox="0 0 24 24"><path d="M12 3l10 18H2z"/><line x1="12" y1="9" x2="12" y2="14"/><line x1="12" y1="17.3" x2="12" y2="17.5"/></symbol>
+  <symbol id="icon-package" viewBox="0 0 24 24"><path d="M21 8l-9-5-9 5 9 5 9-5z"/><path d="M3 8v8l9 5 9-5V8"/><path d="M12 13v8"/></symbol>
+  <symbol id="icon-terminal" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 9l3 3-3 3"/><line x1="12" y1="15" x2="17" y2="15"/></symbol>
+  <symbol id="icon-list" viewBox="0 0 24 24"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></symbol>
+  <symbol id="icon-layers" viewBox="0 0 24 24"><path d="M12 3l9 5-9 5-9-5 9-5z"/><path d="M3 13l9 5 9-5"/></symbol>
+  <symbol id="icon-sliders" viewBox="0 0 24 24"><line x1="4" y1="6" x2="20" y2="6"/><circle cx="9" cy="6" r="2"/><line x1="4" y1="12" x2="20" y2="12"/><circle cx="15" cy="12" r="2"/><line x1="4" y1="18" x2="20" y2="18"/><circle cx="7" cy="18" r="2"/></symbol>
+  <symbol id="icon-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><line x1="12" y1="2" x2="12" y2="4"/><line x1="12" y1="20" x2="12" y2="22"/><line x1="4.2" y1="4.2" x2="5.6" y2="5.6"/><line x1="18.4" y1="18.4" x2="19.8" y2="19.8"/><line x1="2" y1="12" x2="4" y2="12"/><line x1="20" y1="12" x2="22" y2="12"/><line x1="4.2" y1="19.8" x2="5.6" y2="18.4"/><line x1="18.4" y1="5.6" x2="19.8" y2="4.2"/></symbol>
+  <symbol id="icon-moon" viewBox="0 0 24 24"><path d="M20 12.8A8.5 8.5 0 1 1 11.2 4a6.8 6.8 0 0 0 8.8 8.8z"/></symbol>
+  <symbol id="icon-monitor" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="13" rx="1.5"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></symbol>
+</svg>
+
+<div class="app-shell">
+  <div class="gradient-line"></div>
+  <div class="layout">
+
+    <!-- ============ Sidebar(§8.7 / §10.1,240px 固定) ============ -->
+    <aside class="sidebar">
+      <div class="sidebar-brand">
+        <div class="brand-icon"><svg class="icon" style="width:18px;height:18px"><use href="#icon-terminal"></use></svg></div>
+        <div>
+          <div class="brand-name">Scoop GUI</div>
+          <div class="brand-version">v0.5.3 (mock)</div>
+        </div>
+      </div>
+
+      <nav class="nav">
+        <button type="button" class="nav-item">
+          <svg class="icon"><use href="#icon-package"></use></svg>
+          <span class="label">已装软件</span>
+          <span class="nav-badge warning">2</span>
+        </button>
+        <button type="button" class="nav-item active" aria-current="page">
+          <svg class="icon"><use href="#icon-search"></use></svg>
+          <span class="label">浏览软件包</span>
+        </button>
+        <button type="button" class="nav-item">
+          <svg class="icon"><use href="#icon-layers"></use></svg>
+          <span class="label">桶管理</span>
+        </button>
+        <button type="button" class="nav-item">
+          <svg class="icon"><use href="#icon-sliders"></use></svg>
+          <span class="label">设置</span>
+        </button>
+      </nav>
+
+      <div class="sidebar-spacer"></div>
+
+      <div style="padding:0 12px">
+        <button type="button" class="nav-item">
+          <svg class="icon"><use href="#icon-list"></use></svg>
+          <span class="label">任务</span>
+          <span class="nav-badge info"><svg class="icon spin"><use href="#icon-spinner"></use></svg>1</span>
+        </button>
+      </div>
+
+      <div class="sidebar-footer">
+        <div style="font-size:11px;color:var(--color-fg-subtle)">主题</div>
+        <div class="theme-toggle" role="group" aria-label="主题切换">
+          <button type="button" class="theme-btn active" data-theme="dark" aria-label="暗色" title="暗色"><svg class="icon"><use href="#icon-moon"></use></svg></button>
+          <button type="button" class="theme-btn" data-theme="light" aria-label="亮色" title="亮色"><svg class="icon"><use href="#icon-sun"></use></svg></button>
+          <button type="button" class="theme-btn" data-theme="system" aria-label="跟随系统" title="跟随系统"><svg class="icon"><use href="#icon-monitor"></use></svg></button>
+        </div>
+      </div>
+    </aside>
+
+    <!-- ============ 主区:P05 内容 ============ -->
+    <main class="content">
+
+      <!-- PageHeader:§10.2 骨架第 1 段,叠加 .bg-grid + .bg-glow-top -->
+      <header class="page-header bg-grid">
+        <div class="bg-glow-top"></div>
+        <div class="page-header-row">
+          <div style="min-width:0;flex:1">
+            <h1 class="page-title">浏览软件包</h1>
+            <p class="page-desc">已添加桶中的可安装软件包;数据来源于本机 Scoop,不联网发现新软件源。</p>
+          </div>
+          <button type="button" class="btn btn-outline" id="refreshBtn">
+            <svg class="icon"><use href="#icon-refresh"></use></svg>
+            刷新
+          </button>
+        </div>
+      </header>
+
+      <div class="content-body">
+
+        <!-- 原型专用:状态切换器,便于一个文件内查看全部数据态,非生产 UI -->
+        <div class="proto-switcher">
+          <span class="label">原型状态预览(非生产 UI):</span>
+          <button type="button" class="proto-btn active" data-state="normal">正常</button>
+          <button type="button" class="proto-btn" data-state="loading">加载中</button>
+          <button type="button" class="proto-btn" data-state="empty">搜索无结果</button>
+          <button type="button" class="proto-btn" data-state="error">读取失败</button>
+        </div>
+
+        <!-- SubToolbar:搜索框,任何数据态下都常驻渲染(设计提示词第 4 节) -->
+        <div class="search-row">
+          <svg class="icon"><use href="#icon-search"></use></svg>
+          <input type="text" class="input" id="searchInput" placeholder="按名称搜索软件包…" autocomplete="off" />
+        </div>
+
+        <!-- 正常态:表格 + Footer 统计 -->
+        <div id="normalBlock">
+          <div class="table-wrap" id="tableWrap">
+            <table id="resultsTable">
+              <thead>
+                <tr>
+                  <th>名称</th>
+                  <th>版本</th>
+                  <th>来源桶</th>
+                  <th>状态</th>
+                  <th class="text-right">操作</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr data-name="7zip" tabindex="0">
+                  <td class="cell-name">7zip</td>
+                  <td class="cell-version">26.02</td>
+                  <td class="cell-source" title="main">main</td>
+                  <td class="status-cell"><span class="badge badge-success"><svg class="icon"><use href="#icon-check"></use></svg>已安装</span></td>
+                  <td class="text-right actions-cell"></td>
+                </tr>
+                <tr data-name="git" tabindex="0">
+                  <td class="cell-name">git</td>
+                  <td class="cell-version">2.49.0</td>
+                  <td class="cell-source" title="main">main</td>
+                  <td class="status-cell"><span class="badge badge-success"><svg class="icon"><use href="#icon-check"></use></svg>已安装</span></td>
+                  <td class="text-right actions-cell"></td>
+                </tr>
+                <tr data-name="yazi" tabindex="0">
+                  <td class="cell-name">yazi</td>
+                  <td class="cell-version">26.5.6</td>
+                  <td class="cell-source" title="main">main</td>
+                  <td class="status-cell"><span class="badge badge-success"><svg class="icon"><use href="#icon-check"></use></svg>已安装</span></td>
+                  <td class="text-right actions-cell"></td>
+                </tr>
+                <tr data-name="ripgrep" tabindex="0">
+                  <td class="cell-name">ripgrep</td>
+                  <td class="cell-version">14.1.1</td>
+                  <td class="cell-source" title="D:\Scoop\user\buckets\main\bucket\ripgrep.json">main</td>
+                  <td class="status-cell"></td>
+                  <td class="text-right actions-cell">
+                    <button type="button" class="btn btn-primary btn-sm install-btn">
+                      <svg class="icon"><use href="#icon-download"></use></svg>安装
+                    </button>
+                  </td>
+                </tr>
+                <tr data-name="fd" tabindex="0">
+                  <td class="cell-name">fd</td>
+                  <td class="cell-version">10.2.0</td>
+                  <td class="cell-source" title="main">main</td>
+                  <td class="status-cell"></td>
+                  <td class="text-right actions-cell">
+                    <button type="button" class="btn btn-primary btn-sm install-btn">
+                      <svg class="icon"><use href="#icon-download"></use></svg>安装
+                    </button>
+                  </td>
+                </tr>
+                <tr data-name="bat" tabindex="0">
+                  <td class="cell-name">bat</td>
+                  <td class="cell-version">0.25.0</td>
+                  <td class="cell-source" title="main">main</td>
+                  <td class="status-cell"><span class="badge badge-info"><svg class="icon spin"><use href="#icon-spinner"></use></svg>安装</span></td>
+                  <td class="text-right actions-cell">
+                    <button type="button" class="btn btn-primary btn-sm install-btn" disabled>
+                      <svg class="icon"><use href="#icon-download"></use></svg>安装
+                    </button>
+                  </td>
+                </tr>
+                <tr data-name="vscode" tabindex="0">
+                  <td class="cell-name">vscode</td>
+                  <td class="cell-version">1.101.0</td>
+                  <td class="cell-source" title="extras">extras</td>
+                  <td class="status-cell"></td>
+                  <td class="text-right actions-cell">
+                    <button type="button" class="btn btn-primary btn-sm install-btn">
+                      <svg class="icon"><use href="#icon-download"></use></svg>安装
+                    </button>
+                  </td>
+                </tr>
+                <tr data-name="obsidian" tabindex="0">
+                  <td class="cell-name">obsidian</td>
+                  <td class="cell-version">1.8.4</td>
+                  <td class="cell-source" title="extras">extras</td>
+                  <td class="status-cell"></td>
+                  <td class="text-right actions-cell">
+                    <button type="button" class="btn btn-primary btn-sm install-btn">
+                      <svg class="icon"><use href="#icon-download"></use></svg>安装
+                    </button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="footer-note" id="footerNote">显示 8 / 8 条</div>
+        </div>
+
+        <!-- 加载态 -->
+        <div class="state-block" id="loadingBlock">
+          <svg class="icon loading-icon spin"><use href="#icon-spinner"></use></svg>
+          <div class="state-hint">正在读取全部可装软件包(首次较慢,取决于桶大小)…</div>
+        </div>
+
+        <!-- 空态(搜索无匹配 / 可装范围为空,共用同一视觉容器) -->
+        <div class="state-block" id="emptyBlock">
+          <div class="empty-icon-box"><svg class="icon"><use href="#icon-package"></use></svg></div>
+          <div class="state-title">没有匹配的软件包</div>
+          <div class="state-hint">换个关键字,或到"桶管理"添加更多桶</div>
+        </div>
+
+        <!-- 错误态 -->
+        <div class="state-block" id="errorBlock">
+          <div class="empty-icon-box error"><svg class="icon"><use href="#icon-alert"></use></svg></div>
+          <div class="state-title">可装软件包列表读取失败</div>
+          <div class="state-hint">本机 Scoop 当前不可用,相关数据无法读取。请检查 scoop 命令是否正常后刷新重试。</div>
+          <button type="button" class="btn btn-secondary" id="retryBtn">
+            <svg class="icon"><use href="#icon-refresh"></use></svg>刷新
+          </button>
+        </div>
+
+      </div>
+    </main>
+  </div>
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  /* ---------- 原型状态切换(正常 / 加载中 / 搜索无结果 / 读取失败) ---------- */
+  var switcher = document.querySelector('.proto-switcher');
+  var blocks = {
+    normal: document.getElementById('normalBlock'),
+    loading: document.getElementById('loadingBlock'),
+    empty: document.getElementById('emptyBlock'),
+    error: document.getElementById('errorBlock')
+  };
+
+  function setState(state) {
+    Object.keys(blocks).forEach(function (key) {
+      blocks[key].style.display = key === state ? 'flex' : 'none';
+    });
+    switcher.querySelectorAll('.proto-btn').forEach(function (b) {
+      b.classList.toggle('active', b.getAttribute('data-state') === state);
+    });
+  }
+  switcher.querySelectorAll('.proto-btn').forEach(function (btn) {
+    btn.addEventListener('click', function () { setState(btn.getAttribute('data-state')); });
+  });
+  setState('normal');
+
+  document.getElementById('retryBtn').addEventListener('click', function () { setState('normal'); });
+
+  /* ---------- 搜索:纯前端对已加载数据即时过滤(与 BrowseView.tsx 行为一致,无防抖、无新增请求) ---------- */
+  var searchInput = document.getElementById('searchInput');
+  var rows = Array.prototype.slice.call(document.querySelectorAll('#resultsTable tbody tr'));
+  var tableWrap = document.getElementById('tableWrap');
+  var footerNote = document.getElementById('footerNote');
+
+  function applyFilter() {
+    // 仅在"正常"演示态下联动过滤,其余演示态(加载中/空/错误)由状态切换器直接接管展示
+    if (blocks.normal.style.display === 'none') return;
+    var q = searchInput.value.trim().toLowerCase();
+    var shown = 0;
+    rows.forEach(function (row) {
+      var match = !q || row.getAttribute('data-name').toLowerCase().indexOf(q) !== -1;
+      row.style.display = match ? '' : 'none';
+      if (match) shown++;
+    });
+    if (shown === 0) {
+      // 与真实实现一致:搜索无结果时替换为空状态,搜索框本身保持可见可编辑
+      setState('empty');
+    } else {
+      tableWrap.style.display = '';
+      footerNote.style.display = '';
+      footerNote.textContent = '显示 ' + shown + ' / ' + shown + ' 条';
+    }
+  }
+  searchInput.addEventListener('input', function () {
+    // 从空态因继续编辑关键字而重新出现匹配项时,先切回 normal 容器再计算
+    if (blocks.normal.style.display === 'none' && blocks.empty.style.display !== 'none') {
+      setState('normal');
+    }
+    applyFilter();
+  });
+
+  /* ---------- Ctrl+K 预留:聚焦搜索框(设计系统 §9) ---------- */
+  document.addEventListener('keydown', function (e) {
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+      e.preventDefault();
+      searchInput.focus();
+    }
+  });
+
+  /* ---------- 刷新按钮:短暂 loading 态演示 ---------- */
+  var refreshBtn = document.getElementById('refreshBtn');
+  refreshBtn.addEventListener('click', function () {
+    if (refreshBtn.disabled) return;
+    var icon = refreshBtn.querySelector('.icon');
+    refreshBtn.disabled = true;
+    icon.querySelector('use').setAttribute('href', '#icon-spinner');
+    icon.classList.add('spin');
+    setTimeout(function () {
+      refreshBtn.disabled = false;
+      icon.querySelector('use').setAttribute('href', '#icon-refresh');
+      icon.classList.remove('spin');
+    }, 900);
+  });
+
+  /* ---------- 安装按钮:简化演示"可装未装 → 安装中 → 已装(最新版)"行内转换
+     真实进度由 P08 任务面板承载,此处只做单行状态演示,不代表完整实现。 ---------- */
+  document.querySelectorAll('.install-btn').forEach(function (btn) {
+    if (btn.disabled) return;
+    btn.addEventListener('click', function (e) {
+      e.stopPropagation();
+      var row = btn.closest('tr');
+      var statusCell = row.querySelector('.status-cell');
+      var actionsCell = row.querySelector('.actions-cell');
+      btn.disabled = true;
+      statusCell.innerHTML = '<span class="badge badge-info"><svg class="icon spin"><use href="#icon-spinner"></use></svg>安装</span>';
+      setTimeout(function () {
+        statusCell.innerHTML = '<span class="badge badge-success"><svg class="icon"><use href="#icon-check"></use></svg>已安装</span>';
+        actionsCell.innerHTML = '';
+      }, 1500);
+    });
+  });
+
+  /* ---------- 行点击:概念上进入 P07 详情对话框(不在本原型范围内,仅登记不实现) ---------- */
+  rows.forEach(function (row) {
+    row.addEventListener('click', function () {
+      // 真实实现见 src/components/DetailDialog.tsx(P07),本原型不复刻该对话框。
+    });
+    row.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        row.click();
+      }
+    });
+  });
+
+  /* ---------- 主题切换(暗 / 亮 / 跟随系统,设计系统 §9) ---------- */
+  document.querySelectorAll('.theme-btn').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      document.querySelectorAll('.theme-btn').forEach(function (b) { b.classList.remove('active'); });
+      btn.classList.add('active');
+      var theme = btn.getAttribute('data-theme');
+      if (theme === 'light') {
+        document.documentElement.classList.add('light');
+      } else if (theme === 'dark') {
+        document.documentElement.classList.remove('light');
+      } else {
+        var prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+        document.documentElement.classList.toggle('light', !prefersDark);
+      }
+    });
+  });
+})();
+</script>
+</body>
+</html>

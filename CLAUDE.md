@@ -7,7 +7,9 @@ Windows 桌面应用:Scoop 包管理器的图形化前端。**Rust(Tauri 2)+ Rea
 - `docs/prd/project.md` — 项目范围与硬约束(软件源唯一性 / 单实例 / 仅中英双语 / 安装参数集边界)
 - `docs/prd/flows/scoop-gui.md` — **全部实体状态机的唯一真相源**(App / Scoop 自身 / Bucket / InstallJob / UI Language / Boot Sequence);任何状态流转改动先改这里
 - `docs/prd/modules/scoop-gui.md` — 功能清单 F01~F19、页面清单 P01~P10、每个功能对应的 scoop CLI 命令
-- `docs/design/systems/electron.md` — 设计系统 v2(暗色默认、run-green、字体、组件形态硬约束);文件名带 electron 是历史原因,实际交付为 Tauri
+- `docs/design/systems/web.md` — 设计系统 v2(暗色默认、run-green、字体、组件形态硬约束)
+- `ARCHITECTURE.md` — 技术基线(架构决策 ARCH01~10);`docs/architecture/database/scoop-gui.md` — 本机持久化结构;`docs/architecture/api/scoop-gui.md` — 14 条 Tauri IPC 命令契约
+- `docs/acceptance/web/scoop-gui/P01~P10.md` — 每页 QA 验收标准(含与实际实现的已知偏差记录)
 
 ## 常用命令
 
@@ -56,3 +58,18 @@ cd src-tauri && cargo test   # 解析器/安装脚本单测(基于真实 scoop 0
 ## 状态
 
 MVP 阶段一(F01~F19)已实现并通过:cargo test 9/9、tsc、真机端到端(67 个已装包/35 过期真实渲染、单实例、语言切换)。未做(PRD 明确排除):自动更新计划、备份还原、托盘通知、scoop config 编辑、shims 管理。
+
+## opcflow 工作流集成
+
+项目已接入 opcflow(`workbench.config.json`,`endpoints: [rust, web]`,`.workbench/` 为本地任务库,已 gitignore)。全部契约文档(project/roles/glossary/flow/module-prd/page-prd×10/design-system/db-doc/api-doc/acceptance×10)与 code 目录已 `scan` 登记 + `submit` 送审,等待人工在 `opcflow serve` 或 CLI 里 approve;10 个页面原型待 👍(design-system 升级到 v2 后原有原型已重做)。改契约文档后记得 `opcflow scan` 重新登记。
+
+**倒填流程(补齐既有实现的验收/架构文档)时发现的真实实现缺口**(非文档问题,已记录进对应页面的 acceptance 文档,尚未修复):
+
+- P01:协助安装表单提交前**无任何校验**(路径格式/代理冲突/凭据不全均直接进入安装,失败后才提示)。
+- P01/P08:F16(协助安装 Scoop)的进度**不经过 P08 任务面板**,`store.ts` 的 `startInstallScoop()` 从不设置 `jobsPanelOpen`,进度条是 BootView 自绘的另一套 UI。
+- P04:单包更新按钮**无二次确认**(卸载与批量更新都有);"已装列表为空"与"过滤后零匹配"复用同一句文案,具误导性。
+- P05/P07:表格行只有 `onClick`,无 `tabIndex`/键盘可达性,纯键盘用户无法从列表进入详情。
+- P06:已知桶清单读取失败会被"已添加桶"读取失败一起吞掉(共用同一个 `Promise.all`),不存在独立的"仅已知桶清单出错"呈现。
+- 多处 i18n 死键(`lang.title/subtitle/zh/en`、`installed.noOutdated`、`common.retry`)定义了但从未被引用。
+
+修复这些之前先跟产品/设计确认优先级,不要在改别的功能时顺手"顺便"改掉。

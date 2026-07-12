@@ -1,0 +1,1499 @@
+<!doctype html>
+<!--
+  P06 · 桶管理页 · HTML 设计原型(独立自包含,不依赖构建工具)
+
+  设计系统:docs/design/systems/web.md(v2 · 暗色默认 · run-green 主色 · 高级感/科技感)
+  页面 PRD :docs/prd/pages/web/scoop-gui/P06-桶管理页.md
+  设计提示词:docs/design/prompts/web/scoop-gui/P06-桶管理页.md
+  结构真相源:src/pages/BucketsView.tsx(双 Tab:已添加 / 已知桶清单)、src/App.tsx(Shell 侧边栏)、
+             src/components/ui/{tabs,table,badge,button,dialog,input,label}.tsx、
+             src/components/{ConfirmDialog,EmptyState}.tsx、src/i18n.ts、src/store.ts
+
+  页面顶部的"原型演示控制"条不是产品界面的一部分,仅用于在同一份文件里演示
+  正常数据 / 已添加为空 / 已知为空 / 读取失败 四种真实存在的数据状态,以及中/英文案切换。
+-->
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>P06 · 桶管理页 · Scoop GUI 设计原型</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link
+  href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap"
+  rel="stylesheet"
+/>
+<style>
+  /* ============================================================
+     设计 token(与 src/index.css 一一对应的暗色变量,§11.1 的实际落地值)
+     ============================================================ */
+  :root {
+    --background: #0b1220;
+    --foreground: #f5f7fa;
+    --card: #111827;
+    --card-foreground: #f5f7fa;
+    --primary: #22c55e;
+    --primary-hover: #34d672;
+    --primary-foreground: #06130a;
+    --secondary: #1a2332;
+    --secondary-foreground: #f5f7fa;
+    --muted-foreground: #a1aab8;
+    --destructive: #ef4444;
+    --border: #374151;
+    --input: #374151;
+    --ring: #22c55e;
+
+    --subtle: #6b7280;
+    --border-strong: #5b6678;
+    --info: #60a5fa;
+    --warning: #f59e0b;
+    --primary-glow: rgba(34, 197, 94, 0.25);
+    --primary-glow-soft: rgba(34, 197, 94, 0.1);
+    --destructive-glow: rgba(239, 68, 68, 0.2);
+    --warning-soft: rgba(245, 158, 11, 0.05);
+    --warning-15: rgba(245, 158, 11, 0.15);
+    --surface-glass: rgba(26, 35, 50, 0.6);
+
+    --radius-sm: 4px;
+    --radius-md: 8px;
+    --radius-lg: 12px;
+    --radius-xl: 16px;
+
+    --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.5), 0 2px 4px -2px rgb(0 0 0 / 0.4);
+    --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.6), 0 4px 6px -4px rgb(0 0 0 / 0.4);
+    --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.7), 0 8px 10px -6px rgb(0 0 0 / 0.5);
+
+    --font-heading: "Space Grotesk", system-ui, sans-serif;
+    --font-body: "DM Sans", "Microsoft YaHei UI", system-ui, sans-serif;
+    --font-mono: "JetBrains Mono", "Cascadia Code", Consolas, monospace;
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+  html,
+  body {
+    height: 100%;
+    margin: 0;
+  }
+  body {
+    background: var(--background);
+    color: var(--foreground);
+    font-family: var(--font-body);
+    font-size: 14px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+    user-select: none;
+    overflow: auto;
+  }
+  h1,
+  h2,
+  h3 {
+    font-family: var(--font-heading);
+    line-height: 1.2;
+    margin: 0;
+  }
+  p {
+    margin: 0;
+  }
+  button {
+    font-family: inherit;
+    color: inherit;
+  }
+  ::selection {
+    background: var(--primary-glow);
+  }
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: var(--border);
+    border-radius: 5px;
+    border: 2px solid transparent;
+    background-clip: content-box;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--border-strong);
+    background-clip: content-box;
+  }
+
+  /* ============================================================
+     图标(简化还原 lucide 风格线性图标,stroke 继承 currentColor)
+     ============================================================ */
+  .icon {
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    flex-shrink: 0;
+    display: inline-block;
+    vertical-align: middle;
+  }
+  .spin {
+    animation: spin 0.8s linear infinite;
+    transform-origin: 50% 50%;
+  }
+  @keyframes spin {
+    to {
+      transform: rotate(360deg);
+    }
+  }
+
+  /* ============================================================
+     整体外壳(§10.1 主界面壳)
+     ============================================================ */
+  .app-shell {
+    display: flex;
+    height: 100vh;
+    min-width: 1024px;
+    min-height: 600px;
+    overflow: hidden;
+  }
+
+  /* ---------------- Sidebar(§8.7,240px 固定) */
+  .sidebar {
+    width: 240px;
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    border-right: 1px solid var(--border);
+    background: var(--card);
+    padding-bottom: 12px;
+  }
+  .gradient-line {
+    height: 1px;
+    flex-shrink: 0;
+    background: linear-gradient(to right, transparent, var(--primary), transparent);
+  }
+  .brand {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 16px 16px 14px;
+  }
+  .brand-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--primary-glow);
+    background: var(--primary-glow-soft);
+    color: var(--primary);
+  }
+  .brand-text {
+    min-width: 0;
+  }
+  .brand-name {
+    font-family: var(--font-heading);
+    font-size: 15px;
+    font-weight: 700;
+  }
+  .brand-version {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    color: var(--subtle);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 160px;
+  }
+  .nav {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 0 12px;
+  }
+  .nav-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    height: 40px;
+    padding: 0 12px;
+    border-radius: var(--radius-md);
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--muted-foreground);
+    background: transparent;
+    border: none;
+    width: 100%;
+    text-align: left;
+    cursor: pointer;
+    transition: background-color 0.1s, color 0.1s;
+  }
+  .nav-item:hover {
+    background: var(--secondary);
+    color: var(--foreground);
+  }
+  .nav-item.active {
+    background: var(--primary-glow-soft);
+    color: var(--primary);
+    box-shadow: inset 2px 0 0 var(--primary);
+  }
+  .nav-label {
+    flex: 1;
+    text-align: left;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .nav-spacer {
+    flex: 1;
+  }
+
+  /* ---------------- 主内容区 */
+  .content {
+    flex: 1;
+    min-width: 0;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .page-header {
+    position: relative;
+    padding: 24px 28px 16px;
+    flex-shrink: 0;
+  }
+  .page-header-bg {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background-image: radial-gradient(ellipse 800px 200px at 50% -50%, var(--primary-glow), transparent),
+      linear-gradient(to right, rgba(55, 65, 81, 0.25) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(55, 65, 81, 0.25) 1px, transparent 1px);
+    background-size:
+      auto,
+      32px 32px,
+      32px 32px;
+  }
+  .page-header-row {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .page-header-text {
+    min-width: 0;
+    flex: 1;
+  }
+  .page-title {
+    font-size: 24px;
+    font-weight: 600;
+  }
+  .page-desc {
+    margin-top: 4px;
+    font-size: 13px;
+    color: var(--muted-foreground);
+  }
+
+  /* ---------------- 原型演示控制条(非产品界面) */
+  .demo-bar {
+    margin: 0 28px 4px;
+    padding: 8px 12px;
+    border: 1px dashed var(--border-strong);
+    border-radius: var(--radius-md);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    font-size: 12px;
+    color: var(--subtle);
+    flex-shrink: 0;
+  }
+  .demo-bar-label {
+    font-weight: 600;
+    color: var(--muted-foreground);
+    white-space: nowrap;
+  }
+  .demo-seg {
+    display: flex;
+    gap: 4px;
+    flex-wrap: wrap;
+  }
+  .demo-btn {
+    height: 26px;
+    padding: 0 10px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--muted-foreground);
+    font-size: 12px;
+    cursor: pointer;
+  }
+  .demo-btn:hover {
+    border-color: var(--border-strong);
+    color: var(--foreground);
+  }
+  .demo-btn.active {
+    background: var(--primary-glow-soft);
+    border-color: var(--primary-glow);
+    color: var(--primary);
+  }
+  .demo-bar-sep {
+    width: 1px;
+    align-self: stretch;
+    background: var(--border);
+  }
+
+  /* ---------------- 内容主体 */
+  .content-body {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 8px 28px 24px;
+  }
+
+  /* Tabs(§8.8) */
+  .tabs-root {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .tabs-list {
+    display: flex;
+    gap: 4px;
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+  .tab-trigger {
+    height: 40px;
+    padding: 0 16px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--muted-foreground);
+    background: transparent;
+    border: none;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -1px;
+    cursor: pointer;
+    transition: color 0.1s, border-color 0.1s;
+  }
+  .tab-trigger:hover {
+    color: var(--foreground);
+  }
+  .tab-trigger.active {
+    color: var(--primary);
+    border-bottom-color: var(--primary);
+    box-shadow: 0 1px 8px var(--primary-glow);
+  }
+  .tab-count {
+    color: var(--muted-foreground);
+  }
+  .tab-panel {
+    display: none;
+    flex: 1;
+    min-height: 0;
+    flex-direction: column;
+  }
+  .tab-panel.active {
+    display: flex;
+  }
+
+  /* Table(§8.6) */
+  .table-wrap {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    background: var(--card);
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+  }
+  thead th {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    height: 40px;
+    background: var(--card);
+    padding: 0 12px;
+    text-align: left;
+    font-weight: 500;
+    color: var(--muted-foreground);
+    border-bottom: 1px solid var(--border);
+    white-space: nowrap;
+  }
+  tbody tr {
+    border-bottom: 1px solid var(--border);
+    transition: background-color 0.1s;
+  }
+  tbody tr:last-child {
+    border-bottom: none;
+  }
+  tbody tr:hover {
+    background: var(--secondary);
+  }
+  td {
+    height: 40px;
+    padding: 0 12px;
+    max-width: 360px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .text-right {
+    text-align: right;
+  }
+  .cell-icon {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .mono {
+    font-family: var(--font-mono);
+  }
+  .strong {
+    font-weight: 500;
+  }
+  .muted {
+    color: var(--muted-foreground);
+  }
+  .small {
+    font-size: 12px;
+  }
+  .ellipsis-240 {
+    max-width: 240px;
+  }
+  .empty-actions-cell {
+    color: var(--subtle);
+  }
+
+  /* Badge(§8.9) */
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    height: 20px;
+    border-radius: var(--radius-sm);
+    padding: 0 8px;
+    font-size: 12px;
+    font-weight: 500;
+    white-space: nowrap;
+    border: 1px solid transparent;
+  }
+  .badge .icon {
+    width: 11px;
+    height: 11px;
+  }
+  .badge-success {
+    border-color: var(--primary-glow);
+    background: var(--primary-glow-soft);
+    color: var(--primary);
+  }
+  .badge-info {
+    border-color: rgba(96, 165, 250, 0.3);
+    background: rgba(96, 165, 250, 0.1);
+    color: var(--info);
+  }
+  .badge-warning {
+    border-color: rgba(245, 158, 11, 0.3);
+    background: var(--warning-15);
+    color: var(--warning);
+  }
+
+  /* Button(§8.1) */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    white-space: nowrap;
+    border-radius: var(--radius-md);
+    font-size: 14px;
+    font-weight: 500;
+    height: 40px;
+    padding: 0 16px;
+    border: none;
+    cursor: pointer;
+    outline: none;
+    transition: all 0.1s;
+  }
+  .btn:active {
+    transform: scale(0.98);
+    filter: brightness(0.9);
+  }
+  .btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    pointer-events: none;
+  }
+  .btn:focus-visible {
+    box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.4);
+  }
+  .btn-default {
+    background: var(--primary);
+    color: var(--primary-foreground);
+    box-shadow: 0 0 12px var(--primary-glow);
+  }
+  .btn-default:hover:not(:disabled) {
+    background: var(--primary-hover);
+    box-shadow: 0 0 20px var(--primary-glow), 0 0 40px var(--primary-glow);
+  }
+  .btn-secondary {
+    background: var(--secondary);
+    color: var(--secondary-foreground);
+    border: 1px solid var(--border);
+  }
+  .btn-secondary:hover:not(:disabled) {
+    border-color: var(--border-strong);
+  }
+  .btn-outline {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--foreground);
+  }
+  .btn-outline:hover:not(:disabled) {
+    background: var(--secondary);
+  }
+  .btn-ghost {
+    background: transparent;
+  }
+  .btn-ghost:hover:not(:disabled) {
+    background: var(--secondary);
+  }
+  .btn-destructive {
+    background: var(--destructive);
+    color: #fff;
+  }
+  .btn-destructive:hover:not(:disabled) {
+    box-shadow: 0 0 16px var(--destructive-glow);
+  }
+  .btn-sm {
+    height: 32px;
+    padding: 0 12px;
+    font-size: 13px;
+  }
+  .btn svg {
+    flex-shrink: 0;
+  }
+
+  /* Dialog(§8.4) */
+  .overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(4px);
+    z-index: 50;
+    display: none;
+  }
+  .overlay.open {
+    display: block;
+  }
+  .dialog {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 51;
+    width: min(480px, calc(100vw - 64px));
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-xl);
+    box-shadow: var(--shadow-xl);
+    display: none;
+    flex-direction: column;
+    outline: none;
+  }
+  .dialog.open {
+    display: flex;
+  }
+  .dialog-close {
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    width: 32px;
+    height: 32px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--radius-md);
+    border: none;
+    background: transparent;
+    color: var(--muted-foreground);
+    cursor: pointer;
+  }
+  .dialog-close:hover {
+    background: var(--secondary);
+    color: var(--foreground);
+  }
+  .dialog-header {
+    padding: 24px 24px 0;
+  }
+  .dialog-title {
+    font-family: var(--font-heading);
+    font-size: 18px;
+    font-weight: 600;
+  }
+  .dialog-desc {
+    margin-top: 6px;
+    font-size: 13px;
+    color: var(--muted-foreground);
+    white-space: pre-wrap;
+  }
+  .dialog-body {
+    padding: 16px 24px 0;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .dialog-footer {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 8px;
+    padding: 16px 24px 20px;
+  }
+
+  /* Input / Label(§8.3) */
+  label {
+    display: block;
+    margin-bottom: 4px;
+    font-size: 13px;
+    font-weight: 500;
+  }
+  .input {
+    height: 40px;
+    width: 100%;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--border);
+    background: var(--secondary);
+    padding: 0 12px;
+    font-size: 14px;
+    color: var(--foreground);
+    outline: none;
+    transition: border-color 0.1s, box-shadow 0.1s;
+  }
+  .input::placeholder {
+    color: var(--subtle);
+  }
+  .input:focus-visible {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.25);
+  }
+  .input-hint {
+    margin-top: 4px;
+    font-size: 12px;
+    color: var(--subtle);
+  }
+
+  /* Empty / Error state(P10) */
+  .empty {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 48px 24px;
+    text-align: center;
+  }
+  .empty-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 56px;
+    height: 56px;
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--border);
+    background: var(--secondary);
+    color: var(--subtle);
+    margin-bottom: 4px;
+  }
+  .empty-icon.error {
+    border-color: rgba(245, 158, 11, 0.3);
+    background: var(--warning-soft);
+    color: var(--warning);
+  }
+  .empty-title {
+    font-size: 15px;
+    font-weight: 500;
+  }
+  .empty-hint {
+    max-width: 480px;
+    font-size: 13px;
+    color: var(--muted-foreground);
+  }
+
+  /* Toast(§8.10,顶部右侧堆叠) */
+  .toast-stack {
+    position: fixed;
+    top: 16px;
+    right: 16px;
+    z-index: 60;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    width: 320px;
+  }
+  .toast {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-left: 2px solid var(--primary);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-lg);
+    padding: 10px 14px;
+    font-size: 13px;
+    color: var(--foreground);
+    animation: toast-in 0.15s ease-out;
+  }
+  .toast.error {
+    border-left-color: var(--destructive);
+  }
+  .toast.info {
+    border-left-color: var(--info);
+  }
+  .toast.leaving {
+    opacity: 0;
+    transition: opacity 0.2s ease-in;
+  }
+  .toast .icon {
+    flex-shrink: 0;
+  }
+  .toast.error .icon {
+    color: var(--destructive);
+  }
+  .toast.info .icon {
+    color: var(--info);
+  }
+  .toast:not(.error):not(.info) .icon {
+    color: var(--primary);
+  }
+  @keyframes toast-in {
+    from {
+      opacity: 0;
+      transform: translateY(-6px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  a.demo-btn {
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+  }
+</style>
+</head>
+<body>
+<!-- SVG 图标精灵:简化还原 lucide 线性风格(stroke 继承 currentColor,详见 .icon) -->
+<svg style="position:absolute;width:0;height:0;overflow:hidden" aria-hidden="true">
+  <defs>
+    <symbol id="i-terminal" viewBox="0 0 24 24"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></symbol>
+    <symbol id="i-package" viewBox="0 0 24 24"><path d="M21 8L12 3 3 8v8l9 5 9-5V8z"/><path d="M3.3 7.6L12 12.5l8.7-4.9"/><line x1="12" y1="12.5" x2="12" y2="22"/></symbol>
+    <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></symbol>
+    <symbol id="i-sliders" viewBox="0 0 24 24"><line x1="6" y1="4" x2="6" y2="20"/><circle cx="6" cy="9" r="2"/><line x1="12" y1="4" x2="12" y2="20"/><circle cx="12" cy="15" r="2"/><line x1="18" y1="4" x2="18" y2="20"/><circle cx="18" cy="7" r="2"/></symbol>
+    <symbol id="i-list" viewBox="0 0 24 24"><line x1="9" y1="6" x2="20" y2="6"/><line x1="9" y1="12" x2="20" y2="12"/><line x1="9" y1="18" x2="20" y2="18"/><circle cx="4.5" cy="6" r="1"/><circle cx="4.5" cy="12" r="1"/><circle cx="4.5" cy="18" r="1"/></symbol>
+    <symbol id="i-layers" viewBox="0 0 24 24"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></symbol>
+    <symbol id="i-plus" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></symbol>
+    <symbol id="i-refresh" viewBox="0 0 24 24"><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-15 6.7L3 16"/><path d="M3 21v-5h5"/></symbol>
+    <symbol id="i-trash" viewBox="0 0 24 24"><line x1="4" y1="6" x2="20" y2="6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></symbol>
+    <symbol id="i-x" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></symbol>
+    <symbol id="i-alert" viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></symbol>
+    <symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></symbol>
+    <symbol id="i-loader" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" stroke-dasharray="34 100"/></symbol>
+  </defs>
+</svg>
+
+<div class="app-shell">
+  <!-- ============================================================ Sidebar(§8.7,还原 App.tsx Shell()) -->
+  <aside class="sidebar">
+    <div class="gradient-line"></div>
+    <div class="brand">
+      <div class="brand-icon"><svg class="icon" width="18" height="18"><use href="#i-terminal"></use></svg></div>
+      <div class="brand-text">
+        <div class="brand-name">Scoop GUI</div>
+        <div class="brand-version">scoop 0.5.3</div>
+      </div>
+    </div>
+    <nav class="nav">
+      <button class="nav-item" data-nav="installed" title="P04 · 已装软件包列表页(本原型未实现)">
+        <svg class="icon" width="16" height="16"><use href="#i-package"></use></svg>
+        <span class="nav-label" data-i18n="nav.installed">已装软件</span>
+        <span class="badge badge-warning">2</span>
+      </button>
+      <button class="nav-item" data-nav="browse" title="P05 · 浏览/搜索软件包页(本原型未实现)">
+        <svg class="icon" width="16" height="16"><use href="#i-search"></use></svg>
+        <span class="nav-label" data-i18n="nav.browse">浏览软件包</span>
+      </button>
+      <button class="nav-item active" data-nav="buckets" title="P06 · 桶管理页(本原型)">
+        <svg class="icon" width="16" height="16"><use href="#i-layers"></use></svg>
+        <span class="nav-label" data-i18n="nav.buckets">桶管理</span>
+      </button>
+      <button class="nav-item" data-nav="settings" title="P09 · 设置/语言切换页(本原型未实现)">
+        <svg class="icon" width="16" height="16"><use href="#i-sliders"></use></svg>
+        <span class="nav-label" data-i18n="nav.settings">设置</span>
+      </button>
+    </nav>
+    <div class="nav-spacer"></div>
+    <div class="nav">
+      <button class="nav-item" id="jobsNavItem" title="P08 · 任务进度浮层(本原型未实现,仅作跳转提示)">
+        <svg class="icon" width="16" height="16"><use href="#i-list"></use></svg>
+        <span class="nav-label" data-i18n="nav.jobs">任务</span>
+        <span class="badge badge-info" id="jobsNavBadge" hidden>
+          <svg class="icon spin" width="11" height="11"><use href="#i-loader"></use></svg>
+          <span id="jobsNavCount">0</span>
+        </span>
+      </button>
+    </div>
+  </aside>
+
+  <!-- ============================================================ 主内容(P06 BucketsView) -->
+  <main class="content">
+    <div class="page-header">
+      <div class="page-header-bg"></div>
+      <div class="page-header-row">
+        <div class="page-header-text">
+          <h1 class="page-title" data-i18n="buckets.title">桶管理</h1>
+          <p class="page-desc" data-i18n="buckets.desc">桶是软件包的来源仓库。这里管理本机已添加的桶,并可从 Scoop 已知桶清单中添加新桶。</p>
+        </div>
+        <button class="btn btn-outline" id="refreshBtn">
+          <svg class="icon" width="16" height="16"><use href="#i-refresh"></use></svg>
+          <span data-i18n="common.refresh">刷新</span>
+        </button>
+        <button class="btn btn-default" id="openAddBtn">
+          <svg class="icon" width="16" height="16"><use href="#i-plus"></use></svg>
+          <span data-i18n="buckets.addCustom">添加自定义桶</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- 原型演示控制条:非产品界面,仅用于切换数据状态与语言 -->
+    <div class="demo-bar">
+      <span class="demo-bar-label">原型演示控制(非产品界面)</span>
+      <div class="demo-seg" id="modeSeg">
+        <button class="demo-btn active" data-mode="normal">正常数据</button>
+        <button class="demo-btn" data-mode="addedEmpty">已添加为空</button>
+        <button class="demo-btn" data-mode="knownEmpty">已知为空</button>
+        <button class="demo-btn" data-mode="error">读取失败</button>
+      </div>
+      <div class="demo-bar-sep"></div>
+      <div class="demo-seg" id="langSeg">
+        <button class="demo-btn active" data-lang="zh">中文</button>
+        <button class="demo-btn" data-lang="en">EN</button>
+      </div>
+    </div>
+
+    <div class="content-body">
+      <!-- 顶层错误态(F19):bucket_list / bucket_known 任一请求失败,替换整个 Tabs -->
+      <div class="empty" id="errorState" hidden>
+        <div class="empty-icon error"><svg class="icon" width="28" height="28"><use href="#i-alert"></use></svg></div>
+        <div class="empty-title" data-i18n="buckets.loadFailed">桶列表读取失败</div>
+        <div class="empty-hint" data-i18n="error.scoopUnavailable">本机 Scoop 当前不可用,相关数据无法读取。请检查 scoop 命令是否正常后刷新重试。</div>
+        <button class="btn btn-secondary" id="errorRefreshBtn" style="margin-top: 8px">
+          <svg class="icon" width="16" height="16"><use href="#i-refresh"></use></svg>
+          <span data-i18n="common.refresh">刷新</span>
+        </button>
+      </div>
+
+      <div class="tabs-root" id="tabsRoot">
+        <div class="tabs-list">
+          <button class="tab-trigger active" data-tab="added">
+            <span data-i18n="buckets.addedTab">已添加</span>
+            <span class="tab-count" id="addedCount">(3)</span>
+          </button>
+          <button class="tab-trigger" data-tab="known">
+            <span data-i18n="buckets.knownTab">已知桶清单</span>
+          </button>
+        </div>
+
+        <!-- 已添加桶(F09) -->
+        <div class="tab-panel active" data-panel="added">
+          <div class="empty" id="addedEmptyState" hidden>
+            <div class="empty-icon"><svg class="icon" width="28" height="28"><use href="#i-layers"></use></svg></div>
+            <div class="empty-title" data-i18n="buckets.empty">本机还没有添加任何桶</div>
+          </div>
+          <div class="table-wrap" id="addedTableWrap">
+            <table>
+              <thead>
+                <tr>
+                  <th data-i18n="common.name">名称</th>
+                  <th data-i18n="buckets.repoUrl">仓库地址</th>
+                  <th data-i18n="common.updated">更新时间</th>
+                  <th class="text-right" data-i18n="buckets.manifests">软件包数</th>
+                  <th class="text-right" data-i18n="common.actions">操作</th>
+                </tr>
+              </thead>
+              <tbody id="addedTbody"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- 已知桶清单(F10/F11) -->
+        <div class="tab-panel" data-panel="known">
+          <div class="empty" id="knownEmptyState" hidden>
+            <div class="empty-icon"><svg class="icon" width="28" height="28"><use href="#i-layers"></use></svg></div>
+            <div class="empty-title" data-i18n="buckets.knownEmpty">已知桶清单读取失败或为空</div>
+          </div>
+          <div class="table-wrap" id="knownTableWrap">
+            <table>
+              <thead>
+                <tr>
+                  <th data-i18n="common.name">名称</th>
+                  <th data-i18n="common.status">状态</th>
+                  <th class="text-right" data-i18n="common.actions">操作</th>
+                </tr>
+              </thead>
+              <tbody id="knownTbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- ============================================================ 添加自定义桶对话框(F11 · §8.4) -->
+<div class="overlay" id="addOverlay"></div>
+<div class="dialog" id="addDialog" role="dialog" aria-modal="true" tabindex="-1">
+  <button class="dialog-close" id="addCloseBtn" aria-label="Close"><svg class="icon" width="16" height="16"><use href="#i-x"></use></svg></button>
+  <div class="dialog-header">
+    <div class="dialog-title" data-i18n="buckets.addCustom">添加自定义桶</div>
+  </div>
+  <div class="dialog-body">
+    <div>
+      <label data-i18n="buckets.bucketName">桶名称</label>
+      <input class="input mono" id="addNameInput" placeholder="extras" autocomplete="off" />
+    </div>
+    <div>
+      <label><span data-i18n="buckets.repoUrl">仓库地址</span> <span data-i18n="common.optional">(可选)</span></label>
+      <input class="input mono" id="addRepoInput" placeholder="https://github.com/user/scoop-bucket" autocomplete="off" />
+      <div class="input-hint" data-i18n="buckets.repoHelp">已知桶无需填写;自定义桶需提供 git 仓库地址</div>
+    </div>
+  </div>
+  <div class="dialog-footer">
+    <button class="btn btn-secondary" id="addCancelBtn" data-i18n="common.cancel">取消</button>
+    <button class="btn btn-default" id="addSubmitBtn" disabled data-i18n="common.add">添加</button>
+  </div>
+</div>
+
+<!-- ============================================================ 移除桶确认对话框(F12) -->
+<div class="overlay" id="removeOverlay"></div>
+<div class="dialog" id="removeDialog" role="dialog" aria-modal="true" tabindex="-1">
+  <button class="dialog-close" id="removeCloseBtn" aria-label="Close"><svg class="icon" width="16" height="16"><use href="#i-x"></use></svg></button>
+  <div class="dialog-header">
+    <div class="dialog-title" data-i18n="buckets.removeTitle">移除桶确认</div>
+    <div class="dialog-desc" id="removeDesc"></div>
+  </div>
+  <div class="dialog-footer">
+    <button class="btn btn-secondary" id="removeCancelBtn" data-i18n="common.cancel">取消</button>
+    <button class="btn btn-destructive" id="removeConfirmBtn" data-i18n="common.remove">移除</button>
+  </div>
+</div>
+
+<!-- ============================================================ Toast 堆叠区(§8.10,顶部右侧) -->
+<div class="toast-stack" id="toastStack"></div>
+
+<script>
+(function () {
+  "use strict";
+
+  /* ----------------------------------------------------------------
+     中英字典:与 src/i18n.ts 中 P06 相关 key 一一对应,仅摘取本页用到的子集
+     ---------------------------------------------------------------- */
+  var I18N = {
+    "app.name": { zh: "Scoop GUI", en: "Scoop GUI" },
+    "nav.installed": { zh: "已装软件", en: "Installed" },
+    "nav.browse": { zh: "浏览软件包", en: "Browse" },
+    "nav.buckets": { zh: "桶管理", en: "Buckets" },
+    "nav.settings": { zh: "设置", en: "Settings" },
+    "nav.jobs": { zh: "任务", en: "Jobs" },
+    "common.refresh": { zh: "刷新", en: "Refresh" },
+    "common.cancel": { zh: "取消", en: "Cancel" },
+    "common.confirm": { zh: "确认", en: "Confirm" },
+    "common.add": { zh: "添加", en: "Add" },
+    "common.remove": { zh: "移除", en: "Remove" },
+    "common.actions": { zh: "操作", en: "Actions" },
+    "common.name": { zh: "名称", en: "Name" },
+    "common.updated": { zh: "更新时间", en: "Updated" },
+    "common.status": { zh: "状态", en: "Status" },
+    "common.optional": { zh: "(可选)", en: "(optional)" },
+    "buckets.title": { zh: "桶管理", en: "Buckets" },
+    "buckets.desc": {
+      zh: "桶是软件包的来源仓库。这里管理本机已添加的桶,并可从 Scoop 已知桶清单中添加新桶。",
+      en: "Buckets are package source repositories. Manage the buckets added on this machine and add new ones from the known list.",
+    },
+    "buckets.addedTab": { zh: "已添加", en: "Added" },
+    "buckets.knownTab": { zh: "已知桶清单", en: "Known buckets" },
+    "buckets.manifests": { zh: "软件包数", en: "Manifests" },
+    "buckets.addCustom": { zh: "添加自定义桶", en: "Add custom bucket" },
+    "buckets.bucketName": { zh: "桶名称", en: "Bucket name" },
+    "buckets.repoUrl": { zh: "仓库地址", en: "Repository URL" },
+    "buckets.repoHelp": {
+      zh: "已知桶无需填写;自定义桶需提供 git 仓库地址",
+      en: "Not needed for known buckets; custom buckets require a git repository URL.",
+    },
+    "buckets.removeTitle": { zh: "移除桶确认", en: "Confirm bucket removal" },
+    "buckets.removeDesc": {
+      zh: "移除桶 {name} 后,该桶内未安装的软件包将不再出现在浏览列表;已安装的软件包不受影响。",
+      en: "After removing {name}, its uninstalled packages disappear from Browse. Already installed apps are not affected.",
+    },
+    "buckets.alreadyAdded": { zh: "已添加", en: "Added" },
+    "buckets.empty": { zh: "本机还没有添加任何桶", en: "No buckets added yet" },
+    "buckets.knownEmpty": { zh: "已知桶清单读取失败或为空", en: "Known bucket list is empty or failed to load" },
+    "buckets.loadFailed": { zh: "桶列表读取失败", en: "Failed to load buckets" },
+    "error.scoopUnavailable": {
+      zh: "本机 Scoop 当前不可用,相关数据无法读取。请检查 scoop 命令是否正常后刷新重试。",
+      en: "Scoop is currently unavailable on this machine. Check that the scoop command works, then refresh.",
+    },
+    "jobs.kind.bucket-add": { zh: "添加桶", en: "Add bucket" },
+    "jobs.kind.bucket-remove": { zh: "移除桶", en: "Remove bucket" },
+    "jobs.succeededToast": { zh: "{title} 已成功", en: "{title} succeeded" },
+    "prototype.scopeHint": {
+      zh: "本原型仅聚焦 P06 桶管理页,该导航项对应的页面未在此文件内实现",
+      en: "This prototype only covers P06 — the target page is not implemented in this file",
+    },
+    "prototype.queued": {
+      zh: "已加入任务队列,可在“任务”面板查看进度",
+      en: "Queued — check the Jobs panel for progress",
+    },
+    "prototype.refreshed": { zh: "桶列表已刷新", en: "Buckets refreshed" },
+  };
+
+  function t(key, params) {
+    var entry = I18N[key];
+    var text = entry ? entry[state.lang] : key;
+    if (params) {
+      Object.keys(params).forEach(function (k) {
+        text = text.split("{" + k + "}").join(String(params[k]));
+      });
+    }
+    return text;
+  }
+
+  /* ----------------------------------------------------------------
+     示例数据(字段名与 BucketInfo { name, source, updated, manifests } 一致)
+     已知桶名单与 scoop 默认 `scoop bucket known` 输出顺序一致
+     ---------------------------------------------------------------- */
+  var KNOWN_ALL = ["main", "extras", "versions", "nirsoft", "sysinternals", "php", "nerd-fonts", "nonportable", "java", "games"];
+  var BASE_ADDED = [
+    { name: "main", source: "https://github.com/ScoopInstaller/Main", updated: "2026/07/10 22:23:33", manifests: "1608" },
+    { name: "extras", source: "https://github.com/ScoopInstaller/Extras", updated: "2026/07/10 22:23:53", manifests: "2344" },
+    { name: "versions", source: "https://github.com/ScoopInstaller/Versions", updated: "2026/07/05 10:12:02", manifests: "612" },
+  ];
+
+  var state = {
+    lang: "zh",
+    mode: "normal",
+    buckets: [],
+    known: [],
+    busy: {}, // name -> "bucket-add" | "bucket-remove"
+    timers: {}, // name -> timeoutId(demo 内部用,避免切换状态后残留的模拟任务误触发)
+  };
+
+  function clearAllTimers() {
+    Object.keys(state.timers).forEach(function (name) {
+      window.clearTimeout(state.timers[name]);
+    });
+    state.timers = {};
+  }
+
+  function resetDataForMode(mode) {
+    clearAllTimers();
+    state.mode = mode;
+    state.busy = {};
+    if (mode === "error") {
+      state.buckets = [];
+      state.known = [];
+    } else if (mode === "addedEmpty") {
+      state.buckets = [];
+      state.known = KNOWN_ALL.slice();
+    } else if (mode === "knownEmpty") {
+      state.buckets = BASE_ADDED.map(function (b) { return Object.assign({}, b); });
+      state.known = [];
+    } else {
+      state.buckets = BASE_ADDED.map(function (b) { return Object.assign({}, b); });
+      state.known = KNOWN_ALL.slice();
+    }
+  }
+
+  function isAdded(name) {
+    return state.buckets.some(function (b) { return b.name === name; });
+  }
+
+  function nowStr() {
+    var d = new Date();
+    function p(n) { return String(n).padStart(2, "0"); }
+    return d.getFullYear() + "/" + p(d.getMonth() + 1) + "/" + p(d.getDate()) + " " + p(d.getHours()) + ":" + p(d.getMinutes()) + ":" + p(d.getSeconds());
+  }
+
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, function (c) {
+      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
+    });
+  }
+
+  /* ---------------------------------------------------------------- 渲染 */
+  function applyStaticI18n() {
+    document.documentElement.lang = state.lang === "zh" ? "zh-CN" : "en";
+    document.querySelectorAll("[data-i18n]").forEach(function (el) {
+      el.textContent = t(el.getAttribute("data-i18n"));
+    });
+  }
+
+  function busyBadgeHtml(kind) {
+    return (
+      '<span class="badge badge-info"><svg class="icon spin" width="11" height="11"><use href="#i-loader"></use></svg>' +
+      t("jobs.kind." + kind) +
+      "</span>"
+    );
+  }
+
+  function renderAddedTab() {
+    var wrap = document.getElementById("addedTableWrap");
+    var empty = document.getElementById("addedEmptyState");
+    document.getElementById("addedCount").textContent = "(" + state.buckets.length + ")";
+    if (state.buckets.length === 0) {
+      wrap.hidden = true;
+      empty.hidden = false;
+      return;
+    }
+    wrap.hidden = false;
+    empty.hidden = true;
+    var tbody = document.getElementById("addedTbody");
+    tbody.innerHTML = state.buckets
+      .map(function (b) {
+        var busyKind = state.busy[b.name];
+        var action = busyKind
+          ? busyBadgeHtml(busyKind)
+          : '<button class="btn btn-ghost btn-sm action-remove" data-name="' +
+            escapeHtml(b.name) +
+            '" style="color:var(--destructive)"><svg class="icon" width="13" height="13"><use href="#i-trash"></use></svg>' +
+            t("common.remove") +
+            "</button>";
+        return (
+          "<tr>" +
+          '<td class="mono strong"><span class="cell-icon"><svg class="icon" width="14" height="14" style="color:var(--primary)"><use href="#i-layers"></use></svg>' +
+          escapeHtml(b.name) +
+          "</span></td>" +
+          '<td class="mono muted small ellipsis-240" title="' + escapeHtml(b.source) + '">' + escapeHtml(b.source) + "</td>" +
+          '<td class="muted small">' + escapeHtml(b.updated) + "</td>" +
+          '<td class="text-right mono muted">' + escapeHtml(b.manifests) + "</td>" +
+          '<td class="text-right">' + action + "</td>" +
+          "</tr>"
+        );
+      })
+      .join("");
+    tbody.querySelectorAll(".action-remove").forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        openRemoveDialog(btn.getAttribute("data-name"));
+      });
+    });
+  }
+
+  function renderKnownTab() {
+    var wrap = document.getElementById("knownTableWrap");
+    var empty = document.getElementById("knownEmptyState");
+    if (state.known.length === 0) {
+      wrap.hidden = true;
+      empty.hidden = false;
+      return;
+    }
+    wrap.hidden = false;
+    empty.hidden = true;
+    var tbody = document.getElementById("knownTbody");
+    tbody.innerHTML = state.known
+      .map(function (name) {
+        var added = isAdded(name);
+        var busyKind = state.busy[name];
+        var status = "";
+        if (busyKind) status = busyBadgeHtml(busyKind);
+        else if (added)
+          status =
+            '<span class="badge badge-success"><svg class="icon" width="11" height="11"><use href="#i-check"></use></svg>' +
+            t("buckets.alreadyAdded") +
+            "</span>";
+        var action = "";
+        if (!added) {
+          action =
+            '<button class="btn btn-default btn-sm action-add" data-name="' +
+            escapeHtml(name) +
+            '" ' + (busyKind ? "disabled" : "") + '><svg class="icon" width="13" height="13"><use href="#i-plus"></use></svg>' +
+            t("common.add") +
+            "</button>";
+        }
+        return (
+          "<tr>" +
+          '<td class="mono strong"><span class="cell-icon"><svg class="icon" width="14" height="14" style="color:' +
+          (added ? "var(--primary)" : "var(--subtle)") +
+          '"><use href="#i-layers"></use></svg>' +
+          escapeHtml(name) +
+          "</span></td>" +
+          "<td>" + status + "</td>" +
+          '<td class="text-right">' + action + "</td>" +
+          "</tr>"
+        );
+      })
+      .join("");
+    tbody.querySelectorAll(".action-add").forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        runAdd(btn.getAttribute("data-name"), "");
+      });
+    });
+  }
+
+  function renderJobsBadge() {
+    var count = Object.keys(state.busy).length;
+    var badge = document.getElementById("jobsNavBadge");
+    badge.hidden = count === 0;
+    document.getElementById("jobsNavCount").textContent = String(count);
+  }
+
+  function renderAll() {
+    var isError = state.mode === "error";
+    document.getElementById("errorState").hidden = !isError;
+    document.getElementById("tabsRoot").hidden = isError;
+    if (!isError) {
+      renderAddedTab();
+      renderKnownTab();
+    }
+    renderJobsBadge();
+  }
+
+  /* ---------------------------------------------------------------- Tabs 切换 */
+  document.querySelectorAll(".tab-trigger").forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      document.querySelectorAll(".tab-trigger").forEach(function (b) { b.classList.remove("active"); });
+      document.querySelectorAll(".tab-panel").forEach(function (p) { p.classList.remove("active"); });
+      btn.classList.add("active");
+      document.querySelector('.tab-panel[data-panel="' + btn.dataset.tab + '"]').classList.add("active");
+    });
+  });
+
+  function focusAddedTab() {
+    document.querySelectorAll(".tab-trigger").forEach(function (b) { b.classList.toggle("active", b.dataset.tab === "added"); });
+    document.querySelectorAll(".tab-panel").forEach(function (p) { p.classList.toggle("active", p.dataset.panel === "added"); });
+  }
+
+  /* ---------------------------------------------------------------- 原型演示控制条 */
+  function setMode(mode) {
+    document.querySelectorAll("#modeSeg .demo-btn").forEach(function (b) { b.classList.toggle("active", b.dataset.mode === mode); });
+    resetDataForMode(mode);
+    focusAddedTab();
+    renderAll();
+  }
+  document.getElementById("modeSeg").addEventListener("click", function (e) {
+    var btn = e.target.closest(".demo-btn");
+    if (!btn) return;
+    setMode(btn.dataset.mode);
+  });
+  document.getElementById("langSeg").addEventListener("click", function (e) {
+    var btn = e.target.closest(".demo-btn");
+    if (!btn) return;
+    document.querySelectorAll("#langSeg .demo-btn").forEach(function (b) { b.classList.remove("active"); });
+    btn.classList.add("active");
+    state.lang = btn.dataset.lang;
+    applyStaticI18n();
+    updateAddSubmitState();
+    renderAll();
+  });
+
+  /* ---------------------------------------------------------------- 刷新按钮 */
+  function spinButton(btn, durationMs, onDone) {
+    var icon = btn.querySelector(".icon");
+    var use = icon.querySelector("use");
+    var originalHref = use.getAttribute("href");
+    use.setAttribute("href", "#i-loader");
+    icon.classList.add("spin");
+    btn.disabled = true;
+    window.setTimeout(function () {
+      use.setAttribute("href", originalHref);
+      icon.classList.remove("spin");
+      btn.disabled = false;
+      onDone && onDone();
+    }, durationMs);
+  }
+  document.getElementById("refreshBtn").addEventListener("click", function () {
+    var btn = this;
+    spinButton(btn, 900, function () {
+      if (state.mode === "error") setMode("normal");
+      else toast("info", t("prototype.refreshed"));
+    });
+  });
+  document.getElementById("errorRefreshBtn").addEventListener("click", function () {
+    var btn = this;
+    spinButton(btn, 900, function () {
+      setMode("normal");
+    });
+  });
+
+  /* ---------------------------------------------------------------- 添加自定义桶对话框 */
+  var addOverlay = document.getElementById("addOverlay");
+  var addDialog = document.getElementById("addDialog");
+  var addNameInput = document.getElementById("addNameInput");
+  var addRepoInput = document.getElementById("addRepoInput");
+  var addSubmitBtn = document.getElementById("addSubmitBtn");
+
+  function updateAddSubmitState() {
+    addSubmitBtn.disabled = addNameInput.value.trim().length === 0;
+  }
+  function openAddDialog() {
+    updateAddSubmitState();
+    addOverlay.classList.add("open");
+    addDialog.classList.add("open");
+    addNameInput.focus();
+  }
+  function closeAddDialog() {
+    addOverlay.classList.remove("open");
+    addDialog.classList.remove("open");
+  }
+  document.getElementById("openAddBtn").addEventListener("click", openAddDialog);
+  document.getElementById("addCancelBtn").addEventListener("click", closeAddDialog);
+  document.getElementById("addCloseBtn").addEventListener("click", closeAddDialog);
+  addOverlay.addEventListener("click", closeAddDialog);
+  addNameInput.addEventListener("input", updateAddSubmitState);
+  [addNameInput, addRepoInput].forEach(function (inp) {
+    inp.addEventListener("keydown", function (e) {
+      if (e.key === "Enter") submitAdd();
+    });
+  });
+  function submitAdd() {
+    var name = addNameInput.value.trim();
+    if (!name) return;
+    var repo = addRepoInput.value.trim();
+    closeAddDialog();
+    addNameInput.value = "";
+    addRepoInput.value = "";
+    updateAddSubmitState();
+    runAdd(name, repo);
+  }
+  addSubmitBtn.addEventListener("click", submitAdd);
+
+  /* ---------------------------------------------------------------- 移除确认对话框 */
+  var removeOverlay = document.getElementById("removeOverlay");
+  var removeDialog = document.getElementById("removeDialog");
+  var removeTarget = "";
+  function openRemoveDialog(name) {
+    removeTarget = name;
+    document.getElementById("removeDesc").textContent = t("buckets.removeDesc", { name: name });
+    removeOverlay.classList.add("open");
+    removeDialog.classList.add("open");
+    removeDialog.focus();
+  }
+  function closeRemoveDialog() {
+    removeOverlay.classList.remove("open");
+    removeDialog.classList.remove("open");
+    removeTarget = "";
+  }
+  document.getElementById("removeCancelBtn").addEventListener("click", closeRemoveDialog);
+  document.getElementById("removeCloseBtn").addEventListener("click", closeRemoveDialog);
+  removeOverlay.addEventListener("click", closeRemoveDialog);
+  document.getElementById("removeConfirmBtn").addEventListener("click", function () {
+    var name = removeTarget;
+    closeRemoveDialog();
+    if (name) runRemove(name);
+  });
+  removeDialog.addEventListener("keydown", function (e) {
+    if (e.key === "Enter") document.getElementById("removeConfirmBtn").click();
+  });
+
+  document.addEventListener("keydown", function (e) {
+    if (e.key === "Escape") {
+      if (addDialog.classList.contains("open")) closeAddDialog();
+      if (removeDialog.classList.contains("open")) closeRemoveDialog();
+    }
+  });
+
+  /* ---------------------------------------------------------------- 任务模拟(F17):入队 -> 处理中 -> 成功 */
+  function jobTitle(kind, target) {
+    return t("jobs.kind." + kind) + " " + target;
+  }
+
+  function openJobsPanelHint() {
+    // 呼应真实实现:enqueue() 成功后立即打开 P08 任务面板;本原型只做轻量 toast 提示,不外接完整 P08。
+    toast("info", t("prototype.queued"));
+  }
+
+  function runAdd(name, repo) {
+    state.busy[name] = "bucket-add";
+    openJobsPanelHint();
+    renderAll();
+    state.timers[name] = window.setTimeout(function () {
+      delete state.busy[name];
+      delete state.timers[name];
+      if (!isAdded(name)) {
+        state.buckets.push({
+          name: name,
+          source: repo || "https://github.com/example/scoop-" + name,
+          updated: nowStr(),
+          manifests: String(20 + Math.floor(Math.random() * 300)),
+        });
+      }
+      if (state.known.indexOf(name) === -1) state.known.push(name);
+      renderAll();
+      toast("success", t("jobs.succeededToast", { title: jobTitle("bucket-add", name) }));
+    }, 1500);
+  }
+
+  function runRemove(name) {
+    state.busy[name] = "bucket-remove";
+    openJobsPanelHint();
+    renderAll();
+    state.timers[name] = window.setTimeout(function () {
+      delete state.busy[name];
+      delete state.timers[name];
+      state.buckets = state.buckets.filter(function (b) { return b.name !== name; });
+      renderAll();
+      toast("success", t("jobs.succeededToast", { title: jobTitle("bucket-remove", name) }));
+    }, 1500);
+  }
+
+  /* ---------------------------------------------------------------- Toast */
+  function toast(kind, message) {
+    var stack = document.getElementById("toastStack");
+    var el = document.createElement("div");
+    el.className = "toast" + (kind === "error" ? " error" : kind === "info" ? " info" : "");
+    var iconId = kind === "success" ? "i-check" : kind === "error" ? "i-alert" : "i-info";
+    el.innerHTML = '<svg class="icon" width="14" height="14"><use href="#' + iconId + '"></use></svg><span>' + escapeHtml(message) + "</span>";
+    stack.appendChild(el);
+    var duration = kind === "error" ? 6000 : 4000;
+    window.setTimeout(function () {
+      el.classList.add("leaving");
+      window.setTimeout(function () { el.remove(); }, 200);
+    }, duration);
+  }
+
+  /* ---------------------------------------------------------------- 侧边栏其它导航项(本原型只演示 P06) */
+  document.getElementById("jobsNavItem").addEventListener("click", function () {
+    toast("info", t("prototype.scopeHint"));
+  });
+  document.querySelectorAll(".nav-item[data-nav]").forEach(function (btn) {
+    if (btn.dataset.nav === "buckets") return;
+    btn.addEventListener("click", function () {
+      toast("info", t("prototype.scopeHint"));
+    });
+  });
+
+  /* ---------------------------------------------------------------- 初始化 */
+  resetDataForMode("normal");
+  applyStaticI18n();
+  renderAll();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,769 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>P04 · 已装软件包列表页 · 设计原型</title>
+<!--
+  P04 · 已装软件包列表页 · 设计原型(designer 产出,仅供视觉与交互参考,独立自包含,不依赖构建工具)
+  真相源:src/pages/InstalledView.tsx
+  设计依据:docs/design/systems/web.md(v2)、docs/design/prompts/web/scoop-gui/P04-已装软件包列表页.md
+  本文件为回填产出 —— scoop-gui 已实现并验收,本原型是对已实现界面的视觉回填,如与源码有出入以源码为准,
+  已知出入见设计提示词第 11 节"已知偏离记录"(PageHeader/SubToolbar 按钮分配、过期图标位置、Badge variant 数量、
+  Footer 未实现、单包更新无二次确认、"更新全部过期"禁用态无说明文案)。
+  顶部"原型状态演示"控制条不属于产品界面,仅用于在同一份文件里切换正常/空/错误三种子状态,便于设计评审。
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link
+  href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap"
+  rel="stylesheet"
+/>
+<style>
+  /* ============================================================
+     设计 token(docs/design/systems/web.md §2 / §4~§7 / §11.1)
+     暗色默认,不做亮色切换(v2 暗色为主推,本原型只演示暗色)
+     ============================================================ */
+  :root {
+    --color-bg: oklch(0.13 0.02 250);
+    --color-bg-elevated: oklch(0.17 0.02 250);
+    --color-bg-overlay: oklch(0.20 0.02 250);
+    --color-fg: oklch(0.96 0.005 250);
+    --color-fg-muted: oklch(0.72 0.01 250);
+    --color-fg-subtle: oklch(0.55 0.01 250);
+    --color-border: oklch(0.30 0.01 250);
+    --color-border-strong: oklch(0.45 0.01 250);
+    --color-primary: oklch(0.72 0.18 145);
+    --color-primary-hover: oklch(0.76 0.18 145);
+    --color-primary-foreground: oklch(0.16 0.03 145);
+    --color-accent: oklch(0.70 0.16 250);
+    --color-warning: oklch(0.80 0.16 80);
+    --color-destructive: oklch(0.65 0.22 25);
+    --color-success: var(--color-primary);
+
+    /* 派生 alpha token —— 设计系统 §7/§8.6/§8.9 描述的 opacity 公式,原文未单列 token 名,
+       此处显式定义以便原型直接复用(设计提示词第 11 节第 3 条已记录 info variant 的存在) */
+    --primary-glow: oklch(0.72 0.18 145 / 0.25);
+    --primary-glow-soft: oklch(0.72 0.18 145 / 0.10);
+    --accent-glow: oklch(0.70 0.16 250 / 0.25);
+    --accent-10: oklch(0.70 0.16 250 / 0.10);
+    --accent-30: oklch(0.70 0.16 250 / 0.30);
+    --warning-5: oklch(0.80 0.16 80 / 0.05);
+    --warning-15: oklch(0.80 0.16 80 / 0.15);
+    --warning-30: oklch(0.80 0.16 80 / 0.30);
+    --destructive-glow: oklch(0.65 0.22 25 / 0.20);
+    --destructive-30: oklch(0.65 0.22 25 / 0.30);
+
+    --font-heading: "Space Grotesk", system-ui, sans-serif;
+    --font-body: "DM Sans", system-ui, sans-serif;
+    --font-mono: "JetBrains Mono", "Cascadia Code", Consolas, monospace;
+
+    --radius-sm: 4px;
+    --radius-md: 8px;
+    --radius-lg: 12px;
+    --radius-xl: 16px;
+
+    --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.5), 0 2px 4px -2px rgb(0 0 0 / 0.4);
+    --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.6), 0 4px 6px -4px rgb(0 0 0 / 0.4);
+    --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.7), 0 8px 10px -6px rgb(0 0 0 / 0.5);
+  }
+
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+  body {
+    background: var(--color-bg);
+    color: var(--color-fg);
+    font-family: var(--font-body);
+    font-size: 14px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+  h1, h2, h3 { font-family: var(--font-heading); line-height: 1.2; margin: 0; }
+  ::selection { background: var(--primary-glow); }
+  ::-webkit-scrollbar { width: 10px; height: 10px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--color-border); border-radius: 5px; border: 2px solid transparent; background-clip: content-box; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--color-border-strong); background-clip: content-box; }
+
+  /* ---------------- 科技感叠加层(设计系统 §2.1 / §11.2) ---------------- */
+  .bg-grid {
+    background-image:
+      linear-gradient(to right, oklch(0.30 0.01 250 / 0.16) 1px, transparent 1px),
+      linear-gradient(to bottom, oklch(0.30 0.01 250 / 0.16) 1px, transparent 1px);
+    background-size: 32px 32px;
+  }
+  .bg-glow-top {
+    background: radial-gradient(ellipse 800px 200px at 50% -50%, var(--primary-glow), transparent);
+  }
+  .gradient-line {
+    height: 1px;
+    flex-shrink: 0;
+    background: linear-gradient(to right, transparent, var(--color-primary), transparent);
+  }
+
+  /* ---------------- 图标(内联 sprite,近似 lucide 线性风格) ---------------- */
+  .icon { width: 16px; height: 16px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; flex-shrink: 0; vertical-align: -3px; }
+  .icon-sm { width: 14px; height: 14px; }
+  .icon-lg { width: 20px; height: 20px; }
+  .icon-xl { width: 22px; height: 22px; }
+  .icon-spin { animation: spin 0.9s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ---------------- 应用外壳布局 ---------------- */
+  .app-shell { display: flex; height: 100vh; min-height: 620px; min-width: 1024px; overflow: hidden; }
+
+  /* ---------------- 侧边栏(设计系统 §8.7 / §10.1;非本页设计范围,仅作场景还原) ---------------- */
+  .sidebar { width: 240px; flex-shrink: 0; display: flex; flex-direction: column; padding-bottom: 12px; background: var(--color-bg-elevated); border-right: 1px solid var(--color-border); }
+  .sidebar-brand { display: flex; align-items: center; gap: 10px; padding: 16px 16px 14px; }
+  .sidebar-brand .logo { width: 36px; height: 36px; border-radius: var(--radius-md); border: 1px solid var(--primary-glow); background: var(--primary-glow-soft); color: var(--color-primary); display: flex; align-items: center; justify-content: center; }
+  .sidebar-brand .name { font-family: var(--font-heading); font-size: 15px; font-weight: 700; }
+  .sidebar-brand .ver { font-family: var(--font-mono); font-size: 10px; color: var(--color-fg-subtle); max-width: 160px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .sidebar nav { display: flex; flex-direction: column; gap: 2px; padding: 0 12px; }
+  .nav-item { display: flex; align-items: center; gap: 10px; height: 40px; padding: 0 12px; border-radius: var(--radius-md); font-size: 13px; font-weight: 500; color: var(--color-fg-muted); background: transparent; border: none; cursor: pointer; text-align: left; width: 100%; transition: background-color .1s, color .1s; font-family: var(--font-body); }
+  .nav-item:hover { background: var(--color-bg-overlay); color: var(--color-fg); }
+  .nav-item.active { background: var(--primary-glow-soft); color: var(--color-primary); box-shadow: inset 2px 0 0 var(--color-primary); }
+  .nav-item .label { flex: 1; }
+  .sidebar-spacer { flex: 1; }
+  .sidebar-footer { padding: 0 12px; }
+
+  /* ---------------- badge(设计系统 §8.9;此原型含 info 第 6 个 variant,见设计提示词第 11 节第 3 条) ---------------- */
+  .badge { display: inline-flex; align-items: center; gap: 4px; height: 20px; padding: 0 8px; border-radius: var(--radius-sm); border: 1px solid; font-size: 12px; font-weight: 500; white-space: nowrap; }
+  .badge .icon { width: 11px; height: 11px; }
+  .badge-default { border-color: var(--color-border); background: var(--color-bg-overlay); color: var(--color-fg-muted); }
+  .badge-success { border-color: var(--primary-glow); background: var(--primary-glow-soft); color: var(--color-primary); }
+  .badge-warning { border-color: var(--warning-30); background: var(--warning-15); color: var(--color-warning); }
+  .badge-destructive { border-color: var(--destructive-30); background: var(--destructive-glow); color: var(--color-destructive); }
+  .badge-info { border-color: var(--accent-30); background: var(--accent-10); color: var(--color-accent); }
+  .badge-count { display: inline-flex; align-items: center; justify-content: center; min-width: 18px; height: 18px; padding: 0 5px; border-radius: var(--radius-sm); background: rgba(0,0,0,.25); font-size: 11px; }
+
+  /* ---------------- button(设计系统 §8.1) ---------------- */
+  .btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; height: 40px; padding: 0 16px; border-radius: var(--radius-md); border: 1px solid transparent; font-family: var(--font-body); font-size: 14px; font-weight: 500; white-space: nowrap; cursor: pointer; transition: all .1s ease; background: transparent; color: var(--color-fg); }
+  .btn:active:not(:disabled) { transform: scale(0.98); filter: brightness(0.9); }
+  .btn:disabled { opacity: .5; cursor: not-allowed; }
+  .btn:focus-visible { outline: none; box-shadow: 0 0 0 3px var(--primary-glow); }
+  .btn-default { background: var(--color-primary); color: var(--color-primary-foreground); box-shadow: 0 0 12px var(--primary-glow); }
+  .btn-default:hover:not(:disabled) { background: var(--color-primary-hover); box-shadow: 0 0 20px var(--primary-glow), 0 0 40px var(--primary-glow); }
+  .btn-outline { border-color: var(--color-border); background: transparent; }
+  .btn-outline:hover:not(:disabled) { background: var(--color-bg-overlay); }
+  .btn-secondary { background: var(--color-bg-overlay); border-color: var(--color-border); }
+  .btn-secondary:hover:not(:disabled) { border-color: var(--color-border-strong); }
+  .btn-ghost { background: transparent; }
+  .btn-ghost:hover:not(:disabled) { background: var(--color-bg-overlay); }
+  .btn-destructive { background: var(--color-destructive); color: #fff; }
+  .btn-destructive:hover:not(:disabled) { box-shadow: 0 0 16px var(--destructive-glow); }
+  .btn-ghost.text-destructive { color: var(--color-destructive); }
+  .btn-sm { height: 32px; padding: 0 12px; font-size: 13px; }
+  .btn-lg { height: 48px; padding: 0 24px; font-size: 15px; border-radius: var(--radius-lg); }
+  .btn-icon { width: 40px; height: 40px; padding: 0; }
+
+  /* ---------------- input(设计系统 §8.3) ---------------- */
+  .input { display: flex; height: 40px; width: 100%; border-radius: var(--radius-md); border: 1px solid var(--color-border); background: var(--color-bg-overlay); padding: 0 12px; font-size: 14px; color: var(--color-fg); font-family: var(--font-body); outline: none; transition: border-color .1s, box-shadow .1s; }
+  .input::placeholder { color: var(--color-fg-subtle); }
+  .input:focus-visible { border-color: var(--color-primary); box-shadow: 0 0 0 3px var(--primary-glow); }
+
+  /* ---------------- 主区域布局 ---------------- */
+  .main { flex: 1; min-width: 0; display: flex; flex-direction: column; height: 100%; }
+  .page-header-region { position: relative; padding: 24px 28px 16px; flex-shrink: 0; }
+  .page-header-region .overlay-glow { position: absolute; inset: 0; pointer-events: none; }
+  .page-header-row { position: relative; display: flex; align-items: center; gap: 8px; }
+  .page-header-row h1 { font-size: 24px; font-weight: 600; }
+  .page-header-row .desc { margin-top: 4px; font-size: 13px; color: var(--color-fg-muted); }
+  .page-header-row .titles { min-width: 0; flex: 1; }
+  .page-header-row .actions { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+
+  .content-body { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 12px; padding: 0 28px 24px; }
+  .subtoolbar { display: flex; align-items: center; gap: 8px; }
+  .subtoolbar .search-wrap { position: relative; flex: 1; min-width: 0; }
+  .subtoolbar .search-wrap .icon { position: absolute; top: 12px; left: 12px; color: var(--color-fg-subtle); }
+  .subtoolbar .search-wrap input { padding-left: 36px; }
+
+  /* ---------------- table(设计系统 §8.6) ---------------- */
+  .table-wrap { flex: 1; min-height: 0; overflow-y: auto; overflow-x: hidden; border: 1px solid var(--color-border); border-radius: var(--radius-lg); background: var(--color-bg-elevated); }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  thead th { position: sticky; top: 0; z-index: 1; height: 40px; padding: 0 12px; background: var(--color-bg-elevated); text-align: left; font-weight: 500; color: var(--color-fg-muted); white-space: nowrap; border-bottom: 1px solid var(--color-border); }
+  th.col-actions, td.col-actions { text-align: right; }
+  tbody tr { height: 40px; border-bottom: 1px solid var(--color-border); transition: background-color .1s; cursor: pointer; }
+  tbody tr:last-child { border-bottom: none; }
+  tbody tr:hover { background: var(--color-bg-overlay); }
+  tbody tr.row-outdated { background: var(--warning-5); }
+  tbody tr.row-outdated:hover { background: color-mix(in oklab, var(--warning-5), var(--color-bg-overlay) 60%); }
+  tbody tr.row-selected { box-shadow: inset 2px 0 0 var(--color-primary); background: var(--primary-glow-soft); }
+  td { height: 40px; max-width: 360px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding: 0 12px; }
+  td.mono { font-family: var(--font-mono); }
+  td.name-cell { font-family: var(--font-mono); font-weight: 500; }
+  .muted { color: var(--color-fg-muted); }
+  .subtle { color: var(--color-fg-subtle); }
+  .text-warning { color: var(--color-warning); }
+  .actions-cell { display: flex; align-items: center; justify-content: flex-end; gap: 4px; }
+
+  /* ---------------- empty state(P10 子状态) ---------------- */
+  .empty-state { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; padding: 48px 24px; text-align: center; }
+  .empty-state .glyph { width: 56px; height: 56px; border-radius: var(--radius-lg); border: 1px solid var(--color-border); background: var(--color-bg-overlay); color: var(--color-fg-subtle); display: flex; align-items: center; justify-content: center; margin-bottom: 4px; }
+  .empty-state.is-error .glyph { border-color: var(--warning-30); background: var(--warning-5); color: var(--color-warning); }
+  .empty-state .title { font-size: 15px; font-weight: 500; }
+  .empty-state .hint { max-width: 480px; font-size: 13px; color: var(--color-fg-muted); }
+
+  /* ---------------- dialog(设计系统 §8.4) ---------------- */
+  .dialog-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.6); backdrop-filter: blur(4px); display: flex; align-items: center; justify-content: center; z-index: 60; animation: fade-in .12s ease; }
+  .dialog-overlay[hidden] { display: none; }
+  @keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
+  .dialog-content { width: min(480px, calc(100vw - 64px)); background: var(--color-bg-elevated); border: 1px solid var(--color-border); border-radius: var(--radius-xl); box-shadow: var(--shadow-xl); }
+  .dialog-header { padding: 20px 24px 4px; }
+  .dialog-header .dialog-title { font-size: 17px; font-weight: 600; }
+  .dialog-header .dialog-desc { margin-top: 8px; font-size: 13px; color: var(--color-fg-muted); white-space: pre-wrap; }
+  .dialog-list { margin: 12px 24px 0; max-height: 200px; overflow: auto; border: 1px solid var(--color-border); border-radius: var(--radius-md); background: var(--color-bg-overlay); padding: 8px 12px; font-family: var(--font-mono); font-size: 12px; line-height: 1.75; }
+  .dialog-footer { display: flex; justify-content: flex-end; gap: 8px; padding: 20px 24px 24px; }
+
+  /* ---------------- toast(设计系统 §8.10) ---------------- */
+  .toast-stack { position: fixed; top: 16px; right: 16px; z-index: 80; display: flex; flex-direction: column; gap: 8px; width: 320px; }
+  .toast { display: flex; gap: 8px; align-items: flex-start; padding: 12px 14px; background: var(--color-bg-elevated); border: 1px solid var(--color-border); border-radius: var(--radius-lg); box-shadow: var(--shadow-lg); font-size: 13px; animation: toast-in .16s ease; }
+  @keyframes toast-in { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: translateY(0); } }
+  .toast.toast-success { border-left: 2px solid var(--color-primary); }
+  .toast.toast-error { border-left: 2px solid var(--color-destructive); box-shadow: var(--shadow-lg), 0 0 12px var(--destructive-glow); }
+  .toast.toast-info { border-left: 2px solid var(--color-accent); }
+  .toast .icon { margin-top: 1px; }
+  .toast.toast-success .icon { color: var(--color-primary); }
+  .toast.toast-error .icon { color: var(--color-destructive); }
+  .toast.toast-info .icon { color: var(--color-accent); }
+
+  /* ---------------- 原型状态演示控制条(非产品界面,仅评审用) ---------------- */
+  .demo-bar { display: flex; align-items: center; gap: 10px; padding: 8px 16px; background: repeating-linear-gradient(135deg, rgba(255,255,255,.03) 0 10px, transparent 10px 20px); border-bottom: 1px dashed var(--color-border-strong); font-size: 12px; color: var(--color-fg-subtle); flex-shrink: 0; }
+  .demo-bar strong { color: var(--color-fg-muted); font-weight: 500; }
+  .demo-pill { border: 1px solid var(--color-border); background: transparent; color: var(--color-fg-muted); border-radius: 999px; padding: 4px 12px; font-size: 12px; cursor: pointer; font-family: var(--font-body); }
+  .demo-pill.active { border-color: var(--primary-glow); background: var(--primary-glow-soft); color: var(--color-primary); }
+  .demo-pill:hover { color: var(--color-fg); }
+</style>
+</head>
+<body>
+
+<!-- ================= 图标 sprite(内联,近似 lucide 线性风格,非精确复刻) ================= -->
+<svg style="position:absolute;width:0;height:0" aria-hidden="true">
+  <defs>
+    <symbol id="i-terminal" viewBox="0 0 24 24"><path d="M5 7l4 4-4 4"/><path d="M13 15h6"/></symbol>
+    <symbol id="i-package" viewBox="0 0 24 24"><path d="M21 8l-9-5-9 5 9 5 9-5Z"/><path d="M3 8v8l9 5 9-5V8"/><path d="M12 13v8"/></symbol>
+    <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.35-4.35"/></symbol>
+    <symbol id="i-layers" viewBox="0 0 24 24"><path d="M12 3 21 8l-9 5-9-5 9-5Z"/><path d="M3 13l9 5 9-5"/></symbol>
+    <symbol id="i-sliders" viewBox="0 0 24 24"><path d="M6 21V13"/><path d="M6 9V3"/><circle cx="6" cy="11" r="2"/><path d="M12 21v-4"/><path d="M12 13V3"/><circle cx="12" cy="15" r="2"/><path d="M18 21v-8"/><path d="M18 9V3"/><circle cx="18" cy="11" r="2"/></symbol>
+    <symbol id="i-list" viewBox="0 0 24 24"><path d="M8 6h13"/><path d="M8 12h13"/><path d="M8 18h13"/><circle cx="3.5" cy="6" r="1"/><circle cx="3.5" cy="12" r="1"/><circle cx="3.5" cy="18" r="1"/></symbol>
+    <symbol id="i-refresh" viewBox="0 0 24 24"><path d="M3 12a9 9 0 0 1 15.4-6.36L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-15.4 6.36L3 16"/><path d="M3 21v-5h5"/></symbol>
+    <symbol id="i-arrow-up" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 16V8"/><path d="M8.5 11.5 12 8l3.5 3.5"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></symbol>
+    <symbol id="i-alert" viewBox="0 0 24 24"><path d="M12 3.5 21.5 20.5 2.5 20.5Z"/><path d="M12 9.5v4.5"/><path d="M12 17.25h.01"/></symbol>
+    <symbol id="i-loader" viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-3.05-6.74"/></symbol>
+  </defs>
+</svg>
+
+<div class="app-shell">
+  <!-- ================= 侧边栏(设计系统 §8.7 / §10.1;非本页设计范围,仅还原场景) ================= -->
+  <aside class="sidebar">
+    <div class="gradient-line"></div>
+    <div class="sidebar-brand">
+      <div class="logo"><svg class="icon icon-lg"><use href="#i-terminal"/></svg></div>
+      <div>
+        <div class="name">Scoop GUI</div>
+        <div class="ver">scoop 0.5.3</div>
+      </div>
+    </div>
+    <nav>
+      <button class="nav-item active" type="button">
+        <svg class="icon"><use href="#i-package"/></svg>
+        <span class="label">已装软件</span>
+        <span id="nav-outdated-badge" class="badge badge-warning" style="display:none"></span>
+      </button>
+      <button class="nav-item" type="button">
+        <svg class="icon"><use href="#i-search"/></svg>
+        <span class="label">浏览软件包</span>
+      </button>
+      <button class="nav-item" type="button">
+        <svg class="icon"><use href="#i-layers"/></svg>
+        <span class="label">桶管理</span>
+      </button>
+      <button class="nav-item" type="button">
+        <svg class="icon"><use href="#i-sliders"/></svg>
+        <span class="label">设置</span>
+      </button>
+    </nav>
+    <div class="sidebar-spacer"></div>
+    <div class="sidebar-footer">
+      <button class="nav-item" type="button">
+        <svg class="icon"><use href="#i-list"/></svg>
+        <span class="label">任务</span>
+        <span id="nav-jobs-badge" class="badge badge-info" style="display:none"></span>
+      </button>
+    </div>
+  </aside>
+
+  <!-- ================= 主区域:P04 本体 ================= -->
+  <main class="main">
+    <!-- 原型状态演示控制条:非产品界面,仅评审用(见文件头注释) -->
+    <div class="demo-bar">
+      <strong>原型状态演示(非产品界面)</strong>
+      <button class="demo-pill active" data-demo="populated" type="button">正常(8 个已装软件包)</button>
+      <button class="demo-pill" data-demo="empty" type="button">空状态(installed.empty)</button>
+      <button class="demo-pill" data-demo="error" type="button">错误态(error.readFailed)</button>
+    </div>
+
+    <!-- PageHeader(设计系统 §10.2;右侧为"检查更新"+"更新全部过期",见设计提示词第 3 节与第 11 节第 1 条) -->
+    <div class="page-header-region bg-grid">
+      <div class="overlay-glow bg-glow-top"></div>
+      <div class="page-header-row">
+        <div class="titles">
+          <h1>已装软件包</h1>
+          <p class="desc">本机已通过 Scoop 安装的软件包;存在新版本的软件包会标记为"过期"。</p>
+        </div>
+        <div class="actions">
+          <button class="btn btn-outline" id="btn-check-updates" type="button">
+            <svg class="icon" id="icon-check-updates"><use href="#i-refresh"/></svg>
+            检查更新
+          </button>
+          <button class="btn btn-default" id="btn-update-all" type="button">
+            <svg class="icon"><use href="#i-arrow-up"/></svg>
+            更新全部过期
+            <span class="badge-count" id="update-all-count"></span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 内容体:SubToolbar + Table(设计提示词第 4、5、6 节) -->
+    <div class="content-body">
+      <div class="subtoolbar">
+        <div class="search-wrap">
+          <svg class="icon"><use href="#i-search"/></svg>
+          <input class="input" id="filter-input" type="text" placeholder="过滤已装软件包…" />
+        </div>
+        <button class="btn btn-outline btn-icon" id="btn-refresh" type="button" aria-label="刷新">
+          <svg class="icon" id="icon-refresh"><use href="#i-refresh"/></svg>
+        </button>
+      </div>
+
+      <!-- populated 状态:TableWrap -->
+      <div class="table-wrap" id="table-region">
+        <table>
+          <thead>
+            <tr>
+              <th>名称</th>
+              <th>版本</th>
+              <th>可用版本</th>
+              <th>来源桶</th>
+              <th>状态</th>
+              <th class="col-actions">操作</th>
+            </tr>
+          </thead>
+          <tbody id="table-body"><!-- JS 渲染 --></tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- ================= 卸载确认对话框(设计提示词第 7 节;共享一份实例,P07 触发也复用此弹窗) ================= -->
+<div class="dialog-overlay" id="dialog-uninstall" hidden>
+  <div class="dialog-content" role="dialog" aria-modal="true">
+    <div class="dialog-header">
+      <div class="dialog-title">卸载确认</div>
+      <div class="dialog-desc" id="uninstall-desc"></div>
+    </div>
+    <div class="dialog-footer">
+      <button class="btn btn-secondary" data-action="cancel-uninstall" type="button">取消</button>
+      <button class="btn btn-destructive" data-action="confirm-uninstall" type="button">卸载</button>
+    </div>
+  </div>
+</div>
+
+<!-- ================= 批量更新确认对话框(设计提示词第 7 节) ================= -->
+<div class="dialog-overlay" id="dialog-update-all" hidden>
+  <div class="dialog-content" role="dialog" aria-modal="true">
+    <div class="dialog-header">
+      <div class="dialog-title">批量更新确认</div>
+      <div class="dialog-desc" id="update-all-desc"></div>
+    </div>
+    <div class="dialog-list" id="update-all-list"></div>
+    <div class="dialog-footer">
+      <button class="btn btn-secondary" data-action="cancel-update-all" type="button">取消</button>
+      <button class="btn btn-default" data-action="confirm-update-all" type="button">更新全部过期</button>
+    </div>
+  </div>
+</div>
+
+<!-- ================= Toast 堆叠(设计系统 §8.10) ================= -->
+<div class="toast-stack" id="toast-stack"></div>
+
+<script>
+(function () {
+  "use strict";
+
+  /* ---------------------------------------------------------------
+   * 示例数据:字段名对应 InstalledApp / StatusEntry 契约
+   * (docs/architecture/api/scoop-gui.md §3.5/§3.6)。
+   * busy: null | "update" | "uninstall" —— 模拟 selectBusyTargets() 的结果。
+   * 7zip / neovim 在初始状态即为 busy,用于静态演示"忙碌态长什么样";
+   * 其余行的 busy 态只由用户交互触发,交互完成后会在若干秒后自动复位。
+   * ------------------------------------------------------------- */
+  const SEED_DATA = [
+    { name: "git", version: "2.45.1.windows.1", bucket: "main", bucketFull: "D:\\Scoop\\buckets\\main\\bucket\\git.json", latest: "", outdated: false, busy: null },
+    { name: "python", version: "3.11.8", bucket: "main", bucketFull: "main", latest: "3.12.3", outdated: true, busy: null },
+    { name: "nodejs-lts", version: "20.11.0", bucket: "main", bucketFull: "main", latest: "", outdated: false, busy: null },
+    { name: "vscode", version: "1.88.0", bucket: "extras", bucketFull: "D:\\Scoop\\buckets\\extras\\bucket\\vscode.json", latest: "1.89.1", outdated: true, busy: null },
+    { name: "7zip", version: "23.01", bucket: "main", bucketFull: "main", latest: "", outdated: false, busy: "uninstall" },
+    { name: "ripgrep", version: "14.1.0", bucket: "main", bucketFull: "main", latest: "", outdated: false, busy: null },
+    { name: "neovim", version: "0.9.5", bucket: "main", bucketFull: "main", latest: "0.10.0", outdated: true, busy: "update" },
+    { name: "oh-my-posh", version: "19.9.0", bucket: "extras", bucketFull: "extras", latest: "", outdated: false, busy: null },
+  ];
+  // 工作副本:"正常"演示态按钮会把它重置回 SEED_DATA 的深拷贝,保证每次演示都有确定的起点
+  let DATA = SEED_DATA.map((a) => Object.assign({}, a));
+
+  const KIND_LABEL = { update: "更新", uninstall: "卸载" };
+
+  let selectedName = "";
+  // demoState 只表达"外层模拟态"(error = 模拟 errors.installed 命令级失败);
+  // "populated" 与"installed 数组本身为空"由 DATA 是否为空决定,不再单独区分 —— 与源码
+  // InstalledView.tsx 完全一致:源码里"本机确实没装任何软件包"与"过滤后零匹配"共用同一段
+  // rows.length === 0 判断和同一段 installed.empty/installed.emptyHint 文案,不做区分
+  // (这是本次核对中发现的一处源码现状,见验收文档"已知发现"一节;本原型如实复现,不做"改进")。
+  let demoState = "populated"; // populated | error
+
+  const tableRegion = document.getElementById("table-region");
+  const filterInput = document.getElementById("filter-input");
+  const updateAllBtn = document.getElementById("btn-update-all");
+  const updateAllCount = document.getElementById("update-all-count");
+  const navOutdatedBadge = document.getElementById("nav-outdated-badge");
+  const navJobsBadge = document.getElementById("nav-jobs-badge");
+
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  }
+
+  function outdatedList() {
+    return DATA.filter((a) => a.outdated).map((a) => a.name);
+  }
+
+  function busyCount() {
+    return DATA.filter((a) => a.busy).length;
+  }
+
+  /* ------------------------- 渲染:头部计数徽标 ------------------------- */
+  function renderCounters() {
+    const outdated = outdatedList();
+    updateAllBtn.disabled = outdated.length === 0;
+    if (outdated.length > 0) {
+      updateAllCount.style.display = "";
+      updateAllCount.textContent = String(outdated.length);
+    } else {
+      updateAllCount.style.display = "none";
+    }
+
+    if (outdated.length > 0) {
+      navOutdatedBadge.style.display = "";
+      navOutdatedBadge.textContent = String(outdated.length);
+    } else {
+      navOutdatedBadge.style.display = "none";
+    }
+
+    const busy = busyCount();
+    if (busy > 0) {
+      navJobsBadge.style.display = "";
+      navJobsBadge.innerHTML = '<svg class="icon icon-sm icon-spin"><use href="#i-loader"/></svg>' + busy;
+    } else {
+      navJobsBadge.style.display = "none";
+    }
+  }
+
+  /* ------------------------- 渲染:表格主体 ------------------------- */
+  function renderRow(app) {
+    const isBusy = !!app.busy;
+    const rowClasses = ["data-row"];
+    if (app.outdated) rowClasses.push("row-outdated");
+    if (app.name === selectedName) rowClasses.push("row-selected");
+
+    let statusBadge;
+    if (isBusy) {
+      statusBadge = '<span class="badge badge-info"><svg class="icon icon-spin"><use href="#i-loader"/></svg>' + KIND_LABEL[app.busy] + "</span>";
+    } else if (app.outdated) {
+      statusBadge = '<span class="badge badge-warning"><svg class="icon"><use href="#i-alert"/></svg>过期</span>';
+    } else {
+      statusBadge = '<span class="badge badge-success"><svg class="icon"><use href="#i-check"/></svg>最新</span>';
+    }
+
+    const latestCell = app.outdated
+      ? '<span class="text-warning">' + escapeHtml(app.latest) + "</span>"
+      : '<span class="subtle">—</span>';
+
+    let actions = "";
+    if (app.outdated) {
+      actions += '<button class="btn btn-sm btn-default" data-action="update" data-name="' + escapeHtml(app.name) + '"' + (isBusy ? " disabled" : "") + ">更新</button>";
+    }
+    actions += '<button class="btn btn-sm btn-ghost text-destructive" data-action="uninstall" data-name="' + escapeHtml(app.name) + '"' + (isBusy ? " disabled" : "") + ">卸载</button>";
+
+    return (
+      '<tr class="' + rowClasses.join(" ") + '" data-name="' + escapeHtml(app.name) + '">' +
+      '<td class="name-cell">' + escapeHtml(app.name) + "</td>" +
+      '<td class="mono muted">' + escapeHtml(app.version) + "</td>" +
+      '<td class="mono">' + latestCell + "</td>" +
+      '<td class="muted" title="' + escapeHtml(app.bucketFull) + '">' + escapeHtml(app.bucket) + "</td>" +
+      "<td>" + statusBadge + "</td>" +
+      '<td class="col-actions"><div class="actions-cell">' + actions + "</div></td>" +
+      "</tr>"
+    );
+  }
+
+  /* ------------------------- 空态 / 错误态(P10 子状态) ------------------------- */
+  // 容器节点(tableRegion)全程不用 outerHTML 整体替换,只切 className 与 innerHTML——
+  // 避免 outerHTML 替换导致 JS 引用变成游离节点(曾在人工测试中触发过一次,现已改为此写法)。
+  var TABLE_SKELETON =
+    '<table><thead><tr><th>名称</th><th>版本</th><th>可用版本</th><th>来源桶</th><th>状态</th><th class="col-actions">操作</th></tr></thead><tbody id="table-body"></tbody></table>';
+
+  function showTableSkeletonIfNeeded() {
+    if (!document.getElementById("table-body")) {
+      tableRegion.className = "table-wrap";
+      tableRegion.innerHTML = TABLE_SKELETON;
+    }
+  }
+
+  function showEmptyState(title, hint) {
+    tableRegion.className = "table-wrap empty-state";
+    tableRegion.innerHTML =
+      '<div class="glyph"><svg class="icon-xl"><use href="#i-package"/></svg></div>' +
+      '<div class="title">' + escapeHtml(title) + "</div>" +
+      '<div class="hint">' + escapeHtml(hint) + "</div>";
+  }
+
+  function showErrorState() {
+    tableRegion.className = "table-wrap empty-state is-error";
+    tableRegion.innerHTML =
+      '<div class="glyph"><svg class="icon-xl"><use href="#i-alert"/></svg></div>' +
+      '<div class="title">无法读取数据</div>' +
+      '<div class="hint">本机 Scoop 当前不可用,相关数据无法读取。请检查 scoop 命令是否正常后刷新重试。</div>' +
+      '<button class="btn btn-secondary" id="btn-error-retry" style="margin-top:12px" type="button">' +
+      '<svg class="icon"><use href="#i-refresh"/></svg>刷新</button>';
+    document.getElementById("btn-error-retry").addEventListener("click", function () {
+      setDemoState("populated");
+    });
+  }
+
+  /**
+   * 渲染主入口:条件顺序与 InstalledView.tsx 一一对应
+   * (loading 骨架态本原型不模拟) → errors.installed → rows.length === 0 → 表格。
+   * 注意:源码对"installed 本身为空数组"与"过滤后零匹配"用的是同一个 rows.length === 0
+   * 判断、同一段 installed.empty / installed.emptyHint 文案,并不区分两种情形——本函数
+   * 如实复现这一行为(不做"过滤零匹配应有独立提示"的改进,那不是当前源码的真实行为)。
+   */
+  function render() {
+    if (demoState === "error") {
+      showErrorState();
+      renderCounters();
+      return;
+    }
+
+    const q = filterInput.value.trim().toLowerCase();
+    const rows = DATA.filter((a) => !q || a.name.toLowerCase().includes(q));
+
+    if (rows.length === 0) {
+      showEmptyState("本机还没有通过 Scoop 安装任何软件包", '前往"浏览软件包"查找并安装第一个软件包');
+      renderCounters();
+      return;
+    }
+
+    showTableSkeletonIfNeeded();
+    document.getElementById("table-body").innerHTML = rows.map(renderRow).join("");
+    renderCounters();
+  }
+
+  function setDemoState(next) {
+    demoState = next;
+    document.querySelectorAll(".demo-pill").forEach((p) => p.classList.toggle("active", p.dataset.demo === next));
+    if (next === "populated") {
+      // 重置为初始 8 行示例数据 + 清空过滤框,得到确定的演示起点
+      DATA = SEED_DATA.map((a) => Object.assign({}, a));
+      selectedName = "";
+      filterInput.value = "";
+    } else if (next === "empty") {
+      DATA = []; // 对应"installed 数组本身为空";与"过滤后零匹配"走同一段 render() 逻辑
+    }
+    // next === "error" 时 DATA 不变,由 render() 顶部短路到 showErrorState()
+    render();
+  }
+
+  /* ------------------------- toast(设计系统 §8.10) ------------------------- */
+  function toast(message, variant) {
+    variant = variant || "info";
+    const stack = document.getElementById("toast-stack");
+    const el = document.createElement("div");
+    el.className = "toast toast-" + variant;
+    const iconId = variant === "success" ? "i-check" : variant === "error" ? "i-alert" : "i-loader";
+    el.innerHTML = '<svg class="icon"><use href="#' + iconId + '"/></svg><div>' + escapeHtml(message) + "</div>";
+    stack.appendChild(el);
+    const duration = variant === "error" ? 6000 : 4000;
+    setTimeout(() => {
+      el.style.transition = "opacity .2s";
+      el.style.opacity = "0";
+      setTimeout(() => el.remove(), 200);
+    }, duration);
+  }
+
+  /* ------------------------- 单包更新:一键直达,无二次确认
+   * (源码 InstalledView.tsx 行为;与页面 PRD"选择更新并确认"表述不一致,
+   *  详见设计提示词第 11 节第 5 条,本原型按源码呈现) ------------------------- */
+  function startUpdate(name) {
+    const app = DATA.find((a) => a.name === name);
+    if (!app || app.busy) return;
+    app.busy = "update";
+    render();
+    toast("已加入任务队列:更新 " + name, "info");
+    setTimeout(() => {
+      app.busy = null;
+      app.outdated = false;
+      app.version = app.latest || app.version;
+      app.latest = "";
+      render();
+      toast("更新 " + name + " 已成功", "success");
+    }, 2200);
+  }
+
+  /* ------------------------- 批量更新:单 worker 顺序执行(ARCH05 / flow §1.6) ------------------------- */
+  function runUpdateAllQueue(names) {
+    let i = 0;
+    function next() {
+      if (i >= names.length) return;
+      const name = names[i];
+      i += 1;
+      const app = DATA.find((a) => a.name === name);
+      if (app && !app.busy) {
+        app.busy = "update";
+        render();
+        setTimeout(() => {
+          app.busy = null;
+          app.outdated = false;
+          app.version = app.latest || app.version;
+          app.latest = "";
+          render();
+          toast("更新 " + name + " 已成功", "success");
+          next();
+        }, 1500);
+      } else {
+        next();
+      }
+    }
+    next();
+  }
+
+  /* ------------------------- 卸载确认弹窗 ------------------------- */
+  const uninstallDialog = document.getElementById("dialog-uninstall");
+  const uninstallDesc = document.getElementById("uninstall-desc");
+  let uninstallTarget = "";
+
+  function askUninstall(name) {
+    uninstallTarget = name;
+    uninstallDesc.textContent = "确定要从本机卸载 " + name + " 吗?";
+    uninstallDialog.hidden = false;
+  }
+  function closeUninstall() {
+    uninstallDialog.hidden = true;
+    uninstallTarget = "";
+  }
+  function confirmUninstall() {
+    const name = uninstallTarget;
+    closeUninstall();
+    const app = DATA.find((a) => a.name === name);
+    if (!app) return;
+    app.busy = "uninstall";
+    render();
+    setTimeout(() => {
+      const idx = DATA.findIndex((a) => a.name === name);
+      if (idx >= 0) DATA.splice(idx, 1);
+      render();
+      toast("卸载 " + name + " 已成功", "success");
+    }, 1800);
+  }
+
+  /* ------------------------- 批量更新确认弹窗 ------------------------- */
+  const updateAllDialog = document.getElementById("dialog-update-all");
+  const updateAllDesc = document.getElementById("update-all-desc");
+  const updateAllListEl = document.getElementById("update-all-list");
+
+  function openUpdateAll() {
+    const names = outdatedList();
+    if (names.length === 0) return;
+    updateAllDesc.textContent = "将按顺序更新以下 " + names.length + " 个过期软件包,每个软件包对应一条任务:";
+    updateAllListEl.innerHTML = names.map((n) => "<div>" + escapeHtml(n) + "</div>").join("");
+    updateAllDialog.hidden = false;
+  }
+  function closeUpdateAll() {
+    updateAllDialog.hidden = true;
+  }
+  function confirmUpdateAll() {
+    const names = outdatedList();
+    closeUpdateAll();
+    runUpdateAllQueue(names);
+  }
+
+  /* ------------------------- 事件绑定 ------------------------- */
+  filterInput.addEventListener("input", render);
+
+  document.getElementById("btn-check-updates").addEventListener("click", function () {
+    const btn = this;
+    const icon = document.getElementById("icon-check-updates");
+    if (btn.disabled) return;
+    btn.disabled = true;
+    icon.classList.add("icon-spin");
+    setTimeout(() => {
+      btn.disabled = false;
+      icon.classList.remove("icon-spin");
+      toast("过期检查已完成", "info");
+    }, 900);
+  });
+
+  document.getElementById("btn-refresh").addEventListener("click", function () {
+    const icon = document.getElementById("icon-refresh");
+    icon.classList.add("icon-spin");
+    setTimeout(() => icon.classList.remove("icon-spin"), 600);
+  });
+
+  updateAllBtn.addEventListener("click", openUpdateAll);
+
+  document.querySelectorAll(".demo-pill").forEach((p) => {
+    p.addEventListener("click", () => setDemoState(p.dataset.demo));
+  });
+
+  // 事件委托:行点击(选中态演示 + P07 跳转提示)与操作按钮
+  document.addEventListener("click", function (e) {
+    const actionBtn = e.target.closest("[data-action]");
+    if (actionBtn) {
+      const action = actionBtn.dataset.action;
+      const name = actionBtn.dataset.name;
+      if (action === "update") { e.stopPropagation(); startUpdate(name); return; }
+      if (action === "uninstall") { e.stopPropagation(); askUninstall(name); return; }
+      if (action === "cancel-uninstall") { closeUninstall(); return; }
+      if (action === "confirm-uninstall") { confirmUninstall(); return; }
+      if (action === "cancel-update-all") { closeUpdateAll(); return; }
+      if (action === "confirm-update-all") { confirmUpdateAll(); return; }
+    }
+
+    const row = e.target.closest("tr.data-row");
+    if (row) {
+      const name = row.dataset.name;
+      selectedName = selectedName === name ? "" : name;
+      render();
+      if (selectedName) toast("已选中 " + name + " → 实际产品中会打开 P07 详情对话框(本原型不展开)", "info");
+    }
+  });
+
+  // 对话框:点击遮罩关闭、Esc 关闭、Enter 确认(设计系统 §8.4 通用行为)
+  uninstallDialog.addEventListener("click", function (e) { if (e.target === uninstallDialog) closeUninstall(); });
+  updateAllDialog.addEventListener("click", function (e) { if (e.target === updateAllDialog) closeUpdateAll(); });
+  document.addEventListener("keydown", function (e) {
+    if (e.key === "Escape") {
+      if (!uninstallDialog.hidden) closeUninstall();
+      if (!updateAllDialog.hidden) closeUpdateAll();
+    } else if (e.key === "Enter") {
+      if (!uninstallDialog.hidden) confirmUninstall();
+      else if (!updateAllDialog.hidden) confirmUpdateAll();
+    }
+  });
+
+  // 初始渲染
+  render();
+})();
+</script>
+</body>
+</html>

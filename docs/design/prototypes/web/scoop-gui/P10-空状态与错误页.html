@@ -1,0 +1,1092 @@
+<!doctype html>
+<!--
+  P10 · 空状态与错误页 · scoop-gui(web 端)
+  =====================================================================
+  本文件是一份*设计走查原型*,不是产品代码。它把 P10 覆盖的"子状态"——
+  P04(已装列表)/ P05(浏览搜索)/ P06(桶管理)在数据为空或读取失败时的呈现,
+  以及场景 7(长时任务失败)在 P08 任务面板与来源页的联动——用真实设计系统 v2
+  的 token 与真实组件(src/components/EmptyState.tsx 等)已经支持的变体,
+  拼装成一个可以在浏览器里直接打开、点击切换的静态演示。
+
+  真相源对照(如本文件与下列源码有出入,以源码为准):
+    - src/components/EmptyState.tsx      空状态/错误态容器
+    - src/pages/InstalledView.tsx        P04 已装列表
+    - src/pages/BrowseView.tsx           P05 浏览/搜索
+    - src/pages/BucketsView.tsx          P06 桶管理(双 Tab)
+    - src/components/JobsPanel.tsx       P08 任务面板(场景 7 联动)
+    - src/i18n.ts                        全部文案 key
+    - docs/design/systems/web.md         设计系统 v2(色板/字体/间距/硬约束)
+
+  凡是带 "【原型】" 字样或 dashed 边框的区域,均为本文件为了演示/讲解而加、
+  真实产品里不存在的辅助内容,不应被误当成产品 UI 的一部分。
+-->
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>P10 · 空状态与错误页 · scoop-gui 设计原型</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link
+  href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap"
+  rel="stylesheet"
+/>
+<style>
+  /* ==================================================================
+     §11.1 设计 token(docs/design/systems/web.md)—— 暗色默认 + 亮色备选
+     数值以 web.md 的 oklch 定义为主,alpha 叠加变体(*-soft/-glow 等)
+     对齐 src/index.css 的既有实现,保证与真实运行时视觉一致。
+     ================================================================== */
+  :root {
+    color-scheme: dark;
+    --bg: oklch(0.13 0.02 250);
+    --bg-elevated: oklch(0.17 0.02 250);
+    --bg-overlay: oklch(0.20 0.02 250);
+    --fg: oklch(0.96 0.005 250);
+    --fg-muted: oklch(0.72 0.01 250);
+    --fg-subtle: oklch(0.55 0.01 250);
+    --border: oklch(0.30 0.01 250);
+    --border-strong: oklch(0.45 0.01 250);
+
+    --primary: oklch(0.72 0.18 145);
+    --primary-hover: oklch(0.76 0.18 145);
+    --primary-fg: oklch(0.16 0.03 145);
+    --primary-glow: oklch(0.72 0.18 145 / 0.25);
+    --primary-glow-soft: oklch(0.72 0.18 145 / 0.10);
+
+    --accent: oklch(0.70 0.16 250);
+    --accent-glow: oklch(0.70 0.16 250 / 0.25);
+
+    --warning: oklch(0.80 0.16 80);
+    --warning-soft: oklch(0.80 0.16 80 / 0.05);
+    --warning-15: oklch(0.80 0.16 80 / 0.15);
+    --warning-30: oklch(0.80 0.16 80 / 0.30);
+
+    --destructive: oklch(0.65 0.22 25);
+    --destructive-glow: oklch(0.65 0.22 25 / 0.20);
+    --destructive-30: oklch(0.65 0.22 25 / 0.30);
+
+    --surface-glass: oklch(0.22 0.02 250 / 0.6);
+
+    --font-heading: "Space Grotesk", system-ui, sans-serif;
+    --font-body: "DM Sans", system-ui, sans-serif;
+    --font-mono: "JetBrains Mono", "Cascadia Code", Consolas, monospace;
+
+    --radius-sm: 4px;
+    --radius-md: 8px;
+    --radius-lg: 12px;
+    --radius-xl: 16px;
+
+    --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.5), 0 2px 4px -2px rgb(0 0 0 / 0.4);
+    --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.6), 0 4px 6px -4px rgb(0 0 0 / 0.4);
+    --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.7), 0 8px 10px -6px rgb(0 0 0 / 0.5);
+  }
+
+  /* 亮色备选(设计系统 §3);本原型默认不开启,仅作切换演示 */
+  :root.light {
+    color-scheme: light;
+    --bg: oklch(0.99 0.005 250);
+    --bg-elevated: oklch(1 0 0);
+    --bg-overlay: oklch(0.96 0.005 250);
+    --fg: oklch(0.18 0.02 250);
+    --fg-muted: oklch(0.45 0.01 250);
+    --fg-subtle: oklch(0.55 0.02 250);
+    --border: oklch(0.88 0.01 250);
+    --border-strong: oklch(0.7 0.02 250);
+
+    --primary: oklch(0.55 0.18 145);
+    --primary-hover: oklch(0.50 0.18 145);
+    --primary-fg: oklch(0.99 0 0);
+    --primary-glow: oklch(0.55 0.18 145 / 0.18);
+    --primary-glow-soft: oklch(0.55 0.18 145 / 0.08);
+
+    --warning-soft: oklch(0.80 0.16 80 / 0.08);
+    --warning-15: oklch(0.80 0.16 80 / 0.18);
+    --surface-glass: oklch(1 0 0 / 0.75);
+
+    --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.08), 0 2px 4px -2px rgb(0 0 0 / 0.06);
+    --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.06);
+    --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.12), 0 8px 10px -6px rgb(0 0 0 / 0.08);
+  }
+
+  * { box-sizing: border-box; }
+  /* 保险规则:多个组件类(.badge/.btn 等)自带 display:inline-flex,
+     与浏览器 UA 样式表的 [hidden]{display:none} 同优先级时按后出现者生效,
+     会导致 hidden 属性被"抵消"而不生效,故用 !important 强制兜底。 */
+  [hidden] { display: none !important; }
+  html, body, #root { height: 100%; margin: 0; }
+  body {
+    background: var(--bg);
+    color: var(--fg);
+    font-family: var(--font-body);
+    font-size: 14px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+  h1, h2, h3 { font-family: var(--font-heading); line-height: 1.2; margin: 0; }
+  ::selection { background: var(--primary-glow); }
+
+  .icon { width: 16px; height: 16px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; flex-shrink: 0; vertical-align: -3px; }
+  .icon-lg { width: 28px; height: 28px; }
+  .spin { animation: spin 1s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ---------------------------------------------------------- 科技感叠加层 */
+  .bg-grid {
+    background-image:
+      linear-gradient(to right, oklch(0.30 0.01 250 / 0.16) 1px, transparent 1px),
+      linear-gradient(to bottom, oklch(0.30 0.01 250 / 0.16) 1px, transparent 1px);
+    background-size: 32px 32px;
+  }
+  .bg-glow-top { position: absolute; inset: 0; pointer-events: none;
+    background: radial-gradient(ellipse 800px 200px at 50% -50%, var(--primary-glow), transparent); }
+  .gradient-line { height: 1px; flex-shrink: 0;
+    background: linear-gradient(to right, transparent, var(--primary), transparent); }
+
+  /* ---------------------------------------------------------- 按钮 */
+  .btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+    height: 40px; padding: 0 16px; border-radius: var(--radius-md); border: none;
+    font-family: var(--font-body); font-size: 14px; font-weight: 500; white-space: nowrap;
+    cursor: pointer; transition: filter .1s, box-shadow .15s, border-color .15s, background .15s; }
+  .btn:active { transform: scale(0.98); filter: brightness(0.9); }
+  .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+  .btn.sm { height: 32px; padding: 0 12px; font-size: 13px; }
+  .btn.icon-only { width: 40px; padding: 0; }
+  .btn-primary { background: var(--primary); color: var(--primary-fg); box-shadow: 0 0 12px var(--primary-glow); }
+  .btn-primary:not(:disabled):hover { background: var(--primary-hover); box-shadow: 0 0 20px var(--primary-glow), 0 0 40px var(--primary-glow); }
+  .btn-secondary { background: var(--bg-overlay); border: 1px solid var(--border); color: var(--fg); }
+  .btn-secondary:not(:disabled):hover { border-color: var(--border-strong); }
+  .btn-outline { background: transparent; border: 1px solid var(--border); color: var(--fg); }
+  .btn-outline:not(:disabled):hover { background: var(--bg-overlay); }
+  .btn-ghost { background: transparent; color: var(--fg-muted); }
+  .btn-ghost:not(:disabled):hover { background: var(--bg-overlay); color: var(--fg); }
+  .btn-destructive-text { background: transparent; color: var(--destructive); }
+  .btn-destructive-text:not(:disabled):hover { background: var(--bg-overlay); }
+  .badge-count { border-radius: var(--radius-sm); background: rgba(0,0,0,.25); padding: 0 6px; font-size: 11px; }
+
+  /* ---------------------------------------------------------- 徽标 Badge */
+  .badge { display: inline-flex; align-items: center; gap: 4px; height: 20px; border-radius: var(--radius-sm);
+    border: 1px solid; padding: 0 8px; font-size: 12px; font-weight: 500; white-space: nowrap; }
+  .badge .icon { width: 11px; height: 11px; }
+  .badge-default { border-color: var(--border); background: var(--bg-overlay); color: var(--fg-muted); }
+  .badge-success { border-color: var(--primary-glow); background: var(--primary-glow-soft); color: var(--primary); }
+  .badge-warning { border-color: var(--warning-30); background: var(--warning-15); color: var(--warning); }
+  .badge-destructive { border-color: var(--destructive-30); background: var(--destructive-glow); color: var(--destructive); }
+
+  /* ---------------------------------------------------------- 表格 */
+  .table-wrap { flex: 1; min-height: 0; overflow-y: auto; overflow-x: hidden;
+    border-radius: var(--radius-lg); border: 1px solid var(--border); background: var(--bg-elevated); }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  thead th { position: sticky; top: 0; z-index: 1; height: 40px; background: var(--bg-elevated);
+    padding: 0 12px; text-align: left; font-weight: 500; color: var(--fg-muted);
+    border-bottom: 1px solid var(--border); white-space: nowrap; }
+  th.text-right, td.text-right { text-align: right; }
+  tbody tr { border-bottom: 1px solid var(--border); transition: background .1s; }
+  tbody tr:last-child { border-bottom: none; }
+  tbody tr:hover { background: var(--bg-overlay); }
+  td { height: 40px; padding: 0 12px; max-width: 360px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .mono { font-family: var(--font-mono); }
+  .muted { color: var(--fg-muted); }
+  .subtle { color: var(--fg-subtle); }
+  .cell-actions { display: flex; justify-content: flex-end; gap: 4px; }
+
+  /* ---------------------------------------------------------- Tabs */
+  .tabs-list { display: flex; gap: 4px; border-bottom: 1px solid var(--border); margin-bottom: 12px; }
+  .tab-trigger { height: 40px; padding: 0 16px; display: inline-flex; align-items: center; gap: 6px;
+    border: none; border-bottom: 2px solid transparent; background: none; cursor: pointer;
+    color: var(--fg-muted); font-family: var(--font-body); font-size: 14px; font-weight: 500; }
+  .tab-trigger:hover { color: var(--fg); }
+  .tab-trigger.active { border-color: var(--primary); color: var(--primary); box-shadow: 0 1px 8px var(--primary-glow); }
+  .tab-panel[hidden] { display: none; }
+
+  /* ---------------------------------------------------------- 空状态 / 错误态(真相源:EmptyState.tsx) */
+  .empty-state { display: flex; flex: 1; flex-direction: column; align-items: center; justify-content: center;
+    gap: 8px; padding: 48px 24px; text-align: center; min-height: 260px; }
+  .empty-icon { margin-bottom: 4px; display: flex; width: 56px; height: 56px; align-items: center; justify-content: center;
+    border-radius: var(--radius-lg); border: 1px solid var(--border); background: var(--bg-overlay); color: var(--fg-subtle); }
+  .empty-icon.is-error { border-color: var(--warning-30); background: var(--warning-soft); color: var(--warning); }
+  .empty-title { font-size: 15px; font-weight: 500; color: var(--fg); }
+  .empty-hint { max-width: 480px; font-size: 13px; color: var(--fg-muted); }
+  .empty-actions { margin-top: 4px; }
+
+  /* ---------------------------------------------------------- 外壳:侧边栏 + 内容区(P03) */
+  .shell { display: flex; flex: 1; min-height: 0; }
+  .sidebar { width: 240px; flex-shrink: 0; display: flex; flex-direction: column;
+    border-right: 1px solid var(--border); background: var(--bg-elevated); padding-bottom: 12px; }
+  .brand { display: flex; align-items: center; gap: 10px; padding: 16px 16px 14px; }
+  .brand-icon { width: 36px; height: 36px; display: flex; align-items: center; justify-content: center;
+    border-radius: var(--radius-md); border: 1px solid var(--primary-glow); background: var(--primary-glow-soft); color: var(--primary); }
+  .brand-name { font-family: var(--font-heading); font-size: 15px; font-weight: 700; }
+  .brand-version { font-family: var(--font-mono); font-size: 10px; color: var(--fg-subtle); }
+  .nav { display: flex; flex-direction: column; gap: 2px; padding: 0 12px; }
+  .nav-item { display: flex; align-items: center; gap: 10px; width: 100%; height: 40px; padding: 0 12px;
+    border: none; border-radius: var(--radius-md); background: none; cursor: pointer; text-align: left;
+    font-family: var(--font-body); font-size: 13px; font-weight: 500; color: var(--fg-muted); }
+  .nav-item:hover { background: var(--bg-overlay); color: var(--fg); }
+  .nav-item.active { background: var(--primary-glow-soft); color: var(--primary); box-shadow: inset 2px 0 0 var(--primary); }
+  .nav-item span.label { flex: 1; }
+  .nav-spacer { flex: 1; }
+
+  .content { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+  .view[hidden] { display: none; }
+  .view { display: flex; flex-direction: column; height: 100%; min-width: 0; }
+  .page-header { position: relative; padding: 24px 28px 16px; flex-shrink: 0; }
+  .page-header-row { position: relative; display: flex; align-items: center; gap: 8px; }
+  .page-header h1 { font-size: 24px; font-weight: 600; }
+  .page-header p { margin: 6px 0 0; font-size: 13px; color: var(--fg-muted); }
+  .page-header-text { flex: 1; min-width: 0; }
+  .page-body { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 12px; padding: 0 28px 24px; }
+  .toolbar { display: flex; align-items: center; gap: 8px; }
+  .search-box { position: relative; flex: 1; min-width: 0; }
+  .search-box .icon { position: absolute; top: 12px; left: 12px; color: var(--fg-subtle); }
+  .input { width: 100%; height: 40px; padding: 0 12px 0 34px; border-radius: var(--radius-md);
+    border: 1px solid var(--border); background: var(--bg-overlay); color: var(--fg); font-size: 14px; font-family: var(--font-body); }
+  .input:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 1px var(--primary), 0 0 0 4px var(--primary-glow); }
+  .state-slot { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+
+  /* ---------------------------------------------------------- P08 任务面板(surface-glass,非 modal) */
+  .jobs-panel { position: fixed; right: 24px; bottom: 56px; z-index: 40; width: 420px;
+    max-height: min(480px, calc(100vh - 140px)); display: flex; flex-direction: column; overflow: hidden;
+    border-radius: var(--radius-xl); border: 1px solid var(--border); box-shadow: var(--shadow-xl);
+    background: var(--surface-glass); backdrop-filter: blur(12px); }
+  .jobs-panel[hidden] { display: none; }
+  .jobs-head { display: flex; align-items: center; gap: 8px; padding: 12px 12px 12px 16px; }
+  .jobs-head .title { font-family: var(--font-heading); font-size: 14px; font-weight: 600; }
+  .job-row { display: flex; align-items: center; gap: 8px; padding: 8px 12px; margin: 0 8px; border-radius: var(--radius-md);
+    background: var(--primary-glow-soft); box-shadow: inset 2px 0 0 var(--destructive); font-size: 13px; }
+  .job-row .name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .jobs-empty { padding: 24px; text-align: center; font-size: 13px; color: var(--fg-muted); }
+  .jobs-log-wrap { border-top: 1px solid var(--border); padding: 10px 16px 14px; }
+  .jobs-log-title { margin-bottom: 6px; font-size: 12px; color: var(--fg-subtle); }
+  .log-box { height: 150px; overflow: auto; background: rgba(0,0,0,.35); border: 1px solid var(--border);
+    border-radius: var(--radius-md); font-family: var(--font-mono); font-size: 12px; line-height: 1.6;
+    padding: 8px 10px; white-space: pre-wrap; word-break: break-all; }
+
+  /* ---------------------------------------------------------- Toast(Sonner 位置/风格对照) */
+  .toast-region { position: fixed; top: 16px; right: 16px; z-index: 60; display: flex; flex-direction: column; gap: 8px; width: 320px; }
+  .toast { display: flex; background: var(--bg-elevated); border: 1px solid var(--border); border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-lg); overflow: hidden; font-size: 13px; animation: toast-in .15s ease-out; }
+  .toast-bar { width: 3px; flex-shrink: 0; background: var(--destructive); }
+  .toast-body { padding: 10px 12px; color: var(--fg); }
+  @keyframes toast-in { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: translateY(0); } }
+
+  /* ---------------------------------------------------------- 【原型专用】非产品 UI 的讲解/控制元素 */
+  .proto-legend { border-bottom: 1px dashed var(--warning-30); background: var(--warning-soft); padding: 10px 20px; flex-shrink: 0; }
+  .proto-legend-title { font-size: 12px; font-weight: 700; color: var(--warning); letter-spacing: .02em; }
+  .proto-legend p { margin: 4px 0 0; font-size: 12px; line-height: 1.6; color: var(--fg-muted); max-width: 920px; }
+  .proto-controls { display: flex; align-items: center; gap: 10px; margin-top: 8px; flex-wrap: wrap; }
+  .proto-controls .seg-group { display: inline-flex; border: 1px solid var(--border); border-radius: 999px; overflow: hidden; }
+  .proto-controls .seg-group button { border: none; background: var(--bg-overlay); color: var(--fg-muted); font-size: 12px;
+    padding: 5px 12px; cursor: pointer; font-family: var(--font-body); }
+  .proto-controls .seg-group button.active { background: var(--primary-glow-soft); color: var(--primary); }
+  .proto-controls .demo-btn { border: 1px dashed var(--destructive-30); background: var(--destructive-glow); color: var(--destructive);
+    border-radius: 999px; font-size: 12px; padding: 5px 12px; cursor: pointer; font-family: var(--font-body); }
+
+  .proto-toggle { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; padding: 8px 10px;
+    border: 1px dashed var(--border-strong); border-radius: var(--radius-md); background: rgba(127,127,127,.04); flex-wrap: wrap; }
+  .proto-toggle-label { font-size: 11px; color: var(--fg-subtle); text-transform: uppercase; letter-spacing: .05em; margin-right: 2px; }
+  .seg { border: 1px solid var(--border); background: var(--bg-overlay); color: var(--fg-muted); font-size: 12px;
+    padding: 4px 11px; border-radius: 999px; cursor: pointer; font-family: var(--font-body); }
+  .seg.active { background: var(--primary-glow-soft); border-color: var(--primary); color: var(--primary); }
+  .seg:disabled { opacity: .4; cursor: not-allowed; }
+
+  .proto-note { margin-top: 10px; border: 1px dashed var(--border-strong); border-radius: var(--radius-md);
+    padding: 9px 11px; font-size: 12px; line-height: 1.6; color: var(--fg-muted); background: rgba(127,127,127,.04); }
+  .proto-note b { color: var(--fg); }
+  .proto-note-label { display: inline-block; margin-bottom: 3px; font-size: 11px; font-weight: 700;
+    color: var(--warning); text-transform: uppercase; letter-spacing: .04em; }
+
+  .footer-note { flex-shrink: 0; padding: 8px 28px 14px; font-size: 11px; color: var(--fg-subtle); font-family: var(--font-mono); }
+</style>
+</head>
+<body>
+
+<!-- ================= SVG 图标 sprite(lucide-react 线性图标近似还原,line-based,不引入插画元素)================= -->
+<svg width="0" height="0" style="position:absolute">
+  <defs>
+    <symbol id="i-terminal" viewBox="0 0 24 24"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></symbol>
+    <symbol id="i-package" viewBox="0 0 24 24"><path d="m7.5 4.27 9 5.15"/><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4a2 2 0 0 0 1-1.73Z"/><path d="m3.3 7 8.7 5 8.7-5"/><line x1="12" y1="22" x2="12" y2="12"/></symbol>
+    <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.7" y2="16.7"/></symbol>
+    <symbol id="i-layers" viewBox="0 0 24 24"><path d="m12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83Z"/><path d="M2.6 12.08a1 1 0 0 0 0 1.83l8.58 3.9a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83"/></symbol>
+    <symbol id="i-sliders" viewBox="0 0 24 24"><line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/></symbol>
+    <symbol id="i-list" viewBox="0 0 24 24"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></symbol>
+    <symbol id="i-triangle-alert" viewBox="0 0 24 24"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></symbol>
+    <symbol id="i-refresh" viewBox="0 0 24 24"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><polyline points="21 3 21 8 16 8"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><polyline points="8 16 3 16 3 21"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></symbol>
+    <symbol id="i-loader" viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></symbol>
+    <symbol id="i-x" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></symbol>
+    <symbol id="i-circle-up" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="16 12 12 8 8 12"/><line x1="12" y1="16" x2="12" y2="8"/></symbol>
+    <symbol id="i-plus" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></symbol>
+    <symbol id="i-trash" viewBox="0 0 24 24"><line x1="3" y1="6" x2="21" y2="6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></symbol>
+  </defs>
+</svg>
+
+<div id="root" style="display:flex; flex-direction:column; height:100%;">
+
+  <!-- ============================================================ 【原型】说明条 + 全局演示控制(非产品 UI) -->
+  <div class="proto-legend">
+    <div class="proto-legend-title" data-t="proto.badge">【原型说明 · 非产品界面】</div>
+    <p data-t="proto.intro">
+      本页演示 P10 覆盖的子状态:P04/P05/P06 在数据为空或读取失败时的呈现,以及一次长时任务失败在任务面板与来源页的联动。
+      每个页面标题下方带虚线框的"原型演示"控制条用于切换子状态,真实产品里不存在这些控制条。
+    </p>
+    <div class="proto-controls">
+      <span class="proto-legend-title" style="color:var(--fg-subtle)" data-t="proto.lang">语言</span>
+      <div class="seg-group" id="langGroup">
+        <button data-lang="zh" class="active">中文</button>
+        <button data-lang="en">EN</button>
+      </div>
+      <span class="proto-legend-title" style="color:var(--fg-subtle)" data-t="proto.theme">主题</span>
+      <div class="seg-group" id="themeGroup">
+        <button data-theme="dark" class="active" data-t="proto.dark">暗色</button>
+        <button data-theme="light" data-t="proto.light">亮色</button>
+      </div>
+      <button class="demo-btn" id="simulateFailBtn">
+        <span data-t="proto.simulateFail">模拟:触发一次任务失败(场景 7)</span>
+      </button>
+    </div>
+  </div>
+
+  <div class="shell">
+    <!-- ============================================================ 侧边栏(P03 主界面壳,§10.1) -->
+    <aside class="sidebar">
+      <div class="gradient-line"></div>
+      <div class="brand">
+        <div class="brand-icon"><svg class="icon" style="width:18px;height:18px"><use href="#i-terminal"/></svg></div>
+        <div>
+          <div class="brand-name">Scoop GUI</div>
+          <div class="brand-version">v0.5.3 (mock)</div>
+        </div>
+      </div>
+      <nav class="nav">
+        <button class="nav-item active" data-view="installed">
+          <svg class="icon"><use href="#i-package"/></svg>
+          <span class="label" data-t="nav.installed">已装软件</span>
+          <span class="badge badge-warning" id="navOutdatedBadge" hidden></span>
+        </button>
+        <button class="nav-item" data-view="browse">
+          <svg class="icon"><use href="#i-search"/></svg>
+          <span class="label" data-t="nav.browse">浏览软件包</span>
+        </button>
+        <button class="nav-item" data-view="buckets">
+          <svg class="icon"><use href="#i-layers"/></svg>
+          <span class="label" data-t="nav.buckets">桶管理</span>
+        </button>
+        <button class="nav-item" data-view="settings">
+          <svg class="icon"><use href="#i-sliders"/></svg>
+          <span class="label" data-t="nav.settings">设置</span>
+        </button>
+      </nav>
+      <div class="nav-spacer"></div>
+      <div style="padding:0 12px">
+        <button class="nav-item" id="jobsNavBtn">
+          <svg class="icon"><use href="#i-list"/></svg>
+          <span class="label" data-t="nav.jobs">任务</span>
+          <span class="badge badge-destructive" id="navJobsBadge" hidden>1</span>
+        </button>
+      </div>
+    </aside>
+
+    <!-- ============================================================ 内容区 -->
+    <main class="content">
+
+      <!-- ======================= P04 已装软件包列表 ======================= -->
+      <section class="view" data-view="installed">
+        <div class="page-header bg-grid">
+          <div class="bg-glow-top"></div>
+          <div class="page-header-row">
+            <div class="page-header-text">
+              <h1 data-t="installed.title">已装软件包</h1>
+              <p data-t="installed.desc">本机已通过 Scoop 安装的软件包;存在新版本的软件包会标记为"过期"。</p>
+            </div>
+            <button class="btn btn-outline"><svg class="icon"><use href="#i-refresh"/></svg><span data-t="installed.checkUpdates">检查更新</span></button>
+            <button class="btn btn-primary" id="updateAllBtn"><svg class="icon"><use href="#i-circle-up"/></svg><span data-t="installed.updateAll">更新全部过期</span><span class="badge-count" id="updateAllCount" hidden></span></button>
+          </div>
+        </div>
+        <div class="page-body">
+          <div class="proto-toggle">
+            <span class="proto-toggle-label" data-t="proto.toggleLabel">原型演示 · 切换子状态</span>
+            <button class="seg active" data-installed-mode="data" data-t="proto.stateData">有数据</button>
+            <button class="seg" data-installed-mode="empty" data-t="proto.stateEmpty">空状态(场景 1)</button>
+            <button class="seg" data-installed-mode="error" data-t="proto.stateError">读取失败(场景 5/6)</button>
+          </div>
+          <div class="toolbar">
+            <div class="search-box">
+              <svg class="icon"><use href="#i-search"/></svg>
+              <input class="input" id="installedFilter" data-t-ph="installed.filter" placeholder="过滤已装软件包…" />
+            </div>
+            <button class="btn btn-outline icon-only" aria-label="refresh"><svg class="icon"><use href="#i-refresh"/></svg></button>
+          </div>
+          <div class="state-slot" id="installedSlot"></div>
+          <div class="proto-note" id="installedFilterNote" hidden>
+            <span class="proto-note-label" data-t="proto.noteLabel">原型说明</span><br/>
+            <span data-t="proto.installedFilterNote">你刚才在过滤框里输入的关键字没有匹配到任何一行。注意:这里显示的文案与"本机压根没装任何软件包"时完全一样——真实代码里这两种情况共用同一个判断(rows.length === 0),不做区分,这不是本原型的疏漏,而是当前实现的既有行为(详见 acceptance 文档用例 1)。</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- ======================= P05 浏览/搜索软件包 ======================= -->
+      <section class="view" data-view="browse" hidden>
+        <div class="page-header bg-grid">
+          <div class="bg-glow-top"></div>
+          <div class="page-header-row">
+            <div class="page-header-text">
+              <h1 data-t="browse.title">浏览软件包</h1>
+              <p data-t="browse.desc">已添加桶中的可安装软件包;数据来源于本机 Scoop,不联网发现新软件源。</p>
+            </div>
+            <button class="btn btn-outline"><svg class="icon"><use href="#i-refresh"/></svg><span data-t="common.refresh">刷新</span></button>
+          </div>
+        </div>
+        <div class="page-body">
+          <div class="proto-toggle">
+            <span class="proto-toggle-label" data-t="proto.toggleLabel">原型演示 · 切换子状态</span>
+            <button class="seg active" data-browse-mode="data" data-t="proto.stateData">有数据</button>
+            <button class="seg" data-browse-mode="empty" data-t="proto.stateEmptySource">无查询为空(场景 2)</button>
+            <button class="seg" data-browse-mode="error" data-t="proto.stateError">读取失败(场景 5/6)</button>
+          </div>
+          <div class="search-box">
+            <svg class="icon"><use href="#i-search"/></svg>
+            <input class="input" id="browseQuery" data-t-ph="browse.searchPlaceholder" placeholder="按名称搜索软件包…" />
+          </div>
+          <div class="state-slot" id="browseSlot"></div>
+          <div class="proto-note" id="browseSearchNote" hidden>
+            <span class="proto-note-label" data-t="proto.noteLabel">原型说明</span><br/>
+            <span data-t="proto.browseSearchNote">你输入的关键字没有搜到任何软件包(场景 3 · 搜索无结果)。请对比"无查询为空"那个状态——两者在真实代码里渲染的是同一段标题与说明文字,并无区分,这也是当前实现的既有行为。</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- ======================= P06 桶管理 ======================= -->
+      <section class="view" data-view="buckets" hidden>
+        <div class="page-header bg-grid">
+          <div class="bg-glow-top"></div>
+          <div class="page-header-row">
+            <div class="page-header-text">
+              <h1 data-t="buckets.title">桶管理</h1>
+              <p data-t="buckets.desc">桶是软件包的来源仓库。这里管理本机已添加的桶,并可从 Scoop 已知桶清单中添加新桶。</p>
+            </div>
+            <button class="btn btn-outline"><svg class="icon"><use href="#i-refresh"/></svg><span data-t="common.refresh">刷新</span></button>
+            <button class="btn btn-primary"><svg class="icon"><use href="#i-plus"/></svg><span data-t="buckets.addCustom">添加自定义桶</span></button>
+          </div>
+        </div>
+        <div class="page-body">
+          <div class="proto-toggle">
+            <span class="proto-toggle-label" data-t="proto.toggleLabel">原型演示 · 切换子状态</span>
+            <label style="display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--fg-muted);cursor:pointer">
+              <input type="checkbox" id="bucketsErrorToggle" />
+              <span data-t="proto.bucketsErrorLabel">整页读取失败(场景 5/6,替换整个 Tabs)</span>
+            </label>
+          </div>
+          <div class="proto-toggle">
+            <span class="proto-toggle-label" data-t="proto.tabIndependent">已添加 Tab</span>
+            <button class="seg active" data-added-mode="data" data-t="proto.stateData">有数据</button>
+            <button class="seg" data-added-mode="empty" data-t="proto.stateEmpty">空(场景 4a)</button>
+            <span style="width:1px;height:16px;background:var(--border);margin:0 4px"></span>
+            <span class="proto-toggle-label" data-t="proto.tabIndependent2">已知桶清单 Tab</span>
+            <button class="seg active" data-known-mode="data" data-t="proto.stateData">有数据</button>
+            <button class="seg" data-known-mode="empty" data-t="proto.stateEmpty">空(场景 4b)</button>
+          </div>
+          <div class="state-slot" id="bucketsSlot"></div>
+        </div>
+      </section>
+
+      <!-- ======================= 设置(P09,超出本页面范围,仅占位) ======================= -->
+      <section class="view" data-view="settings" hidden>
+        <div class="page-header bg-grid">
+          <div class="bg-glow-top"></div>
+          <div class="page-header-row">
+            <div class="page-header-text">
+              <h1 data-t="settings.title">设置</h1>
+              <p data-t="proto.settingsOutOfScope">设置页面(P09)不在本设计提示词范围内,此处从略。</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <div class="footer-note">
+    src/components/EmptyState.tsx · src/pages/InstalledView.tsx · src/pages/BrowseView.tsx · src/pages/BucketsView.tsx · src/components/JobsPanel.tsx · src/i18n.ts
+  </div>
+</div>
+
+<!-- ============================================================ P08 任务面板(场景 7,非 modal 浮层,可关闭) -->
+<div class="jobs-panel" id="jobsPanel" hidden>
+  <div class="jobs-head">
+    <svg class="icon"><use href="#i-list"/></svg>
+    <span class="title" data-t="jobs.title">任务进度</span>
+    <span style="flex:1"></span>
+    <button class="btn btn-ghost icon-only sm" style="height:28px;width:28px" id="jobsPanelClose"><svg class="icon" style="width:14px;height:14px"><use href="#i-x"/></svg></button>
+  </div>
+  <div id="jobsBody">
+    <div class="jobs-empty" data-t="jobs.empty">暂无任务</div>
+  </div>
+</div>
+
+<!-- ============================================================ Toast 区域(Sonner 位置对照:右上角) -->
+<div class="toast-region" id="toastRegion"></div>
+
+<script>
+(function () {
+  "use strict";
+
+  /* ================================================================
+     I18N —— 与 src/i18n.ts 对应的文案子集(只收录本原型用到的 key)。
+     proto.* 前缀的 key 是本原型自造的讲解性文案,真实字典里没有,
+     用前缀明确标记以免与产品文案混淆。
+     ================================================================ */
+  var I18N = {
+    "proto.badge": { zh: "【原型说明 · 非产品界面】", en: "[Prototype notes — not product UI]" },
+    "proto.intro": {
+      zh: "本页演示 P10 覆盖的子状态:P04/P05/P06 在数据为空或读取失败时的呈现,以及一次长时任务失败在任务面板与来源页的联动。每个页面标题下方带虚线框的“原型演示”控制条用于切换子状态,真实产品里不存在这些控制条。",
+      en: "This page demonstrates the sub-states covered by P10: how P04/P05/P06 render when data is empty or fails to load, plus how a failed long-running task shows up in the task panel and the source page. The dashed “prototype demo” control bars under each page title do not exist in the real product.",
+    },
+    "proto.lang": { zh: "语言", en: "Language" },
+    "proto.theme": { zh: "主题", en: "Theme" },
+    "proto.dark": { zh: "暗色", en: "Dark" },
+    "proto.light": { zh: "亮色", en: "Light" },
+    "proto.simulateFail": { zh: "模拟:触发一次任务失败(场景 7)", en: "Simulate: trigger a task failure (scenario 7)" },
+    "proto.toggleLabel": { zh: "原型演示 · 切换子状态", en: "Prototype demo · switch sub-state" },
+    "proto.stateData": { zh: "有数据", en: "Has data" },
+    "proto.stateEmpty": { zh: "空状态", en: "Empty" },
+    "proto.stateEmptySource": { zh: "无查询为空(场景 2)", en: "Empty, no query (scenario 2)" },
+    "proto.stateError": { zh: "读取失败(场景 5/6)", en: "Read failed (scenario 5/6)" },
+    "proto.bucketsErrorLabel": { zh: "整页读取失败(场景 5/6,替换整个 Tabs)", en: "Whole-page read failure (scenario 5/6, replaces both tabs)" },
+    "proto.tabIndependent": { zh: "已添加 Tab", en: "Added tab" },
+    "proto.tabIndependent2": { zh: "已知桶清单 Tab", en: "Known-buckets tab" },
+    "proto.noteLabel": { zh: "原型说明", en: "Prototype note" },
+    "proto.installedFilterNote": {
+      zh: "你刚才在过滤框里输入的关键字没有匹配到任何一行。注意:这里显示的文案与“本机压根没装任何软件包”时完全一样——真实代码里这两种情况共用同一个判断(rows.length === 0),不做区分,这不是本原型的疏漏,而是当前实现的既有行为(详见 acceptance 文档用例 1)。",
+      en: "The keyword you typed did not match any row. Notice the copy is identical to the “nothing installed at all” case — the real code collapses both into the same rows.length === 0 branch. This is the existing app behavior, not an omission in this prototype (see acceptance doc, case 1).",
+    },
+    "proto.browseSearchNote": {
+      zh: "你输入的关键字没有搜到任何软件包(场景 3 · 搜索无结果)。请对比“无查询为空”那个状态——两者在真实代码里渲染的是同一段标题与说明文字,并无区分,这也是当前实现的既有行为。",
+      en: "Your keyword matched nothing (scenario 3 · no search results). Compare this with the “empty, no query” state — the real code renders the exact same title and hint for both, with no distinction. This is existing app behavior.",
+    },
+    "proto.settingsOutOfScope": { zh: "设置页面(P09)不在本设计提示词范围内,此处从略。", en: "Settings (P09) is out of scope for this design prompt and is omitted here." },
+    "proto.retryNote": {
+      zh: "该任务行没有“重试”或“放弃”按钮——真实产品的重试路径是回到来源页(已装软件包),该软件包已自动回到“已装过期”状态,重新点击“更新”按钮即可再次触发,不存在任务面板内的专属重试控件。",
+      en: "This job row has no Retry or Abandon button. In the real product, retrying means going back to the source page (Installed): the app automatically reverts to “outdated”, so clicking Update again re-triggers the action. There is no dedicated retry control inside the task panel.",
+    },
+
+    "nav.installed": { zh: "已装软件", en: "Installed" },
+    "nav.browse": { zh: "浏览软件包", en: "Browse" },
+    "nav.buckets": { zh: "桶管理", en: "Buckets" },
+    "nav.settings": { zh: "设置", en: "Settings" },
+    "nav.jobs": { zh: "任务", en: "Jobs" },
+
+    "common.refresh": { zh: "刷新", en: "Refresh" },
+    "common.name": { zh: "名称", en: "Name" },
+    "common.version": { zh: "版本", en: "Version" },
+    "common.source": { zh: "来源桶", en: "Bucket" },
+    "common.status": { zh: "状态", en: "Status" },
+    "common.actions": { zh: "操作", en: "Actions" },
+    "common.updated": { zh: "更新时间", en: "Updated" },
+    "common.update": { zh: "更新", en: "Update" },
+    "common.remove": { zh: "移除", en: "Remove" },
+    "common.add": { zh: "添加", en: "Add" },
+
+    "installed.title": { zh: "已装软件包", en: "Installed Apps" },
+    "installed.desc": { zh: "本机已通过 Scoop 安装的软件包;存在新版本的软件包会标记为“过期”。", en: "Apps installed via Scoop on this machine. Apps with a newer version available are marked as outdated." },
+    "installed.checkUpdates": { zh: "检查更新", en: "Check updates" },
+    "installed.updateAll": { zh: "更新全部过期", en: "Update all outdated" },
+    "installed.outdated": { zh: "过期", en: "Outdated" },
+    "installed.upToDate": { zh: "最新", en: "Up to date" },
+    "installed.latest": { zh: "可用版本", en: "Latest" },
+    "installed.empty": { zh: "本机还没有通过 Scoop 安装任何软件包", en: "No apps installed via Scoop yet" },
+    "installed.emptyHint": { zh: "前往“浏览软件包”查找并安装第一个软件包", en: "Head to Browse to find and install your first package" },
+    "installed.filter": { zh: "过滤已装软件包…", en: "Filter installed apps…" },
+
+    "error.readFailed": { zh: "无法读取数据", en: "Failed to read data" },
+    "error.scoopUnavailable": {
+      zh: "本机 Scoop 当前不可用,相关数据无法读取。请检查 scoop 命令是否正常后刷新重试。",
+      en: "Scoop is currently unavailable on this machine. Check that the scoop command works, then refresh.",
+    },
+
+    "browse.title": { zh: "浏览软件包", en: "Browse Packages" },
+    "browse.desc": { zh: "已添加桶中的可安装软件包;数据来源于本机 Scoop,不联网发现新软件源。", en: "Installable packages from your added buckets. Data comes from local Scoop only." },
+    "browse.searchPlaceholder": { zh: "按名称搜索软件包…", en: "Search packages by name…" },
+    "browse.installedBadge": { zh: "已安装", en: "Installed" },
+    "browse.empty": { zh: "没有匹配的软件包", en: "No matching packages" },
+    "browse.emptyHint": { zh: "换个关键字,或到“桶管理”添加更多桶", en: "Try another keyword, or add more buckets" },
+    "browse.loadFailed": { zh: "可装软件包列表读取失败", en: "Failed to load package list" },
+
+    "buckets.title": { zh: "桶管理", en: "Buckets" },
+    "buckets.desc": { zh: "桶是软件包的来源仓库。这里管理本机已添加的桶,并可从 Scoop 已知桶清单中添加新桶。", en: "Buckets are package source repositories. Manage the buckets added on this machine and add new ones from the known list." },
+    "buckets.addedTab": { zh: "已添加", en: "Added" },
+    "buckets.knownTab": { zh: "已知桶清单", en: "Known buckets" },
+    "buckets.manifests": { zh: "软件包数", en: "Manifests" },
+    "buckets.addCustom": { zh: "添加自定义桶", en: "Add custom bucket" },
+    "buckets.alreadyAdded": { zh: "已添加", en: "Added" },
+    "buckets.empty": { zh: "本机还没有添加任何桶", en: "No buckets added yet" },
+    "buckets.knownEmpty": { zh: "已知桶清单读取失败或为空", en: "Known bucket list is empty or failed to load" },
+    "buckets.loadFailed": { zh: "桶列表读取失败", en: "Failed to load buckets" },
+    "buckets.repoUrl": { zh: "仓库地址", en: "Repository URL" },
+
+    "jobs.title": { zh: "任务进度", en: "Tasks" },
+    "jobs.empty": { zh: "暂无任务", en: "No tasks yet" },
+    "jobs.log": { zh: "任务日志", en: "Task log" },
+    "jobs.state.failed": { zh: "已失败(可重试)", en: "Failed (retryable)" },
+    "jobs.kind.update": { zh: "更新", en: "Update" },
+    "jobs.failedToast": { zh: "{title} 失败,可在任务面板查看日志后重试", en: "{title} failed — check the log in the task panel and retry" },
+
+    "settings.title": { zh: "设置", en: "Settings" },
+  };
+
+  var lang = "zh";
+  var theme = "dark";
+
+  function t(key, params) {
+    var entry = I18N[key];
+    var text = entry ? entry[lang] : key;
+    if (params) {
+      for (var k in params) { text = text.split("{" + k + "}").join(params[k]); }
+    }
+    return text;
+  }
+
+  function applyStaticI18n() {
+    document.documentElement.lang = lang === "zh" ? "zh-CN" : "en";
+    document.querySelectorAll("[data-t]").forEach(function (el) {
+      el.textContent = t(el.getAttribute("data-t"));
+    });
+    document.querySelectorAll("[data-t-ph]").forEach(function (el) {
+      el.setAttribute("placeholder", t(el.getAttribute("data-t-ph")));
+    });
+  }
+
+  /* ================================================================
+     MOCK 数据 —— 直接取自 src/api.ts 的 mockState,保持与浏览器预览
+     模式下真实看到的数据一致(便于设计/QA 交叉核对)。
+     ================================================================ */
+  var MOCK_INSTALLED = [
+    { name: "7zip", version: "26.00", latest: "26.02", source: "main", outdated: true },
+    { name: "git", version: "2.49.0", latest: "", source: "main", outdated: false },
+    { name: "nodejs", version: "23.6.0", latest: "24.1.0", source: "main", outdated: true },
+  ];
+  var MOCK_BROWSE = [
+    { name: "7zip", version: "26.02", source: "main", installed: true },
+    { name: "git", version: "2.49.0", source: "main", installed: true },
+    { name: "ripgrep", version: "14.1.1", source: "main", installed: false },
+    { name: "fd", version: "10.2.0", source: "main", installed: false },
+    { name: "bat", version: "0.25.0", source: "main", installed: false },
+    { name: "vscode", version: "1.101.0", source: "extras", installed: false },
+    { name: "obsidian", version: "1.8.4", source: "extras", installed: false },
+    { name: "yazi", version: "26.5.6", source: "main", installed: true },
+  ];
+  var MOCK_BUCKETS_ADDED = [
+    { name: "main", source: "https://github.com/ScoopInstaller/Main", updated: "2026/7/10 22:23:33", manifests: "1608" },
+    { name: "extras", source: "https://github.com/ScoopInstaller/Extras", updated: "2026/7/10 22:23:53", manifests: "2344" },
+  ];
+  var MOCK_BUCKETS_KNOWN = ["main", "extras", "versions", "nirsoft", "sysinternals", "php", "nerd-fonts", "nonportable", "java", "games"];
+  var ADDED_NAMES = MOCK_BUCKETS_ADDED.map(function (b) { return b.name; });
+
+  function esc(s) {
+    return String(s).replace(/[&<>"']/g, function (c) {
+      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
+    });
+  }
+
+  /* ================================================================
+     状态
+     ================================================================ */
+  var state = {
+    view: "installed",
+    installedMode: "data",     // data | empty | error
+    installedFilter: "",
+    browseMode: "data",        // data | empty | error   (empty = 无查询也为空,场景 2)
+    browseQuery: "",
+    bucketsError: false,       // 场景 5/6:替换整个 Tabs
+    addedMode: "data",         // data | empty(场景 4a,独立于 known)
+    knownMode: "data",         // data | empty(场景 4b,独立于 added)
+    bucketsActiveTab: "added",
+  };
+
+  /* ================================================================
+     渲染:P04 已装软件包
+     ================================================================ */
+  function renderInstalled() {
+    var slot = document.getElementById("installedSlot");
+    var note = document.getElementById("installedFilterNote");
+    var q = state.installedFilter.trim().toLowerCase();
+
+    // 侧边栏过期徽标 + 头部"更新全部过期"按钮(仅"有数据"态存在过期项,呼应真实的 selectOutdatedNames)
+    var outdatedCount = state.installedMode === "data" ? MOCK_INSTALLED.filter(function (a) { return a.outdated; }).length : 0;
+    var navBadge = document.getElementById("navOutdatedBadge");
+    if (outdatedCount > 0) { navBadge.hidden = false; navBadge.textContent = outdatedCount; } else { navBadge.hidden = true; }
+    var updateAllBtn = document.getElementById("updateAllBtn");
+    var updateAllCount = document.getElementById("updateAllCount");
+    updateAllBtn.disabled = outdatedCount === 0;
+    if (outdatedCount > 0) { updateAllCount.hidden = false; updateAllCount.textContent = outdatedCount; } else { updateAllCount.hidden = true; }
+
+    if (state.installedMode === "error") {
+      note.hidden = true;
+      slot.innerHTML =
+        '<div class="empty-state">' +
+          '<div class="empty-icon is-error"><svg class="icon icon-lg"><use href="#i-triangle-alert"/></svg></div>' +
+          '<div class="empty-title">' + esc(t("error.readFailed")) + '</div>' +
+          '<div class="empty-hint">' + esc(t("error.scoopUnavailable")) + '</div>' +
+          '<div class="empty-actions"><button class="btn btn-secondary sm" id="installedRetryBtn"><svg class="icon"><use href="#i-refresh"/></svg>' + esc(t("common.refresh")) + '</button></div>' +
+        '</div>';
+      document.getElementById("installedRetryBtn").addEventListener("click", function (e) {
+        simulateRetry(e.currentTarget, function () {
+          state.installedMode = "data";
+          activateSeg("data-installed-mode", "data");
+          renderInstalled();
+        });
+      });
+      return;
+    }
+
+    var base = state.installedMode === "empty" ? [] : MOCK_INSTALLED;
+    var rows = base.filter(function (a) { return !q || a.name.toLowerCase().indexOf(q) !== -1; });
+
+    // “过滤后无匹配但本机确有安装”与“本机真的没装”共用同一分支(如实还原 InstalledView.tsx 的 rows.length === 0 判断)
+    note.hidden = !(rows.length === 0 && base.length > 0);
+
+    if (rows.length === 0) {
+      slot.innerHTML =
+        '<div class="empty-state">' +
+          '<div class="empty-icon"><svg class="icon icon-lg"><use href="#i-package"/></svg></div>' +
+          '<div class="empty-title">' + esc(t("installed.empty")) + '</div>' +
+          '<div class="empty-hint">' + esc(t("installed.emptyHint")) + '</div>' +
+        '</div>';
+      return;
+    }
+
+    var html = '<div class="table-wrap"><table><thead><tr>' +
+      '<th>' + esc(t("common.name")) + '</th><th>' + esc(t("common.version")) + '</th><th>' + esc(t("installed.latest")) + '</th>' +
+      '<th>' + esc(t("common.source")) + '</th><th>' + esc(t("common.status")) + '</th><th class="text-right">' + esc(t("common.actions")) + '</th>' +
+      '</tr></thead><tbody>';
+    rows.forEach(function (a) {
+      html += '<tr>' +
+        '<td class="mono" style="font-weight:500">' + esc(a.name) + '</td>' +
+        '<td class="mono muted">' + esc(a.version) + '</td>' +
+        '<td class="mono">' + (a.outdated ? '<span style="color:var(--warning)">' + esc(a.latest) + '</span>' : '<span class="subtle">—</span>') + '</td>' +
+        '<td class="muted">' + esc(a.source) + '</td>' +
+        '<td>' + (a.outdated
+          ? '<span class="badge badge-warning"><svg class="icon"><use href="#i-triangle-alert"/></svg>' + esc(t("installed.outdated")) + '</span>'
+          : '<span class="badge badge-success"><svg class="icon"><use href="#i-check"/></svg>' + esc(t("installed.upToDate")) + '</span>') + '</td>' +
+        '<td class="text-right"><div class="cell-actions">' +
+          (a.outdated ? '<button class="btn btn-primary sm">' + esc(t("common.update")) + '</button>' : '') +
+        '</div></td>' +
+      '</tr>';
+    });
+    html += "</tbody></table></div>";
+    slot.innerHTML = html;
+  }
+
+  /* ================================================================
+     渲染:P05 浏览/搜索
+     ================================================================ */
+  function renderBrowse() {
+    var slot = document.getElementById("browseSlot");
+    var note = document.getElementById("browseSearchNote");
+    var q = state.browseQuery.trim().toLowerCase();
+
+    if (state.browseMode === "error") {
+      note.hidden = true;
+      slot.innerHTML =
+        '<div class="empty-state">' +
+          '<div class="empty-icon is-error"><svg class="icon icon-lg"><use href="#i-triangle-alert"/></svg></div>' +
+          '<div class="empty-title">' + esc(t("browse.loadFailed")) + '</div>' +
+          '<div class="empty-hint">' + esc(t("error.scoopUnavailable")) + '</div>' +
+          '<div class="empty-actions"><button class="btn btn-secondary sm" id="browseRetryBtn"><svg class="icon"><use href="#i-refresh"/></svg>' + esc(t("common.refresh")) + '</button></div>' +
+        '</div>';
+      document.getElementById("browseRetryBtn").addEventListener("click", function (e) {
+        simulateRetry(e.currentTarget, function () {
+          state.browseMode = "data";
+          activateSeg("data-browse-mode", "data");
+          renderBrowse();
+        });
+      });
+      return;
+    }
+
+    var base = state.browseMode === "empty" ? [] : MOCK_BROWSE;
+    var filtered = base.filter(function (p) { return !q || p.name.toLowerCase().indexOf(q) !== -1; });
+
+    // 场景 3(有查询无结果)只在"有数据"模式下、且用户确实输入了查询词时出现;场景 2(无查询为空)对应 empty 模式
+    note.hidden = !(filtered.length === 0 && base.length > 0 && q.length > 0);
+
+    if (filtered.length === 0) {
+      slot.innerHTML =
+        '<div class="empty-state">' +
+          '<div class="empty-icon"><svg class="icon icon-lg"><use href="#i-package"/></svg></div>' +
+          '<div class="empty-title">' + esc(t("browse.empty")) + '</div>' +
+          '<div class="empty-hint">' + esc(t("browse.emptyHint")) + '</div>' +
+        '</div>';
+      return;
+    }
+
+    var html = '<div class="table-wrap"><table><thead><tr>' +
+      '<th>' + esc(t("common.name")) + '</th><th>' + esc(t("common.version")) + '</th><th>' + esc(t("common.source")) + '</th>' +
+      '<th>' + esc(t("common.status")) + '</th><th class="text-right">' + esc(t("common.actions")) + '</th>' +
+      '</tr></thead><tbody>';
+    filtered.forEach(function (p) {
+      html += '<tr>' +
+        '<td class="mono" style="font-weight:500">' + esc(p.name) + '</td>' +
+        '<td class="mono muted">' + esc(p.version) + '</td>' +
+        '<td class="muted">' + esc(p.source) + '</td>' +
+        '<td>' + (p.installed ? '<span class="badge badge-success"><svg class="icon"><use href="#i-check"/></svg>' + esc(t("browse.installedBadge")) + '</span>' : '') + '</td>' +
+        '<td class="text-right"><div class="cell-actions">' +
+          (!p.installed ? '<button class="btn btn-primary sm">' + esc(t("common.add")) + '</button>' : '') +
+        '</div></td>' +
+      '</tr>';
+    });
+    html += "</tbody></table></div>";
+    slot.innerHTML = html;
+  }
+
+  /* ================================================================
+     渲染:P06 桶管理
+     ================================================================ */
+  function renderBuckets() {
+    var slot = document.getElementById("bucketsSlot");
+
+    if (state.bucketsError) {
+      slot.innerHTML =
+        '<div class="empty-state">' +
+          '<div class="empty-icon is-error"><svg class="icon icon-lg"><use href="#i-triangle-alert"/></svg></div>' +
+          '<div class="empty-title">' + esc(t("buckets.loadFailed")) + '</div>' +
+          '<div class="empty-hint">' + esc(t("error.scoopUnavailable")) + '</div>' +
+          '<div class="empty-actions"><button class="btn btn-secondary sm" id="bucketsRetryBtn"><svg class="icon"><use href="#i-refresh"/></svg>' + esc(t("common.refresh")) + '</button></div>' +
+        '</div>';
+      document.getElementById("bucketsRetryBtn").addEventListener("click", function (e) {
+        simulateRetry(e.currentTarget, function () {
+          document.getElementById("bucketsErrorToggle").checked = false;
+          state.bucketsError = false;
+          renderBuckets();
+        });
+      });
+      return;
+    }
+
+    var addedRows = state.addedMode === "empty" ? [] : MOCK_BUCKETS_ADDED;
+    var knownRows = state.knownMode === "empty" ? [] : MOCK_BUCKETS_KNOWN;
+
+    var addedBody;
+    if (addedRows.length === 0) {
+      addedBody =
+        '<div class="empty-state">' +
+          '<div class="empty-icon"><svg class="icon icon-lg"><use href="#i-layers"/></svg></div>' +
+          '<div class="empty-title">' + esc(t("buckets.empty")) + '</div>' +
+        '</div>';
+    } else {
+      addedBody = '<div class="table-wrap"><table><thead><tr>' +
+        '<th>' + esc(t("common.name")) + '</th><th>' + esc(t("buckets.repoUrl")) + '</th><th>' + esc(t("common.updated")) + '</th>' +
+        '<th class="text-right">' + esc(t("buckets.manifests")) + '</th><th class="text-right">' + esc(t("common.actions")) + '</th>' +
+        '</tr></thead><tbody>';
+      addedRows.forEach(function (b) {
+        addedBody += '<tr>' +
+          '<td class="mono" style="font-weight:500"><svg class="icon" style="color:var(--primary)"><use href="#i-layers"/></svg> ' + esc(b.name) + '</td>' +
+          '<td class="mono subtle" style="font-size:12px">' + esc(b.source) + '</td>' +
+          '<td class="muted" style="font-size:12px">' + esc(b.updated) + '</td>' +
+          '<td class="mono muted text-right">' + esc(b.manifests) + '</td>' +
+          '<td class="text-right"><button class="btn btn-ghost btn-destructive-text sm"><svg class="icon"><use href="#i-trash"/></svg>' + esc(t("common.remove")) + '</button></td>' +
+        '</tr>';
+      });
+      addedBody += "</tbody></table></div>";
+    }
+
+    var knownBody;
+    if (knownRows.length === 0) {
+      knownBody =
+        '<div class="empty-state">' +
+          '<div class="empty-icon"><svg class="icon icon-lg"><use href="#i-layers"/></svg></div>' +
+          '<div class="empty-title">' + esc(t("buckets.knownEmpty")) + '</div>' +
+        '</div>';
+    } else {
+      knownBody = '<div class="table-wrap"><table><thead><tr>' +
+        '<th>' + esc(t("common.name")) + '</th><th>' + esc(t("common.status")) + '</th><th class="text-right">' + esc(t("common.actions")) + '</th>' +
+        '</tr></thead><tbody>';
+      knownRows.forEach(function (name) {
+        var added = ADDED_NAMES.indexOf(name) !== -1;
+        knownBody += '<tr>' +
+          '<td class="mono" style="font-weight:500"><svg class="icon" style="color:' + (added ? "var(--primary)" : "var(--fg-subtle)") + '"><use href="#i-layers"/></svg> ' + esc(name) + '</td>' +
+          '<td>' + (added ? '<span class="badge badge-success"><svg class="icon"><use href="#i-check"/></svg>' + esc(t("buckets.alreadyAdded")) + '</span>' : "") + '</td>' +
+          '<td class="text-right">' + (!added ? '<button class="btn btn-primary sm"><svg class="icon"><use href="#i-plus"/></svg>' + esc(t("common.add")) + '</button>' : "") + '</td>' +
+        '</tr>';
+      });
+      knownBody += "</tbody></table></div>";
+    }
+
+    slot.innerHTML =
+      '<div class="tabs-list">' +
+        '<button class="tab-trigger' + (state.bucketsActiveTab === "added" ? " active" : "") + '" data-tab="added">' + esc(t("buckets.addedTab")) + ' <span class="subtle">(' + addedRows.length + ')</span></button>' +
+        '<button class="tab-trigger' + (state.bucketsActiveTab === "known" ? " active" : "") + '" data-tab="known">' + esc(t("buckets.knownTab")) + '</button>' +
+      '</div>' +
+      '<div class="tab-panel" data-tab-panel="added"' + (state.bucketsActiveTab === "added" ? "" : " hidden") + '>' + addedBody + '</div>' +
+      '<div class="tab-panel" data-tab-panel="known"' + (state.bucketsActiveTab === "known" ? "" : " hidden") + '>' + knownBody + '</div>';
+
+    slot.querySelectorAll(".tab-trigger").forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        state.bucketsActiveTab = btn.getAttribute("data-tab");
+        renderBuckets();
+      });
+    });
+  }
+
+  /* 错误态"刷新"按钮的通用交互:短暂 loading 转圈后恢复到有数据态,模拟一次成功的重试 */
+  function simulateRetry(btn, onDone) {
+    var original = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '<svg class="icon spin"><use href="#i-loader"/></svg>' + esc(t("common.refresh"));
+    setTimeout(function () { onDone(); }, 700);
+  }
+
+  /* 同步某组"原型演示"分段控件的 active 高亮,与 state 中的取值对齐 */
+  function activateSeg(attrName, value) {
+    document.querySelectorAll("[" + attrName + "]").forEach(function (b) {
+      b.classList.toggle("active", b.getAttribute(attrName) === value);
+    });
+  }
+
+  /* ================================================================
+     场景 7:模拟一次长时任务失败 —— Toast + 任务面板 + 面板内不提供重试
+     ================================================================ */
+  function showToast(message) {
+    var region = document.getElementById("toastRegion");
+    var el = document.createElement("div");
+    el.className = "toast";
+    el.innerHTML = '<span class="toast-bar"></span><div class="toast-body">' + esc(message) + "</div>";
+    region.appendChild(el);
+    setTimeout(function () { el.remove(); }, 6000); // 与设计系统 §8.10"错误 6s"一致
+  }
+
+  var jobSimulated = false;
+  function renderJobsBody() {
+    var body = document.getElementById("jobsBody");
+    if (!jobSimulated) {
+      body.innerHTML = '<div class="jobs-empty">' + esc(t("jobs.empty")) + "</div>";
+      return;
+    }
+    body.innerHTML =
+      '<div class="job-row">' +
+        '<svg class="icon" style="color:var(--destructive)"><use href="#i-triangle-alert"/></svg>' +
+        '<span class="name mono">' + esc(t("jobs.kind.update")) + ' nodejs</span>' +
+        '<span class="badge badge-destructive">' + esc(t("jobs.state.failed")) + "</span>" +
+      "</div>" +
+      '<div class="jobs-log-wrap">' +
+        '<div class="jobs-log-title">' + esc(t("jobs.log")) + ' · <span class="mono">' + esc(t("jobs.kind.update")) + ' nodejs</span></div>' +
+        '<div class="log-box">$ scoop update nodejs\nUpdating &#39;nodejs&#39; (23.6.0 -&gt; 24.1.0)\nDownloading ...\nERROR Hash check failed for nodejs.</div>' +
+        '<div class="proto-note" style="margin-top:8px">' +
+          '<span class="proto-note-label">' + esc(t("proto.noteLabel")) + '</span><br/>' +
+          '<span>' + esc(t("proto.retryNote")) + "</span>" +
+        "</div>" +
+      "</div>";
+  }
+
+  function simulateJobFailure() {
+    showToast(t("jobs.failedToast", { title: t("jobs.kind.update") + " nodejs" }));
+    jobSimulated = true;
+    document.getElementById("navJobsBadge").hidden = false;
+    document.getElementById("jobsPanel").hidden = false;
+    renderJobsBody();
+  }
+
+  /* ================================================================
+     事件绑定
+     ================================================================ */
+  function switchView(view) {
+    state.view = view;
+    document.querySelectorAll(".view").forEach(function (el) { el.hidden = el.getAttribute("data-view") !== view; });
+    document.querySelectorAll(".nav-item[data-view]").forEach(function (el) {
+      el.classList.toggle("active", el.getAttribute("data-view") === view);
+    });
+  }
+
+  document.querySelectorAll(".nav-item[data-view]").forEach(function (btn) {
+    btn.addEventListener("click", function () { switchView(btn.getAttribute("data-view")); });
+  });
+
+  document.getElementById("jobsNavBtn").addEventListener("click", function () {
+    var panel = document.getElementById("jobsPanel");
+    panel.hidden = !panel.hidden;
+  });
+  document.getElementById("jobsPanelClose").addEventListener("click", function () {
+    document.getElementById("jobsPanel").hidden = true;
+  });
+  document.getElementById("simulateFailBtn").addEventListener("click", simulateJobFailure);
+
+  document.getElementById("installedFilter").addEventListener("input", function (e) {
+    state.installedFilter = e.target.value;
+    renderInstalled();
+  });
+  document.querySelectorAll("[data-installed-mode]").forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      document.querySelectorAll("[data-installed-mode]").forEach(function (b) { b.classList.remove("active"); });
+      btn.classList.add("active");
+      state.installedMode = btn.getAttribute("data-installed-mode");
+      renderInstalled();
+    });
+  });
+
+  document.getElementById("browseQuery").addEventListener("input", function (e) {
+    state.browseQuery = e.target.value;
+    renderBrowse();
+  });
+  document.querySelectorAll("[data-browse-mode]").forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      document.querySelectorAll("[data-browse-mode]").forEach(function (b) { b.classList.remove("active"); });
+      btn.classList.add("active");
+      state.browseMode = btn.getAttribute("data-browse-mode");
+      renderBrowse();
+    });
+  });
+
+  document.getElementById("bucketsErrorToggle").addEventListener("change", function (e) {
+    state.bucketsError = e.target.checked;
+    renderBuckets();
+  });
+  document.querySelectorAll("[data-added-mode]").forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      document.querySelectorAll("[data-added-mode]").forEach(function (b) { b.classList.remove("active"); });
+      btn.classList.add("active");
+      state.addedMode = btn.getAttribute("data-added-mode");
+      renderBuckets();
+    });
+  });
+  document.querySelectorAll("[data-known-mode]").forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      document.querySelectorAll("[data-known-mode]").forEach(function (b) { b.classList.remove("active"); });
+      btn.classList.add("active");
+      state.knownMode = btn.getAttribute("data-known-mode");
+      renderBuckets();
+    });
+  });
+
+  document.querySelectorAll("#langGroup button").forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      document.querySelectorAll("#langGroup button").forEach(function (b) { b.classList.remove("active"); });
+      btn.classList.add("active");
+      lang = btn.getAttribute("data-lang");
+      applyStaticI18n();
+      renderInstalled();
+      renderBrowse();
+      renderBuckets();
+      renderJobsBody();
+    });
+  });
+  document.querySelectorAll("#themeGroup button").forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      document.querySelectorAll("#themeGroup button").forEach(function (b) { b.classList.remove("active"); });
+      btn.classList.add("active");
+      theme = btn.getAttribute("data-theme");
+      document.documentElement.classList.toggle("light", theme === "light");
+    });
+  });
+
+  /* ================================================================
+     首次渲染
+     ================================================================ */
+  applyStaticI18n();
+  renderInstalled();
+  renderBrowse();
+  renderBuckets();
+  renderJobsBody();
+})();
+</script>
+</body>
+</html>

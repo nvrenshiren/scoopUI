@@ -1,0 +1,527 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>P01 · 启动检测与协助安装页 · HTML 原型</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+  /* ============================================================
+     设计系统 v2 token(docs/design/systems/web.md §11.1 等价实现)
+     暗色为唯一呈现主题,不实现主题切换。
+     ============================================================ */
+  :root {
+    --color-bg: oklch(0.13 0.02 250);
+    --color-bg-elevated: oklch(0.17 0.02 250);
+    --color-bg-overlay: oklch(0.20 0.02 250);
+    --color-fg: oklch(0.96 0.005 250);
+    --color-fg-muted: oklch(0.72 0.01 250);
+    --color-fg-subtle: oklch(0.55 0.01 250);
+    --color-border: oklch(0.30 0.01 250);
+    --color-border-strong: oklch(0.45 0.01 250);
+
+    --color-primary: oklch(0.72 0.18 145);
+    --color-primary-hover: oklch(0.76 0.18 145);
+    --color-primary-foreground: oklch(0.22 0.05 145);
+    --color-primary-glow: oklch(0.72 0.18 145 / 0.25);
+    --color-primary-glow-soft: oklch(0.72 0.18 145 / 0.10);
+
+    --color-accent: oklch(0.70 0.16 250); /* 信息蓝 / --info */
+    --color-accent-glow: oklch(0.70 0.16 250 / 0.25);
+
+    --color-warning: oklch(0.80 0.16 80);
+    --color-warning-15: oklch(0.80 0.16 80 / 0.15);
+    --color-warning-30: oklch(0.80 0.16 80 / 0.30);
+
+    --color-destructive: oklch(0.65 0.22 25);
+    --color-destructive-glow: oklch(0.65 0.22 25 / 0.20);
+    --color-destructive-35: oklch(0.65 0.22 25 / 0.35);
+
+    --color-success: oklch(0.72 0.18 145);
+
+    --font-heading: 'Space Grotesk', system-ui, sans-serif;
+    --font-body: 'DM Sans', system-ui, sans-serif;
+    --font-mono: 'JetBrains Mono', 'Cascadia Code', Consolas, monospace;
+
+    --radius-sm: 4px;
+    --radius-md: 8px;
+    --radius-lg: 12px;
+    --radius-xl: 16px;
+
+    --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.5), 0 2px 4px -2px rgb(0 0 0 / 0.4);
+    --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.6), 0 4px 6px -4px rgb(0 0 0 / 0.4);
+    --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.7), 0 8px 10px -6px rgb(0 0 0 / 0.5);
+
+    --glow-primary: 0 0 20px var(--color-primary-glow), 0 0 40px var(--color-primary-glow);
+    --glow-destructive: 0 0 12px var(--color-destructive-glow);
+    --ring-primary: 0 0 0 1px var(--color-primary), 0 0 0 4px var(--color-primary-glow);
+  }
+
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+  body {
+    background: var(--color-bg);
+    color: var(--color-fg);
+    font-family: var(--font-body);
+    font-size: 14px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+  h1, h2, h3 { font-family: var(--font-heading); line-height: 1.2; margin: 0; }
+  p { margin: 0; }
+  ::selection { background: var(--color-primary-glow); }
+
+  .icon { width: 1em; height: 1em; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; display: inline-block; vertical-align: -0.125em; }
+
+  /* ---------------------------------------------------------- 科技感叠加层 */
+  .bg-grid {
+    background-image:
+      linear-gradient(to right, oklch(0.30 0.01 250 / 0.08) 1px, transparent 1px),
+      linear-gradient(to bottom, oklch(0.30 0.01 250 / 0.08) 1px, transparent 1px);
+    background-size: 32px 32px;
+  }
+  .bg-glow-top {
+    background: radial-gradient(ellipse 800px 200px at 50% -50%, var(--color-primary-glow), transparent);
+  }
+  .gradient-line { height: 1px; flex-shrink: 0; background: linear-gradient(to right, transparent, var(--color-primary), transparent); }
+
+  /* ---------------------------------------------------------- 演示专用工具条(非产品 UI) */
+  .demo-toolbar {
+    position: fixed; top: 0; left: 0; right: 0; height: 48px; z-index: 100;
+    display: flex; align-items: center; gap: 8px; padding: 0 16px;
+    background: #05070c; border-bottom: 1px dashed var(--color-border-strong);
+    font-family: var(--font-body);
+  }
+  .demo-toolbar__label { font-size: 11px; color: var(--color-fg-subtle); margin-right: 8px; white-space: nowrap; }
+  .demo-tab {
+    height: 28px; padding: 0 12px; border-radius: var(--radius-md); border: 1px solid var(--color-border);
+    background: var(--color-bg-overlay); color: var(--color-fg-muted); font-size: 12px; font-family: var(--font-body);
+    cursor: pointer; transition: all .1s;
+  }
+  .demo-tab:hover { border-color: var(--color-border-strong); color: var(--color-fg); }
+  .demo-tab.is-active { background: var(--color-primary-glow-soft); border-color: var(--color-primary); color: var(--color-primary); }
+  .demo-tab--dialog { margin-left: auto; }
+
+  /* ---------------------------------------------------------- 舞台(模拟应用整页接管区域) */
+  .stage {
+    position: relative;
+    min-height: 100vh;
+    padding-top: 48px; /* 让位给演示工具条 */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+  }
+  .stage__glow { pointer-events: none; position: absolute; inset: 48px 0 auto 0; height: 40%; }
+  .stage__panel { position: relative; z-index: 1; width: min(720px, calc(100vw - 96px)); padding: 48px 0; display: none; }
+  .stage__panel.is-active { display: block; }
+
+  /* ---------------------------------------------------------- 状态 A · 检测中 */
+  .detecting { display: flex; flex-direction: column; align-items: center; gap: 12px; text-align: center; }
+  .spinner { width: 32px; height: 32px; color: var(--color-primary); animation: spin 1s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .detecting__title { font-size: 15px; font-weight: 500; }
+  .detecting__hint { font-family: var(--font-mono); font-size: 12px; color: var(--color-fg-subtle); }
+
+  /* ---------------------------------------------------------- 卡片(状态 B / C 共用) */
+  .card {
+    background: var(--color-bg-elevated);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-md);
+    overflow: hidden;
+    max-height: calc(100vh - 128px);
+    display: flex;
+    flex-direction: column;
+  }
+  .card__body { overflow: auto; padding: 24px 28px 28px; }
+
+  .card__head { display: flex; align-items: flex-start; gap: 16px; }
+  .card__icon {
+    flex-shrink: 0; width: 48px; height: 48px; border-radius: var(--radius-lg);
+    display: flex; align-items: center; justify-content: center;
+    border: 1px solid var(--color-warning-30); background: var(--color-warning-15); color: var(--color-warning);
+  }
+  .card__icon .icon { width: 24px; height: 24px; }
+  .card__title { font-size: 1.25rem; font-weight: 600; }
+  .card__desc { margin-top: 6px; font-size: 13px; line-height: 1.6; color: var(--color-fg-muted); }
+
+  /* ---------------------------------------------------------- 失败重试提示条(inline,非 toast/dialog) */
+  .error-banner {
+    margin-top: 16px; display: flex; gap: 10px; padding: 12px 14px;
+    border: 1px solid var(--color-destructive-35); background: var(--color-destructive-glow);
+    border-radius: var(--radius-md); color: var(--color-destructive); font-size: 13px;
+  }
+  .error-banner .icon { width: 15px; height: 15px; margin-top: 2px; flex-shrink: 0; }
+  .error-banner__title { font-weight: 500; }
+  .error-banner__desc { margin-top: 2px; font-size: 12px; }
+
+  /* ---------------------------------------------------------- 表单 */
+  .form-title { margin-top: 24px; font-size: 15px; font-weight: 600; }
+  .form-desc { margin-top: 4px; margin-bottom: 16px; font-size: 12px; line-height: 1.6; color: var(--color-fg-subtle); }
+  .field-list { display: flex; flex-direction: column; gap: 14px; }
+  .field label.field__label {
+    display: block; margin-bottom: 4px; font-size: 13px; font-weight: 500;
+  }
+  .badge {
+    display: inline-flex; align-items: center; height: 20px; padding: 0 8px; margin-left: 6px;
+    border-radius: var(--radius-sm); font-size: 11px; font-weight: 500; border: 1px solid; vertical-align: middle;
+  }
+  .badge--warning { border-color: var(--color-warning-30); background: var(--color-warning-15); color: var(--color-warning); }
+
+  .field input[type="text"], .field input[type="password"] {
+    width: 100%; height: 40px; padding: 0 12px; border-radius: var(--radius-md);
+    border: 1px solid var(--color-border); background: var(--color-bg-overlay); color: var(--color-fg);
+    font-family: var(--font-mono); font-size: 13px; outline: none; transition: border-color .1s, box-shadow .1s;
+  }
+  .field input::placeholder { color: var(--color-fg-subtle); }
+  .field input:focus { border-color: var(--color-primary); box-shadow: var(--ring-primary); }
+  .field__help { margin-top: 4px; font-size: 12px; line-height: 1.6; color: var(--color-fg-subtle); }
+
+  .field-row { display: flex; align-items: flex-start; gap: 12px; }
+  .field-row .field { flex: 1; min-width: 0; }
+
+  .checkbox-row { display: flex; align-items: flex-start; gap: 10px; font-size: 13px; cursor: default; }
+  .checkbox-box {
+    flex-shrink: 0; width: 16px; height: 16px; margin-top: 2px; border-radius: 4px;
+    border: 1px solid var(--color-border); background: var(--color-bg-overlay);
+    display: flex; align-items: center; justify-content: center;
+  }
+  .checkbox-box .icon { width: 11px; height: 11px; color: var(--color-primary-foreground); display: none; stroke-width: 3; }
+  .checkbox-box.is-checked { background: var(--color-primary); border-color: var(--color-primary); }
+  .checkbox-box.is-checked .icon { display: block; }
+  .checkbox-row__help { margin-top: 2px; display: block; font-size: 12px; line-height: 1.6; color: var(--color-fg-subtle); }
+
+  .form-footer { margin-top: 20px; display: flex; justify-content: flex-end; }
+
+  /* ---------------------------------------------------------- 按钮 */
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+    border-radius: var(--radius-md); border: 1px solid transparent; cursor: pointer;
+    font-family: var(--font-body); font-size: 14px; font-weight: 500; white-space: nowrap;
+    height: 40px; padding: 0 16px; transition: all .1s;
+  }
+  .btn:active { transform: scale(0.98); filter: brightness(0.9); }
+  .btn--lg { height: 48px; padding: 0 24px; border-radius: var(--radius-lg); font-size: 15px; }
+  .btn--lg .icon { width: 18px; height: 18px; }
+  .btn--default {
+    background: var(--color-primary); color: var(--color-primary-foreground);
+    box-shadow: 0 0 12px var(--color-primary-glow);
+  }
+  .btn--default:hover { background: var(--color-primary-hover); box-shadow: var(--glow-primary); }
+  .btn--secondary { background: var(--color-bg-overlay); border-color: var(--color-border); color: var(--color-fg); }
+  .btn--secondary:hover { border-color: var(--color-border-strong); }
+  .btn--cancel { background: var(--color-bg-overlay); border-color: var(--color-border); color: var(--color-fg-muted); }
+  .btn--cancel:hover { border-color: var(--color-border-strong); color: var(--color-fg); }
+  .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  /* ---------------------------------------------------------- 进度条(不确定态) */
+  .progress { position: relative; height: 8px; width: 100%; border-radius: 9999px; background: var(--color-bg-overlay); overflow: hidden; margin: 16px 0 8px; }
+  .progress__fill {
+    position: absolute; top: 0; bottom: 0; width: 32%; border-radius: 9999px;
+    background: var(--color-primary); box-shadow: 0 0 12px var(--color-primary-glow);
+    animation: indeterminate 1.4s ease-in-out infinite;
+  }
+  @keyframes indeterminate { 0% { left: -32%; } 100% { left: 100%; } }
+
+  /* ---------------------------------------------------------- 日志区 */
+  .log-box {
+    height: 260px; overflow: auto; padding: 8px 10px; border: 1px solid var(--color-border);
+    border-radius: var(--radius-md); background: rgb(0 0 0 / 0.35); font-family: var(--font-mono);
+    font-size: 12px; line-height: 1.6; white-space: pre-wrap; word-break: break-all; color: var(--color-fg-muted);
+  }
+  .log-box .log-line--accent { color: var(--color-fg); }
+
+  /* ---------------------------------------------------------- 一次性确认弹窗(Dialog,§8.4) */
+  .dialog-overlay {
+    position: fixed; inset: 0; z-index: 60; display: none; align-items: center; justify-content: center;
+    background: rgb(0 0 0 / 0.6); backdrop-filter: blur(4px);
+  }
+  .dialog-overlay.is-open { display: flex; }
+  .dialog {
+    position: relative; width: min(480px, calc(100vw - 64px));
+    background: var(--color-bg-elevated); border: 1px solid var(--color-border);
+    border-radius: var(--radius-xl); box-shadow: var(--shadow-xl);
+  }
+  .dialog__close {
+    position: absolute; top: 16px; right: 16px; width: 32px; height: 32px; border-radius: var(--radius-md);
+    display: flex; align-items: center; justify-content: center; color: var(--color-fg-muted);
+    background: transparent; border: none; cursor: pointer;
+  }
+  .dialog__close:hover { background: var(--color-bg-overlay); color: var(--color-fg); }
+  .dialog__close .icon { width: 16px; height: 16px; }
+  .dialog__header { padding: 24px 24px 0; display: flex; flex-direction: column; gap: 6px; }
+  .dialog__title { font-size: 18px; font-weight: 600; padding-right: 32px; }
+  .dialog__desc { font-size: 13px; color: var(--color-fg-muted); line-height: 1.6; white-space: pre-wrap; }
+  .dialog__footer { display: flex; justify-content: flex-end; gap: 8px; padding: 16px 24px 20px; }
+
+  .footnote { position: relative; z-index: 1; margin-top: 16px; text-align: center; font-size: 11px; color: var(--color-fg-subtle); font-family: var(--font-mono); }
+</style>
+</head>
+<body>
+
+  <!-- 演示专用工具条:切换 P01 的关键状态,不属于产品界面本身 -->
+  <div class="demo-toolbar">
+    <span class="demo-toolbar__label">预览状态切换(仅评审用,非产品 UI)</span>
+    <button class="demo-tab is-active" data-state="detecting" onclick="setState('detecting', this)">① 检测中</button>
+    <button class="demo-tab" data-state="form" onclick="setState('form', this)">② 未检测到 Scoop · 安装配置表单</button>
+    <button class="demo-tab" data-state="form-error" onclick="setState('form-error', this)">③ 表单 · 失败重试</button>
+    <button class="demo-tab" data-state="installing" onclick="setState('installing', this)">④ 协助安装中</button>
+    <button class="demo-tab demo-tab--dialog" onclick="openDialog()">预览:一次性确认弹窗</button>
+  </div>
+
+  <div class="stage bg-grid">
+    <div class="stage__glow bg-glow-top"></div>
+
+    <!-- ============================================================ -->
+    <!-- 状态 A · 检测中(F15)                                         -->
+    <!-- ============================================================ -->
+    <div class="stage__panel is-active" id="panel-detecting">
+      <div class="detecting">
+        <svg class="icon spinner" viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>
+        <div class="detecting__title">正在检测本机 Scoop…</div>
+        <div class="detecting__hint">正在执行 scoop --version 检查命令可用性</div>
+      </div>
+    </div>
+
+    <!-- ============================================================ -->
+    <!-- 状态 B · 未检测到 Scoop → 安装配置表单(F16,首次 / 无错误)     -->
+    <!-- ============================================================ -->
+    <div class="stage__panel" id="panel-form">
+      <div class="card">
+        <div class="gradient-line"></div>
+        <div class="card__body">
+          <div class="card__head">
+            <div class="card__icon">
+              <svg class="icon" viewBox="0 0 24 24"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>
+            </div>
+            <div>
+              <h2 class="card__title">未检测到 Scoop</h2>
+              <p class="card__desc">本机尚未安装 Scoop 包管理器。你可以在下方确认安装配置后,由本产品协助完成首次安装;安装过程需要网络连接。</p>
+            </div>
+          </div>
+
+          <h3 class="form-title">安装配置</h3>
+          <p class="form-desc">以下配置项与 Scoop 官方安装脚本 install.ps1 一一对应;留空即使用官方默认值。确认后开始安装,安装过程中不可修改;本次配置将保存在本机,重装时可复用。</p>
+
+          <div class="field-list">
+            <div class="field">
+              <label class="field__label" for="f1-dir">安装根目录 (ScoopDir)</label>
+              <input id="f1-dir" type="text" placeholder="%USERPROFILE%\scoop" />
+              <div class="field__help">Scoop 本体与所有软件包的安装位置,默认 %USERPROFILE%\scoop</div>
+            </div>
+            <div class="field">
+              <label class="field__label" for="f1-global">全局软件包目录 (ScoopGlobalDir)<span class="badge badge--warning">需要管理员权限</span></label>
+              <input id="f1-global" type="text" placeholder="C:\ProgramData\scoop" />
+              <div class="field__help">使用 --global 安装的软件包存放位置,默认 C:\ProgramData\scoop。修改此项需要管理员权限。</div>
+            </div>
+            <div class="field">
+              <label class="field__label" for="f1-cache">下载缓存目录 (ScoopCacheDir)</label>
+              <input id="f1-cache" type="text" placeholder="%SCOOP%\cache" />
+              <div class="field__help">安装包下载缓存位置,默认位于安装根目录内的 cache 子目录</div>
+            </div>
+            <div class="field">
+              <label class="field__label" for="f1-proxy">代理服务器 (Proxy)</label>
+              <input id="f1-proxy" type="text" placeholder="http://127.0.0.1:7890" />
+              <div class="field__help">通过指定代理下载,例如 http://127.0.0.1:7890;留空则不使用代理</div>
+            </div>
+            <div class="field">
+              <label class="field__label" for="f1-noproxy">代理例外 (NoProxy)</label>
+              <input id="f1-noproxy" type="text" placeholder="localhost,127.0.0.1" />
+              <div class="field__help">不走代理的主机列表,逗号分隔</div>
+            </div>
+            <div class="field-row">
+              <div class="field">
+                <label class="field__label" for="f1-puser">代理用户名 (ProxyCredential)</label>
+                <input id="f1-puser" type="text" />
+                <div class="field__help">代理需要身份验证时填写;留空则不使用凭据</div>
+              </div>
+              <div class="field">
+                <label class="field__label" for="f1-ppass">代理密码</label>
+                <input id="f1-ppass" type="password" />
+              </div>
+            </div>
+            <div class="checkbox-row">
+              <span class="checkbox-box"><svg class="icon" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg></span>
+              <span>使用 Windows 默认凭据访问代理 (ProxyUseDefaultCredentials)</span>
+            </div>
+            <div class="checkbox-row">
+              <span class="checkbox-box"><svg class="icon" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg></span>
+              <span>
+                以管理员权限运行安装 (RunAsAdmin)
+                <span class="checkbox-row__help">勾选后将弹出 UAC 提权窗口执行安装;需要设置全局软件包目录等场景时使用。不勾选则以当前用户身份安装(推荐)。</span>
+              </span>
+            </div>
+          </div>
+
+          <div class="form-footer">
+            <button class="btn btn--default btn--lg" onclick="openDialog()">
+              <svg class="icon" viewBox="0 0 24 24"><path d="M12 15V3"/><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/></svg>
+              开始安装 Scoop
+            </button>
+          </div>
+        </div>
+      </div>
+      <div class="footnote">state = not-found · setupError = ""</div>
+    </div>
+
+    <!-- ============================================================ -->
+    <!-- 状态 B' · 表单 + 失败重试(F16 + F19)                          -->
+    <!-- ============================================================ -->
+    <div class="stage__panel" id="panel-form-error">
+      <div class="card">
+        <div class="gradient-line"></div>
+        <div class="card__body">
+          <div class="card__head">
+            <div class="card__icon">
+              <svg class="icon" viewBox="0 0 24 24"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>
+            </div>
+            <div>
+              <h2 class="card__title">未检测到 Scoop</h2>
+              <p class="card__desc">本机尚未安装 Scoop 包管理器。你可以在下方确认安装配置后,由本产品协助完成首次安装;安装过程需要网络连接。</p>
+            </div>
+          </div>
+
+          <div class="error-banner">
+            <svg class="icon" viewBox="0 0 24 24"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>
+            <div>
+              <div class="error-banner__title">安装失败</div>
+              <div class="error-banner__desc">安装未能完成。你可以检查网络与配置后重试;下方日志给出了失败原因。</div>
+            </div>
+          </div>
+
+          <h3 class="form-title">安装配置</h3>
+          <p class="form-desc">以下配置项与 Scoop 官方安装脚本 install.ps1 一一对应;留空即使用官方默认值。确认后开始安装,安装过程中不可修改;本次配置将保存在本机,重装时可复用。</p>
+
+          <div class="field-list">
+            <div class="field">
+              <label class="field__label" for="f2-dir">安装根目录 (ScoopDir)</label>
+              <input id="f2-dir" type="text" value="D:\Scoop" />
+              <div class="field__help">Scoop 本体与所有软件包的安装位置,默认 %USERPROFILE%\scoop</div>
+            </div>
+            <div class="field">
+              <label class="field__label" for="f2-global">全局软件包目录 (ScoopGlobalDir)<span class="badge badge--warning">需要管理员权限</span></label>
+              <input id="f2-global" type="text" placeholder="C:\ProgramData\scoop" />
+              <div class="field__help">使用 --global 安装的软件包存放位置,默认 C:\ProgramData\scoop。修改此项需要管理员权限。</div>
+            </div>
+            <div class="field">
+              <label class="field__label" for="f2-cache">下载缓存目录 (ScoopCacheDir)</label>
+              <input id="f2-cache" type="text" placeholder="%SCOOP%\cache" />
+              <div class="field__help">安装包下载缓存位置,默认位于安装根目录内的 cache 子目录</div>
+            </div>
+            <div class="field">
+              <label class="field__label" for="f2-proxy">代理服务器 (Proxy)</label>
+              <input id="f2-proxy" type="text" value="http://127.0.0.1:7890" />
+              <div class="field__help">通过指定代理下载,例如 http://127.0.0.1:7890;留空则不使用代理</div>
+            </div>
+            <div class="field">
+              <label class="field__label" for="f2-noproxy">代理例外 (NoProxy)</label>
+              <input id="f2-noproxy" type="text" value="localhost,127.0.0.1" />
+              <div class="field__help">不走代理的主机列表,逗号分隔</div>
+            </div>
+            <div class="field-row">
+              <div class="field">
+                <label class="field__label" for="f2-puser">代理用户名 (ProxyCredential)</label>
+                <input id="f2-puser" type="text" />
+                <div class="field__help">代理需要身份验证时填写;留空则不使用凭据</div>
+              </div>
+              <div class="field">
+                <label class="field__label" for="f2-ppass">代理密码</label>
+                <input id="f2-ppass" type="password" />
+              </div>
+            </div>
+            <div class="checkbox-row">
+              <span class="checkbox-box"><svg class="icon" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg></span>
+              <span>使用 Windows 默认凭据访问代理 (ProxyUseDefaultCredentials)</span>
+            </div>
+            <div class="checkbox-row">
+              <span class="checkbox-box"><svg class="icon" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg></span>
+              <span>
+                以管理员权限运行安装 (RunAsAdmin)
+                <span class="checkbox-row__help">勾选后将弹出 UAC 提权窗口执行安装;需要设置全局软件包目录等场景时使用。不勾选则以当前用户身份安装(推荐)。</span>
+              </span>
+            </div>
+          </div>
+
+          <div class="form-footer">
+            <button class="btn btn--default btn--lg" onclick="openDialog()">
+              <svg class="icon" viewBox="0 0 24 24"><path d="M12 15V3"/><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/></svg>
+              开始安装 Scoop
+            </button>
+          </div>
+        </div>
+      </div>
+      <div class="footnote">state = not-found · setupError = "failed"(同一条 banner 亦用于 "cancelled" / "recheckFailed",仅 error-banner__desc 文案不同)</div>
+    </div>
+
+    <!-- ============================================================ -->
+    <!-- 状态 C · 协助安装中(F16 + F17,页面内嵌进度,不跳转 P08)       -->
+    <!-- ============================================================ -->
+    <div class="stage__panel" id="panel-installing">
+      <div class="card">
+        <div class="gradient-line"></div>
+        <div class="card__body">
+          <div class="card__head">
+            <div class="card__icon">
+              <svg class="icon" viewBox="0 0 24 24"><path d="M12 15V3"/><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/></svg>
+            </div>
+            <div>
+              <h2 class="card__title">正在安装 Scoop…</h2>
+              <p class="card__desc">正在执行官方安装脚本,请保持网络连接。以下为实时输出:</p>
+            </div>
+          </div>
+
+          <div class="progress"><div class="progress__fill"></div></div>
+
+          <div class="log-box">$ 正在准备安装脚本…
+[scoop-gui] [1/2] Downloading Scoop installer (https://get.scoop.sh)...
+[scoop-gui] [2/2] Running Scoop installer...
+Initializing...
+Downloading main bucket...
+Creating shim...</div>
+
+          <div class="form-footer">
+            <button class="btn btn--cancel">取消</button>
+          </div>
+        </div>
+      </div>
+      <div class="footnote">state = installing · Cancel 按钮全程中性灰(取消 ≠ 失败,不用 destructive 色)</div>
+    </div>
+
+  </div>
+
+  <!-- ============================================================ -->
+  <!-- 一次性确认弹窗(F16,复用通用 Dialog,不逐项复述表单值)         -->
+  <!-- ============================================================ -->
+  <div class="dialog-overlay" id="confirm-dialog">
+    <div class="dialog">
+      <button class="dialog__close" onclick="closeDialog()" aria-label="关闭">
+        <svg class="icon" viewBox="0 0 24 24"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+      </button>
+      <div class="dialog__header">
+        <div class="dialog__title">开始安装 Scoop</div>
+        <div class="dialog__desc">以下配置项与 Scoop 官方安装脚本 install.ps1 一一对应;留空即使用官方默认值。确认后开始安装,安装过程中不可修改;本次配置将保存在本机,重装时可复用。</div>
+      </div>
+      <div class="dialog__footer">
+        <button class="btn btn--secondary" onclick="closeDialog()">取消</button>
+        <button class="btn btn--default" onclick="closeDialog()">确认</button>
+      </div>
+    </div>
+  </div>
+
+<script>
+  function setState(name, btn) {
+    document.querySelectorAll('.stage__panel').forEach(function (el) { el.classList.remove('is-active'); });
+    document.getElementById('panel-' + name).classList.add('is-active');
+    document.querySelectorAll('.demo-tab[data-state]').forEach(function (el) { el.classList.remove('is-active'); });
+    btn.classList.add('is-active');
+  }
+  function openDialog() { document.getElementById('confirm-dialog').classList.add('is-open'); }
+  function closeDialog() { document.getElementById('confirm-dialog').classList.remove('is-open'); }
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape') closeDialog();
+  });
+</script>
+</body>
+</html>
