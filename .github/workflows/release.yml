@@ -40,6 +40,20 @@ jobs:
       - name: Run Rust tests
         run: cargo test --manifest-path src-tauri/Cargo.toml
 
+      - name: Bump patch version
+        id: bump
+        shell: bash
+        run: |
+          npm version patch --no-git-tag-version
+          NEW_VERSION=$(node -p "require('./package.json').version")
+          sed -i "s/^version = .*/version = \"$NEW_VERSION\"/" src-tauri/Cargo.toml
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git commit -am "chore: 发布自动递增版本号到 v${NEW_VERSION}"
+          git push origin HEAD:master
+          echo "version=$NEW_VERSION" >> "$GITHUB_OUTPUT"
+          echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
       - name: Build Tauri app (NSIS installer)
         run: npm run tauri build
 
@@ -48,7 +62,6 @@ jobs:
         shell: bash
         run: |
           echo "sha_short=$(git rev-parse --short HEAD)" >> "$GITHUB_OUTPUT"
-          echo "version=$(node -p "require('./src-tauri/tauri.conf.json').version")" >> "$GITHUB_OUTPUT"
 
       - name: Package portable (no-install) build
         shell: pwsh
@@ -67,10 +80,10 @@ jobs:
         run: |
           gh release delete latest --yes --cleanup-tag || true
           gh release create latest \
-            --title "持续构建 v${{ steps.meta.outputs.version }} (${{ steps.meta.outputs.sha_short }})" \
-            --notes "自动构建版本,基于提交 ${{ github.sha }} 生成。随 master 分支每次提交自动更新,可能包含未完全测试的改动,日常使用建议关注正式 Release。附带两种下载:NSIS 安装包(*-setup.exe)与免安装绿色版(scoop-gui-portable-x64.zip,解压后直接运行,需本机已装 WebView2 Runtime)。" \
+            --title "持续构建 v${{ steps.bump.outputs.version }} (${{ steps.meta.outputs.sha_short }})" \
+            --notes "自动构建版本,基于提交 ${{ steps.bump.outputs.sha }} 生成(版本号随每次发布自动递增)。随 master 分支每次提交自动更新,可能包含未完全测试的改动,日常使用建议关注正式 Release。附带两种下载:NSIS 安装包(*-setup.exe)与免安装绿色版(scoop-gui-portable-x64.zip,解压后直接运行,需本机已装 WebView2 Runtime)。" \
             --prerelease \
             --latest=false \
-            --target "${{ github.sha }}" \
+            --target "${{ steps.bump.outputs.sha }}" \
             src-tauri/target/release/bundle/nsis/*.exe \
             src-tauri/target/release/scoop-gui-portable-x64.zip

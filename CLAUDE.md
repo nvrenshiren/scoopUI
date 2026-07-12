@@ -55,6 +55,7 @@ cd src-tauri && cargo test   # 解析器/安装脚本单测(基于真实 scoop 0
 - `release.yml` 在每次 push 到 `master` 时跑完整 `npm run tauri build`,把 NSIS 安装包发布成一个滚动的 `latest` 预发布版本:**先 `gh release delete latest --cleanup-tag` 再 `gh release create`**,没有用 `tauri-apps/tauri-action` 官方示例的 `tagName: app-v__VERSION__` 版本化发布模式——那种模式假定每次发布对应一个新版本号,不适合"每次提交都产出一个可下载最新构建"的持续构建场景;delete+recreate 避免了资产文件名冲突或旧 asset 残留的问题。以后如果要做真正的正式版本发布(打 tag 触发),应该另开一个 workflow,不要复用 `latest` 这个滚动 tag。
 - 用的是默认 `GITHUB_TOKEN`,不是 fine-grained PAT:这个 workflow 由人工 push 触发,只做"构建 + 发布 release",不会再触发下游 workflow,不属于全局规则里"bot 推送/合并需要 RELEASE_TOKEN"那种下游 workflow 联动场景。
 - 每次发布同时附带两个产物:NSIS 安装包(`bundle/nsis/*.exe`)与免安装绿色版 zip(`scoop-gui-portable-x64.zip`)。Tauri 官方 `bundle.targets` 在 Windows 上只有 `nsis`/`msi` 两种安装包目标,**没有内置的 portable 选项**;绿色版是 `release.yml` 里额外加的一步——把 `tauri build` 顺带产出的裸 `target/release/*.exe`(NSIS 打包前的原始可执行文件)连同同目录的 `WebView2Loader.dll` 一起 `Compress-Archive` 打包,本机装了 WebView2 Runtime(Win11 自带)即可解压直接运行,无需安装、不写注册表。
+- **版本号单一来源 + 自动递增**:`tauri.conf.json` 的 `version` 字段设为 `"../package.json"`(Tauri 官方支持的写法,指向 package.json 而非写死数字),之后只有 `package.json` 一处需要维护版本号,`src-tauri/Cargo.toml` 的 `[package] version` 靠 `release.yml` 里的 `sed` 保持同步。`release.yml` 在 `cargo test` 之后、`tauri build` 之前跑 `npm version patch --no-git-tag-version` 把 patch 位 +1,连同 Cargo.toml 一起提交并 `git push origin HEAD:master`——用默认 `GITHUB_TOKEN` 推送,这次 push **不会**再触发 `release.yml`(GitHub 对 `GITHUB_TOKEN` 触发的事件有内置防循环,详见全局规则),不会死循环。发布用的 `--target` 与 release notes 里的提交号都改成指向这次自动递增后的新提交,而不是触发 workflow 那次的原始 `github.sha`。
 
 ## 状态
 
