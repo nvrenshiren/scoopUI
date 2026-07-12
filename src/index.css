@@ -1,0 +1,241 @@
+/* ============================================================
+   scoop-gui 设计系统 v2(docs/design/systems/electron.md)
+   Tailwind v4 @theme + shadcn 语义变量 · 暗色默认 · run-green
+   ============================================================ */
+@import "tailwindcss";
+
+:root {
+  /* shadcn 语义 token(值 = 设计系统 §2 Dark) */
+  --background: #0b1220;
+  --foreground: #f5f7fa;
+  --card: #111827; /* bg-elevated */
+  --card-foreground: #f5f7fa;
+  --popover: #111827;
+  --popover-foreground: #f5f7fa;
+  --primary: #22c55e; /* run-green */
+  --primary-hover: #34d672;
+  --primary-foreground: #06130a;
+  --secondary: #1a2332; /* bg-overlay */
+  --secondary-foreground: #f5f7fa;
+  --muted: #1a2332;
+  --muted-foreground: #a1aab8; /* fg-muted */
+  --accent: #1a2332; /* hover 背景(shadcn 语义) */
+  --accent-foreground: #f5f7fa;
+  --destructive: #ef4444;
+  --border: #374151;
+  --input: #374151;
+  --ring: #22c55e;
+
+  /* 设计系统扩展 token */
+  --subtle: #6b7280; /* fg-subtle */
+  --border-strong: #5b6678;
+  --info: #60a5fa; /* 信息蓝/链接(设计系统 --accent) */
+  --warning: #f59e0b;
+  --primary-glow: rgba(34, 197, 94, 0.25);
+  --primary-glow-soft: rgba(34, 197, 94, 0.1);
+  --destructive-glow: rgba(239, 68, 68, 0.2);
+  --warning-soft: rgba(245, 158, 11, 0.05);
+  --warning-15: rgba(245, 158, 11, 0.15);
+  --surface-glass: rgba(26, 35, 50, 0.6);
+
+  --radius: 0.5rem; /* md=8 · sm=4 · lg=12 · xl=16(shadcn 公式与设计系统吻合) */
+
+  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.5), 0 2px 4px -2px rgb(0 0 0 / 0.4);
+  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.6), 0 4px 6px -4px rgb(0 0 0 / 0.4);
+  --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.7), 0 8px 10px -6px rgb(0 0 0 / 0.5);
+}
+
+/* 亮色备选(设计系统 §3) */
+:root.light {
+  --background: #fafbfc;
+  --foreground: #0f172a;
+  --card: #ffffff;
+  --card-foreground: #0f172a;
+  --popover: #ffffff;
+  --popover-foreground: #0f172a;
+  --primary: #16a34a;
+  --primary-hover: #15803d;
+  --primary-foreground: #ffffff;
+  --secondary: #f4f6f8;
+  --secondary-foreground: #0f172a;
+  --muted: #f4f6f8;
+  --muted-foreground: #475569;
+  --accent: #f4f6f8;
+  --accent-foreground: #0f172a;
+  --border: #d1d5db;
+  --input: #d1d5db;
+  --ring: #16a34a;
+  --subtle: #94a3b8;
+  --border-strong: #94a3b8;
+  --primary-glow: rgba(22, 163, 74, 0.2);
+  --primary-glow-soft: rgba(22, 163, 74, 0.08);
+  --warning-soft: rgba(245, 158, 11, 0.08);
+  --surface-glass: rgba(255, 255, 255, 0.72);
+  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.08), 0 2px 4px -2px rgb(0 0 0 / 0.06);
+  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.06);
+  --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.12), 0 8px 10px -6px rgb(0 0 0 / 0.08);
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-hover: var(--primary-hover);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-subtle: var(--subtle);
+  --color-border-strong: var(--border-strong);
+  --color-info: var(--info);
+  --color-warning: var(--warning);
+
+  --font-heading: "Space Grotesk", system-ui, sans-serif;
+  --font-body: "DM Sans", "Microsoft YaHei UI", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", "Cascadia Code", Consolas, monospace;
+
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: var(--radius);
+  --radius-lg: calc(var(--radius) + 4px);
+  --radius-xl: calc(var(--radius) + 8px);
+
+  --shadow-md: var(--shadow-md);
+  --shadow-lg: var(--shadow-lg);
+  --shadow-xl: var(--shadow-xl);
+}
+
+@layer base {
+  * {
+    border-color: var(--border);
+    box-sizing: border-box;
+  }
+  html,
+  body,
+  #app {
+    height: 100%;
+    margin: 0;
+  }
+  body {
+    background: var(--background);
+    color: var(--foreground);
+    font-family: var(--font-body);
+    font-size: 14px;
+    line-height: 1.5;
+    overflow: hidden;
+    -webkit-font-smoothing: antialiased;
+    user-select: none;
+  }
+  h1,
+  h2,
+  h3 {
+    font-family: var(--font-heading);
+    line-height: 1.2;
+  }
+  ::selection {
+    background: var(--primary-glow);
+  }
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: var(--border);
+    border-radius: 5px;
+    border: 2px solid transparent;
+    background-clip: content-box;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--border-strong);
+    background-clip: content-box;
+  }
+}
+
+@layer utilities {
+  /* 科技感叠加层(设计系统 §2.1) */
+  .bg-grid {
+    background-image: linear-gradient(to right, rgba(55, 65, 81, 0.25) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(55, 65, 81, 0.25) 1px, transparent 1px);
+    background-size: 32px 32px;
+  }
+  :root.light .bg-grid {
+    background-image: linear-gradient(to right, rgba(15, 23, 42, 0.05) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(15, 23, 42, 0.05) 1px, transparent 1px);
+  }
+  .bg-glow-top {
+    background: radial-gradient(ellipse 800px 200px at 50% -50%, var(--primary-glow), transparent);
+  }
+  .gradient-line {
+    height: 1px;
+    background: linear-gradient(to right, transparent, var(--primary), transparent);
+    flex-shrink: 0;
+  }
+
+  /* P08 进行中渐变顶条 */
+  .running-bar {
+    height: 2px;
+    background: linear-gradient(90deg, var(--primary), var(--info), var(--primary));
+    background-size: 200% 100%;
+    animation: slide-bar 1.6s linear infinite;
+    flex-shrink: 0;
+  }
+  @keyframes slide-bar {
+    from {
+      background-position: 0% 0;
+    }
+    to {
+      background-position: 200% 0;
+    }
+  }
+
+  /* 不确定进度条填充 */
+  .progress-indeterminate {
+    width: 32%;
+    animation: indet 1.4s ease-in-out infinite;
+  }
+  @keyframes indet {
+    0% {
+      left: -32%;
+    }
+    100% {
+      left: 100%;
+    }
+  }
+
+  /* 日志区 */
+  .log-box {
+    background: rgba(0, 0, 0, 0.35);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    font-family: var(--font-mono);
+    font-size: 12px;
+    line-height: 1.6;
+    padding: 8px 10px;
+    overflow: auto;
+    white-space: pre-wrap;
+    word-break: break-all;
+    user-select: text;
+  }
+  :root.light .log-box {
+    background: rgba(15, 23, 42, 0.04);
+  }
+
+  /* 玻璃浮层(P08) */
+  .surface-glass {
+    background: var(--surface-glass);
+    backdrop-filter: blur(12px);
+  }
+}

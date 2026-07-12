@@ -1,0 +1,271 @@
+//! 全部 Tauri IPC 命令。读命令(list/status/search/info/bucket)为阻塞子进程
+//! 调用,统一经 spawn_blocking 执行;写操作一律走 InstallJob 队列(F17)。
+
+use std::sync::{Arc, LazyLock};
+
+use regex::Regex;
+use serde::Serialize;
+use tauri::State;
+
+use crate::jobs::{JobDto, JobKind};
+use crate::settings::{self, InstallConfig, Settings};
+use crate::{installer, parse, scoop, Core};
+
+/// 包名/桶名白名单(允许 bucket/name 形式);防止拼进 cmd 的参数携带元字符。
+static NAME_RE: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"^[A-Za-z0-9][A-Za-z0-9._/-]{0,127}$").unwrap());
+/// 桶仓库地址(https URL 或 git 形式)。
+static REPO_RE: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"^[A-Za-z0-9][A-Za-z0-9._:/@~+-]{0,255}$").unwrap());
+/// 搜索关键字。
+static QUERY_RE: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$").unwrap());
+
+fn shims_of(core: &Core) -> Option<String> {
+    core.scoop
+        .lock()
+        .unwrap()
+        .as_ref()
+        .and_then(|e| e.shims_dir.clone())
+}
+
+/// 执行 scoop 读命令并返回 stdout;非零退出码转为错误(F19 命令级失败)。
+fn run_read(core: &Core, args: &[&str]) -> Result<String, String> {
+    let shims = shims_of(core);
+    let out = scoop::run_scoop(&shims, args)?;
+    if !out.status.success() {
+        let stderr = scoop::stderr_text(&out);
+        let stdout = scoop::stdout_text(&out);
+        let detail = if stderr.trim().is_empty() { stdout } else { stderr };
+        return Err(format!(
+            "scoop {} failed (exit {:?}): {}",
+            args.join(" "),
+            out.status.code(),
+            detail.trim()
+        ));
+    }
+    Ok(scoop::stdout_text(&out))
+}
+
+// ---------------------------------------------------------------- settings
+
+#[tauri::command]
+pub fn get_settings(core: State<'_, Arc<Core>>) -> Settings {
+    core.settings.lock().unwrap().clone()
+}
+
+#[tauri::command]
+pub fn set_language(core: State<'_, Arc<Core>>, language: String) -> Result<(), String> {
+    if language != "zh" && language != "en" {
+        return Err("unsupported language".into());
+    }
+    let mut s = core.settings.lock().unwrap();
+    s.language = Some(language);
+    settings::save(&s)
+}
+
+#[tauri::command]
+pub fn set_theme(core: State<'_, Arc<Core>>, theme: String) -> Result<(), String> {
+    if !matches!(theme.as_str(), "dark" | "light" | "system") {
+        return Err("unsupported theme".into());
+    }
+    let mut s = core.settings.lock().unwrap();
+    s.theme = Some(theme);
+    settings::save(&s)
+}
+
+// ------------------------------------------------------------------ detect
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DetectResult {
+    pub available: bool,
+    pub version: Option<String>,
+    pub shims_dir: Option<String>,
+}
+
+/// F15:探测本机 scoop 可用性,并缓存定位结果供后续命令使用。
+///
+/// 调试开关:设置环境变量 `SCOOP_GUI_FORCE_SETUP=1` 可强制报告"未检测到",
+/// 用于在已装 scoop 的机器上预览 P01 协助安装页(仅影响本进程,无副作用)。
+#[tauri::command]
+pub async fn detect_scoop(core: State<'_, Arc<Core>>) -> Result<DetectResult, String> {
+    if std::env::var("SCOOP_GUI_FORCE_SETUP").map(|v| v == "1").unwrap_or(false) {
+        return Ok(DetectResult {
+            available: false,
+            version: None,
+            shims_dir: None,
+        });
+    }
+    let core = core.inner().clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        let configured = core
+            .settings
+            .lock()
+            .unwrap()
+            .install_config
+            .as_ref()
+            .and_then(|c| c.scoop_dir.clone());
+        let env = scoop::detect(configured.as_deref());
+        let result = DetectResult {
+            available: env.is_some(),
+            version: env.as_ref().map(|e| e.version.clone()),
+            shims_dir: env.as_ref().and_then(|e| e.shims_dir.clone()),
+        };
+        *core.scoop.lock().unwrap() = env;
+        result
+    })
+    .await
+    .map_err(|e| e.to_string())
+}
+
+// ------------------------------------------------------------- read queries
+
+macro_rules! blocking_query {
+    ($core:expr, $body:expr) => {{
+        let core = $core.inner().clone();
+        tauri::async_runtime::spawn_blocking(move || $body(core))
+            .await
+            .map_err(|e| e.to_string())?
+    }};
+}
+
+/// query 为 scoop 的子串过滤(用于单包状态刷新,避免全量列表开销)。
+#[tauri::command]
+pub async fn scoop_list(
+    core: State<'_, Arc<Core>>,
+    query: Option<String>,
+) -> Result<Vec<parse::InstalledApp>, String> {
+    if let Some(q) = &query {
+        if !NAME_RE.is_match(q) {
+            return Err("invalid list query".into());
+        }
+    }
+    blocking_query!(core, move |core: Arc<Core>| {
+        let text = match &query {
+            Some(q) => run_read(&core, &["list", q])?,
+            None => run_read(&core, &["list"])?,
+        };
+        Ok(parse::parse_list(&text))
+    })
+}
+
+#[tauri::command]
+pub async fn scoop_status(core: State<'_, Arc<Core>>) -> Result<Vec<parse::StatusEntry>, String> {
+    blocking_query!(core, |core: Arc<Core>| {
+        let text = run_read(&core, &["status"])?;
+        Ok(parse::parse_status(&text))
+    })
+}
+
+#[tauri::command]
+pub async fn scoop_search(
+    core: State<'_, Arc<Core>>,
+    query: Option<String>,
+) -> Result<Vec<parse::SearchResult>, String> {
+    if let Some(q) = &query {
+        if !QUERY_RE.is_match(q) {
+            return Err("invalid search query".into());
+        }
+    }
+    blocking_query!(core, move |core: Arc<Core>| {
+        let text = match &query {
+            Some(q) => run_read(&core, &["search", q])?,
+            None => run_read(&core, &["search"])?,
+        };
+        Ok(parse::parse_search(&text))
+    })
+}
+
+#[tauri::command]
+pub async fn scoop_info(
+    core: State<'_, Arc<Core>>,
+    name: String,
+) -> Result<Vec<(String, String)>, String> {
+    if !NAME_RE.is_match(&name) {
+        return Err("invalid app name".into());
+    }
+    blocking_query!(core, move |core: Arc<Core>| {
+        let text = run_read(&core, &["info", &name])?;
+        Ok(parse::parse_info(&text))
+    })
+}
+
+#[tauri::command]
+pub async fn bucket_list(core: State<'_, Arc<Core>>) -> Result<Vec<parse::BucketInfo>, String> {
+    blocking_query!(core, |core: Arc<Core>| {
+        let text = run_read(&core, &["bucket", "list"])?;
+        Ok(parse::parse_bucket_list(&text))
+    })
+}
+
+#[tauri::command]
+pub async fn bucket_known(core: State<'_, Arc<Core>>) -> Result<Vec<String>, String> {
+    blocking_query!(core, |core: Arc<Core>| {
+        let text = run_read(&core, &["bucket", "known"])?;
+        Ok(parse::parse_known_buckets(&text))
+    })
+}
+
+// -------------------------------------------------------------------- jobs
+
+/// 写操作统一入队(F05/F06/F07/F11/F12)。kind 取值:
+/// install / uninstall / update / bucket-add / bucket-remove
+#[tauri::command]
+pub fn enqueue_job(
+    core: State<'_, Arc<Core>>,
+    kind: String,
+    target: String,
+    repo: Option<String>,
+) -> Result<u64, String> {
+    let job_kind = match kind.as_str() {
+        "install" => JobKind::Install,
+        "uninstall" => JobKind::Uninstall,
+        "update" => JobKind::Update,
+        "bucket-add" => JobKind::BucketAdd,
+        "bucket-remove" => JobKind::BucketRemove,
+        _ => return Err(format!("unknown job kind: {kind}")),
+    };
+    if !NAME_RE.is_match(&target) {
+        return Err("invalid target name".into());
+    }
+    let repo = match repo {
+        Some(r) if !r.trim().is_empty() => {
+            if !REPO_RE.is_match(&r) {
+                return Err("invalid bucket repo url".into());
+            }
+            Some(r)
+        }
+        _ => None,
+    };
+    core.jobs.enqueue(job_kind, target, repo, None)
+}
+
+/// F16:确认安装配置 → 持久化 → 生成 runner → 入队执行。
+#[tauri::command]
+pub fn install_scoop(core: State<'_, Arc<Core>>, config: InstallConfig) -> Result<u64, String> {
+    {
+        let mut s = core.settings.lock().unwrap();
+        s.install_config = Some(config.clone());
+        // 持久化失败不阻塞安装本身(flow §1.8 同源原则),但记录到返回值之外
+        let _ = settings::save(&s);
+    }
+    let runner = installer::prepare_runner(&config)?;
+    core.jobs
+        .enqueue(JobKind::InstallScoop, "Scoop".to_string(), None, Some(runner))
+}
+
+#[tauri::command]
+pub fn cancel_job(core: State<'_, Arc<Core>>, id: u64) -> Result<(), String> {
+    core.jobs.cancel(id)
+}
+
+#[tauri::command]
+pub fn list_jobs(core: State<'_, Arc<Core>>) -> Vec<JobDto> {
+    core.jobs.list()
+}
+
+#[tauri::command]
+pub fn job_log(core: State<'_, Arc<Core>>, id: u64) -> Vec<String> {
+    core.jobs.log_of(id)
+}
