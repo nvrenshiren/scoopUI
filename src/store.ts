@@ -41,7 +41,7 @@ interface AppState {
   knownBuckets: string[];
 
   loading: { installed: boolean; status: boolean; available: boolean; buckets: boolean };
-  errors: { installed: string; available: string; buckets: string };
+  errors: { installed: string; available: string; buckets: string; knownBuckets: string };
 
   jobs: Record<number, JobDto>;
   jobLogs: Record<number, string[]>;
@@ -73,7 +73,7 @@ export const useApp = create<AppState>()(() => ({
   knownBuckets: [],
 
   loading: { installed: false, status: false, available: false, buckets: false },
-  errors: { installed: "", available: "", buckets: "" },
+  errors: { installed: "", available: "", buckets: "", knownBuckets: "" },
 
   jobs: {},
   jobLogs: {},
@@ -190,14 +190,23 @@ export async function refreshAvailable(force = false) {
   }
 }
 
+/**
+ * 已添加桶 / 已知桶清单分别请求、分别记录失败(两条独立的 F19 呈现);
+ * 一个失败不吞另一个,避免"仅已知桶清单出错"被误判为整页失败(见 P06 验收文档已知偏差)。
+ */
 export async function refreshBuckets() {
   set((s) => ({ loading: { ...s.loading, buckets: true } }));
-  try {
-    const [buckets, knownBuckets] = await Promise.all([api.bucketList(), api.bucketKnown()]);
-    set((s) => ({ buckets, knownBuckets, errors: { ...s.errors, buckets: "" }, loading: { ...s.loading, buckets: false } }));
-  } catch (e) {
-    set((s) => ({ errors: { ...s.errors, buckets: String(e) }, loading: { ...s.loading, buckets: false } }));
-  }
+  const [bucketsResult, knownResult] = await Promise.allSettled([api.bucketList(), api.bucketKnown()]);
+  set((s) => ({
+    buckets: bucketsResult.status === "fulfilled" ? bucketsResult.value : s.buckets,
+    knownBuckets: knownResult.status === "fulfilled" ? knownResult.value : s.knownBuckets,
+    errors: {
+      ...s.errors,
+      buckets: bucketsResult.status === "fulfilled" ? "" : String(bucketsResult.reason),
+      knownBuckets: knownResult.status === "fulfilled" ? "" : String(knownResult.reason),
+    },
+    loading: { ...s.loading, buckets: false },
+  }));
 }
 
 async function initialLoad() {
@@ -256,7 +265,8 @@ export async function startInstallScoop(cfg: InstallConfig) {
   set({ setupError: "" });
   try {
     const installJobId = await api.installScoop(cfg);
-    set({ installJobId, boot: "installing" });
+    // F16 进度统一走 P08 任务面板(与其它写操作一致),BootView 自身的进度区仅做首启场景的强调呈现
+    set({ installJobId, boot: "installing", jobsPanelOpen: true });
   } catch (e) {
     toast.error(t("error.jobStartFailed", { msg: String(e) }));
   }

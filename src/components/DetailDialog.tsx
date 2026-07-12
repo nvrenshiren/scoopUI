@@ -9,6 +9,7 @@ import { bucketNameOf } from "@/utils";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
 
 export function DetailDialog() {
   useLang();
@@ -20,6 +21,8 @@ export function DetailDialog() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [pairs, setPairs] = useState<[string, string][]>([]);
+  const [retryTick, setRetryTick] = useState(0);
+  const [updateAsk, setUpdateAsk] = useState(false);
 
   useEffect(() => {
     if (!name) return;
@@ -35,7 +38,7 @@ export function DetailDialog() {
     return () => {
       stale = true;
     };
-  }, [name]);
+  }, [name, retryTick]);
 
   const isInstalled = useMemo(() => installed.some((a) => a.name === name), [installed, name]);
   const isOutdated = useMemo(() => selectOutdatedNames(statusEntries).has(name), [statusEntries, name]);
@@ -91,9 +94,17 @@ export function DetailDialog() {
           ) : error ? (
             <div className="flex items-start gap-2 py-4 text-destructive">
               <TriangleAlert className="mt-0.5 size-4 shrink-0" />
-              <div>
+              <div className="min-w-0 flex-1">
                 {t("detail.failed")}
                 <div className="mt-1 font-mono text-xs break-all select-text">{error}</div>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  className="mt-2.5"
+                  onClick={() => setRetryTick((n) => n + 1)}
+                >
+                  {t("common.retry")}
+                </Button>
               </div>
             </div>
           ) : (
@@ -149,7 +160,7 @@ export function DetailDialog() {
                 {t("common.uninstall")}
               </Button>
               {isOutdated && (
-                <Button onClick={() => act("update")}>
+                <Button onClick={() => setUpdateAsk(true)}>
                   <CircleArrowUp className="size-4" />
                   {t("common.update")}
                 </Button>
@@ -158,6 +169,18 @@ export function DetailDialog() {
           )}
         </div>
       </DialogContent>
+
+      <ConfirmDialog
+        open={updateAsk}
+        title={t("installed.updateTitle")}
+        message={t("installed.updateDesc", { name })}
+        confirmText={t("common.update")}
+        onConfirm={() => {
+          setUpdateAsk(false);
+          act("update");
+        }}
+        onCancel={() => setUpdateAsk(false)}
+      />
     </Dialog>
   );
 }

@@ -27,6 +27,7 @@ export function BucketsView() {
   const jobs = useApp((s) => s.jobs);
   const loading = useApp((s) => s.loading.buckets);
   const error = useApp((s) => s.errors.buckets);
+  const knownError = useApp((s) => s.errors.knownBuckets);
 
   const busy = useMemo(() => selectBusyTargets(jobs), [jobs]);
   const addedNames = useMemo(() => new Set(buckets.map((b) => b.name)), [buckets]);
@@ -161,9 +162,16 @@ export function BucketsView() {
               )}
             </TabsContent>
 
-            {/* 已知桶清单(F10/F11) */}
+            {/* 已知桶清单(F10/F11);读取失败与"确实为空"分开呈现,不共用同一个 Promise.all 结果 */}
             <TabsContent value="known" className="flex min-h-0 flex-1 flex-col">
-              {knownRows.length === 0 ? (
+              {knownError ? (
+                <EmptyState error title={t("buckets.knownLoadFailed")} hint={t("error.scoopUnavailable")}>
+                  <Button variant="secondary" onClick={() => void refreshBuckets()}>
+                    <RefreshCw className="size-4" />
+                    {t("common.refresh")}
+                  </Button>
+                </EmptyState>
+              ) : knownRows.length === 0 ? (
                 <EmptyState icon={Layers} title={t("buckets.knownEmpty")} />
               ) : (
                 <TableWrap className="min-h-0 flex-1">

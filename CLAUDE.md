@@ -54,6 +54,7 @@ cd src-tauri && cargo test   # 解析器/安装脚本单测(基于真实 scoop 0
 - 项目仅面向 Windows,`ci.yml`/`release.yml` 均跑在 `windows-latest`(`cargo test` 与 `tauri build`/NSIS 打包都依赖 Windows,不能换成 ubuntu-latest)。
 - `release.yml` 在每次 push 到 `master` 时跑完整 `npm run tauri build`,把 NSIS 安装包发布成一个滚动的 `latest` 预发布版本:**先 `gh release delete latest --cleanup-tag` 再 `gh release create`**,没有用 `tauri-apps/tauri-action` 官方示例的 `tagName: app-v__VERSION__` 版本化发布模式——那种模式假定每次发布对应一个新版本号,不适合"每次提交都产出一个可下载最新构建"的持续构建场景;delete+recreate 避免了资产文件名冲突或旧 asset 残留的问题。以后如果要做真正的正式版本发布(打 tag 触发),应该另开一个 workflow,不要复用 `latest` 这个滚动 tag。
 - 用的是默认 `GITHUB_TOKEN`,不是 fine-grained PAT:这个 workflow 由人工 push 触发,只做"构建 + 发布 release",不会再触发下游 workflow,不属于全局规则里"bot 推送/合并需要 RELEASE_TOKEN"那种下游 workflow 联动场景。
+- 每次发布同时附带两个产物:NSIS 安装包(`bundle/nsis/*.exe`)与免安装绿色版 zip(`scoop-gui-portable-x64.zip`)。Tauri 官方 `bundle.targets` 在 Windows 上只有 `nsis`/`msi` 两种安装包目标,**没有内置的 portable 选项**;绿色版是 `release.yml` 里额外加的一步——把 `tauri build` 顺带产出的裸 `target/release/*.exe`(NSIS 打包前的原始可执行文件)连同同目录的 `WebView2Loader.dll` 一起 `Compress-Archive` 打包,本机装了 WebView2 Runtime(Win11 自带)即可解压直接运行,无需安装、不写注册表。
 
 ## 状态
 
@@ -63,13 +64,13 @@ MVP 阶段一(F01~F19)已实现并通过:cargo test 9/9、tsc、真机端到端(
 
 项目已接入 opcflow(`workbench.config.json`,`endpoints: [rust, web]`,`.workbench/` 为本地任务库,已 gitignore)。全部契约文档(project/roles/glossary/flow/module-prd/page-prd×10/design-system/db-doc/api-doc/acceptance×10)与 code 目录已 `scan` 登记 + `submit` 送审,等待人工在 `opcflow serve` 或 CLI 里 approve;10 个页面原型待 👍(design-system 升级到 v2 后原有原型已重做)。改契约文档后记得 `opcflow scan` 重新登记。
 
-**倒填流程(补齐既有实现的验收/架构文档)时发现的真实实现缺口**(非文档问题,已记录进对应页面的 acceptance 文档,尚未修复):
+**倒填流程(补齐既有实现的验收/架构文档)时发现并已修复的实现缺口**(源码已改,`npm run build` 与浏览器 mock 模式均已验证):
 
-- P01:协助安装表单提交前**无任何校验**(路径格式/代理冲突/凭据不全均直接进入安装,失败后才提示)。
-- P01/P08:F16(协助安装 Scoop)的进度**不经过 P08 任务面板**,`store.ts` 的 `startInstallScoop()` 从不设置 `jobsPanelOpen`,进度条是 BootView 自绘的另一套 UI。
-- P04:单包更新按钮**无二次确认**(卸载与批量更新都有);"已装列表为空"与"过滤后零匹配"复用同一句文案,具误导性。
-- P05/P07:表格行只有 `onClick`,无 `tabIndex`/键盘可达性,纯键盘用户无法从列表进入详情。
-- P06:已知桶清单读取失败会被"已添加桶"读取失败一起吞掉(共用同一个 `Promise.all`),不存在独立的"仅已知桶清单出错"呈现。
-- 多处 i18n 死键(`lang.title/subtitle/zh/en`、`installed.noOutdated`、`common.retry`)定义了但从未被引用。
+- P01:`BootView.tsx` 提交安装配置前新增 `validate()` 校验(路径非法字符、代理地址格式、代理凭据冲突/不全),不通过则标红对应字段 + toast 提示,不再直接进入安装。
+- P01/P08:`store.ts` 的 `startInstallScoop()` 现在同时置位 `jobsPanelOpen: true`,F16 协助安装的 InstallJob 会出现在 P08 任务面板(BootView 自身的进度区保留,两者并存)。
+- P04/P07:单包更新新增二次确认(`ConfirmDialog`),与卸载/批量更新一致;"已装列表为空"与"过滤后零匹配"拆分为 `installed.empty` / `installed.noMatch` 两套文案。
+- P04/P05:表格行加 `tabIndex`/`role="button"`/回车-空格键盘触发,纯键盘用户可从列表进入详情。
+- P06:`refreshBuckets()` 改用 `Promise.allSettled` 分别请求"已添加桶"与"已知桶清单",各自独立记录 `errors.buckets` / `errors.knownBuckets`,已知桶清单读取失败不再被吞掉、也不再和"确实为空"共用文案。
+- i18n:删除死键 `lang.title/subtitle/zh/en`(`LanguagePick.tsx` 全程未走 i18n 字典,文案是组件内硬编码)、`installed.noOutdated`;`common.retry` 接入 P07 详情读取失败态的重试按钮。
 
-修复这些之前先跟产品/设计确认优先级,不要在改别的功能时顺手"顺便"改掉。
+修复前的完整发现记录仍保留在各页 `docs/acceptance/web/scoop-gui/P0x.md` 的"已知实现细节"章节,包含更多次要的设计系统措辞差异(未改代码,如 P02 标题字号、P03 侧边栏底部插槽等),供后续按需处理。

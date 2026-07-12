@@ -2,6 +2,7 @@
 // 三种子态:检测中 / 未检测到(配置表单 + 失败原因)/ 协助安装中(实时日志)
 import { useEffect, useRef, useState } from "react";
 import { Download, LoaderCircle, TriangleAlert } from "lucide-react";
+import { toast } from "sonner";
 
 import { t } from "@/i18n";
 import { cancelInstallScoop, startInstallScoop, useApp, useLang } from "@/store";
@@ -38,11 +39,35 @@ const emptyForm: FormState = {
   runAsAdmin: false,
 };
 
+type FormErrors = Partial<Record<keyof FormState, string>>;
+
+/** 提交前校验(路径格式 / 代理地址格式 / 代理设置冲突 / 凭据不全),F16 前置条件 */
+function validate(f: FormState): FormErrors {
+  const errors: FormErrors = {};
+  const invalidPathChars = /["<>|?*]/;
+  for (const key of ["scoopDir", "scoopGlobalDir", "scoopCacheDir"] as const) {
+    const v = f[key].trim();
+    if (v && invalidPathChars.test(v)) errors[key] = t("setup.err.invalidPath");
+  }
+  const proxy = f.proxy.trim();
+  if (proxy && !/^https?:\/\/\S+$/i.test(proxy)) errors.proxy = t("setup.err.invalidProxy");
+
+  const hasUser = !!f.proxyCredentialUser.trim();
+  const hasPass = !!f.proxyCredentialPassword;
+  if (f.proxyUseDefaultCredentials && (hasUser || hasPass)) {
+    errors.proxyUseDefaultCredentials = t("setup.err.credConflict");
+  } else if (hasUser !== hasPass) {
+    errors.proxyCredentialUser = t("setup.err.credIncomplete");
+  }
+  return errors;
+}
+
 function Field({
   id,
   label,
   help,
   badge,
+  error,
   value,
   placeholder,
   type,
@@ -52,6 +77,7 @@ function Field({
   label: string;
   help?: string;
   badge?: string;
+  error?: string;
   value: string;
   placeholder?: string;
   type?: string;
@@ -73,9 +99,14 @@ function Field({
         value={value}
         placeholder={placeholder}
         className="font-mono"
+        aria-invalid={!!error}
         onChange={(e) => onChange(e.target.value)}
       />
-      {help && <div className="mt-1 text-xs leading-relaxed text-subtle">{help}</div>}
+      {error ? (
+        <div className="mt-1 text-xs leading-relaxed text-destructive">{error}</div>
+      ) : (
+        help && <div className="mt-1 text-xs leading-relaxed text-subtle">{help}</div>
+      )}
     </div>
   );
 }
@@ -90,6 +121,7 @@ export function BootView() {
   const jobLogs = useApp((s) => s.jobLogs);
 
   const [form, setForm] = useState<FormState>(emptyForm);
+  const [errors, setErrors] = useState<FormErrors>({});
   const [confirmOpen, setConfirmOpen] = useState(false);
 
   // 复用上次确认过的安装配置(PRD:确认后的配置本机持久化,重装复用)
@@ -110,6 +142,16 @@ export function BootView() {
   }, [settings]);
 
   const patch = (p: Partial<FormState>) => setForm((f) => ({ ...f, ...p }));
+
+  function handleStartInstall() {
+    const errs = validate(form);
+    setErrors(errs);
+    if (Object.keys(errs).length > 0) {
+      toast.error(t("setup.err.summary"));
+      return;
+    }
+    setConfirmOpen(true);
+  }
 
   const installJob = installJobId ? jobs[installJobId] : undefined;
   const installLog = installJobId ? (jobLogs[installJobId] ?? []) : [];
@@ -217,6 +259,7 @@ export function BootView() {
                   id="f-dir"
                   label={t("setup.scoopDir")}
                   help={t("setup.scoopDirHelp")}
+                  error={errors.scoopDir}
                   value={form.scoopDir}
                   placeholder="%USERPROFILE%\scoop"
                   onChange={(v) => patch({ scoopDir: v })}
@@ -226,6 +269,7 @@ export function BootView() {
                   label={t("setup.globalDir")}
                   badge={t("setup.adminBadge")}
                   help={t("setup.globalDirHelp")}
+                  error={errors.scoopGlobalDir}
                   value={form.scoopGlobalDir}
                   placeholder="C:\ProgramData\scoop"
                   onChange={(v) => patch({ scoopGlobalDir: v, ...(v.trim() ? { runAsAdmin: true } : {}) })}
@@ -234,6 +278,7 @@ export function BootView() {
                   id="f-cache"
                   label={t("setup.cacheDir")}
                   help={t("setup.cacheDirHelp")}
+                  error={errors.scoopCacheDir}
                   value={form.scoopCacheDir}
                   placeholder="%SCOOP%\cache"
                   onChange={(v) => patch({ scoopCacheDir: v })}
@@ -242,6 +287,7 @@ export function BootView() {
                   id="f-proxy"
                   label={t("setup.proxy")}
                   help={t("setup.proxyHelp")}
+                  error={errors.proxy}
                   value={form.proxy}
                   placeholder="http://127.0.0.1:7890"
                   onChange={(v) => patch({ proxy: v })}
@@ -260,6 +306,7 @@ export function BootView() {
                       id="f-puser"
                       label={t("setup.proxyUser")}
                       help={t("setup.proxyCredHelp")}
+                      error={errors.proxyCredentialUser}
                       value={form.proxyCredentialUser}
                       onChange={(v) => patch({ proxyCredentialUser: v })}
                     />
@@ -282,6 +329,11 @@ export function BootView() {
                   />
                   {t("setup.useDefaultCred")}
                 </label>
+                {errors.proxyUseDefaultCredentials && (
+                  <div className="-mt-2.5 text-xs leading-relaxed text-destructive">
+                    {errors.proxyUseDefaultCredentials}
+                  </div>
+                )}
                 <label className="flex cursor-pointer items-start gap-2.5 text-[13px]">
                   <Checkbox
                     className="mt-0.5"
@@ -298,7 +350,7 @@ export function BootView() {
               </div>
 
               <div className="mt-5 flex justify-end">
-                <Button size="lg" onClick={() => setConfirmOpen(true)}>
+                <Button size="lg" onClick={handleStartInstall}>
                   <Download className="size-[18px]" />
                   {t("setup.startInstall")}
                 </Button>

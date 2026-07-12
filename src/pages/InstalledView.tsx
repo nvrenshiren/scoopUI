@@ -31,6 +31,7 @@ export function InstalledView() {
 
   const [filter, setFilter] = useState("");
   const [updateAllOpen, setUpdateAllOpen] = useState(false);
+  const [updateAsk, setUpdateAsk] = useState("");
 
   const outdated = useMemo(() => selectOutdatedNames(statusEntries), [statusEntries]);
   const busy = useMemo(() => selectBusyTargets(jobs), [jobs]);
@@ -64,6 +65,12 @@ export function InstalledView() {
     const name = uninstallAsk;
     useApp.setState({ uninstallAsk: "" });
     if (name) void enqueue("uninstall", name);
+  }
+
+  function confirmUpdate() {
+    const name = updateAsk;
+    setUpdateAsk("");
+    if (name) void enqueue("update", name);
   }
 
   return (
@@ -122,7 +129,11 @@ export function InstalledView() {
             </Button>
           </EmptyState>
         ) : rows.length === 0 ? (
-          <EmptyState title={t("installed.empty")} hint={t("installed.emptyHint")} />
+          installed.length === 0 ? (
+            <EmptyState title={t("installed.empty")} hint={t("installed.emptyHint")} />
+          ) : (
+            <EmptyState title={t("installed.noMatch")} hint={t("installed.noMatchHint")} />
+          )
         ) : (
           <TableWrap className="min-h-0 flex-1">
             <Table>
@@ -143,8 +154,16 @@ export function InstalledView() {
                   return (
                     <TableRow
                       key={app.name}
+                      tabIndex={0}
+                      role="button"
                       className={isOutdated ? "cursor-pointer bg-[var(--warning-soft)]" : "cursor-pointer"}
                       onClick={() => useApp.setState({ detailName: app.name })}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault();
+                          useApp.setState({ detailName: app.name });
+                        }
+                      }}
                     >
                       <TableCell className="font-mono font-medium">{app.name}</TableCell>
                       <TableCell className="font-mono text-muted-foreground">{app.version}</TableCell>
@@ -179,7 +198,7 @@ export function InstalledView() {
                       <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
                         <div className="flex items-center justify-end gap-1">
                           {isOutdated && (
-                            <Button size="sm" disabled={isBusy} onClick={() => void enqueue("update", app.name)}>
+                            <Button size="sm" disabled={isBusy} onClick={() => setUpdateAsk(app.name)}>
                               {t("common.update")}
                             </Button>
                           )}
@@ -202,6 +221,15 @@ export function InstalledView() {
           </TableWrap>
         )}
       </div>
+
+      <ConfirmDialog
+        open={!!updateAsk}
+        title={t("installed.updateTitle")}
+        message={t("installed.updateDesc", { name: updateAsk })}
+        confirmText={t("common.update")}
+        onConfirm={confirmUpdate}
+        onCancel={() => setUpdateAsk("")}
+      />
 
       <ConfirmDialog
         open={!!uninstallAsk}

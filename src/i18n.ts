@@ -46,14 +46,6 @@ const dict: Dict = {
     zh: "正在执行 scoop --version 检查命令可用性",
     en: "Running scoop --version to check availability",
   },
-  "lang.title": { zh: "选择界面语言", en: "Choose your language" },
-  "lang.subtitle": {
-    zh: "首次启动请选择界面语言,之后可在设置中随时切换",
-    en: "Pick a language for the interface. You can change it anytime in Settings.",
-  },
-  "lang.zh": { zh: "中文", en: "中文 (Chinese)" },
-  "lang.en": { zh: "English", en: "English" },
-
   "setup.notFoundTitle": { zh: "未检测到 Scoop", en: "Scoop Not Detected" },
   "setup.notFoundDesc": {
     zh: "本机尚未安装 Scoop 包管理器。你可以在下方确认安装配置后,由本产品协助完成首次安装;安装过程需要网络连接。",
@@ -122,6 +114,23 @@ const dict: Dict = {
     en: "Installer finished but scoop is still not available on re-check.",
   },
   "setup.adminBadge": { zh: "需要管理员权限", en: "Requires administrator" },
+  "setup.err.summary": { zh: "请检查下方标红的配置项", en: "Please check the highlighted fields below" },
+  "setup.err.invalidPath": {
+    zh: "路径中含有非法字符(不允许 \" < > | ? *)",
+    en: "Path contains invalid characters (\" < > | ? * are not allowed)",
+  },
+  "setup.err.invalidProxy": {
+    zh: "代理地址格式应为 http(s)://主机:端口",
+    en: "Proxy must look like http(s)://host:port",
+  },
+  "setup.err.credConflict": {
+    zh: "已勾选使用默认凭据,不能同时填写代理用户名/密码",
+    en: "Can't set a proxy username/password while using default credentials",
+  },
+  "setup.err.credIncomplete": {
+    zh: "代理用户名与密码需同时填写",
+    en: "Proxy username and password must be filled in together",
+  },
 
   // ---------------- 已装列表 P04
   "installed.title": { zh: "已装软件包", en: "Installed Apps" },
@@ -145,7 +154,13 @@ const dict: Dict = {
     zh: "将按顺序更新以下 {n} 个过期软件包,每个软件包对应一条任务:",
     en: "The following {n} outdated apps will be updated one by one, each as its own task:",
   },
-  "installed.noOutdated": { zh: "当前没有过期的软件包", en: "No outdated apps right now" },
+  "installed.noMatch": { zh: "没有匹配的已装软件包", en: "No installed apps match your filter" },
+  "installed.noMatchHint": { zh: "换个关键字,或清空过滤条件", en: "Try another keyword, or clear the filter" },
+  "installed.updateTitle": { zh: "更新确认", en: "Confirm update" },
+  "installed.updateDesc": {
+    zh: "确定要将 {name} 更新到最新版本吗?",
+    en: "Update {name} to the latest version?",
+  },
   "installed.uninstallTitle": { zh: "卸载确认", en: "Confirm uninstall" },
   "installed.uninstallDesc": {
     zh: "确定要从本机卸载 {name} 吗?",
@@ -195,7 +210,8 @@ const dict: Dict = {
   },
   "buckets.alreadyAdded": { zh: "已添加", en: "Added" },
   "buckets.empty": { zh: "本机还没有添加任何桶", en: "No buckets added yet" },
-  "buckets.knownEmpty": { zh: "已知桶清单读取失败或为空", en: "Known bucket list is empty or failed to load" },
+  "buckets.knownEmpty": { zh: "Scoop 未提供可添加的已知桶", en: "Scoop reports no known buckets to add" },
+  "buckets.knownLoadFailed": { zh: "已知桶清单读取失败", en: "Failed to load the known bucket list" },
   "buckets.loadFailed": { zh: "桶列表读取失败", en: "Failed to load buckets" },
 
   // ---------------- 详情 P07
