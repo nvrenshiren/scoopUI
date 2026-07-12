@@ -15,7 +15,7 @@ Windows 桌面应用:Scoop 包管理器的图形化前端。**Rust(Tauri 2)+ Rea
 npm run tauri dev     # 开发(热更新);首次 Rust 编译约 10 分钟
 npm run tauri build   # NSIS 安装包 → src-tauri/target/release/bundle/nsis/
 npm run dev           # 仅前端(浏览器 mock 模式,无需 Rust)
-npm run build         # vue-tsc 类型检查 + vite 构建(CI 前必过)
+npm run build         # tsc 类型检查 + vite 构建(CI 前必过)
 cd src-tauri && cargo test   # 解析器/安装脚本单测(基于真实 scoop 0.5.3 输出样例)
 ```
 
@@ -47,6 +47,12 @@ cd src-tauri && cargo test   # 解析器/安装脚本单测(基于真实 scoop 0
 - Git Bash 里测 cmd 开关要写 `cmd //d //c`(POSIX 路径转换会吃掉 `/c`)。
 - 用户配置持久化在 `%APPDATA%\scoop-gui\config.json`(language/theme/installConfig)。
 
+### CI/CD(.github/workflows/)
+
+- 项目仅面向 Windows,`ci.yml`/`release.yml` 均跑在 `windows-latest`(`cargo test` 与 `tauri build`/NSIS 打包都依赖 Windows,不能换成 ubuntu-latest)。
+- `release.yml` 在每次 push 到 `master` 时跑完整 `npm run tauri build`,把 NSIS 安装包发布成一个滚动的 `latest` 预发布版本:**先 `gh release delete latest --cleanup-tag` 再 `gh release create`**,没有用 `tauri-apps/tauri-action` 官方示例的 `tagName: app-v__VERSION__` 版本化发布模式——那种模式假定每次发布对应一个新版本号,不适合"每次提交都产出一个可下载最新构建"的持续构建场景;delete+recreate 避免了资产文件名冲突或旧 asset 残留的问题。以后如果要做真正的正式版本发布(打 tag 触发),应该另开一个 workflow,不要复用 `latest` 这个滚动 tag。
+- 用的是默认 `GITHUB_TOKEN`,不是 fine-grained PAT:这个 workflow 由人工 push 触发,只做"构建 + 发布 release",不会再触发下游 workflow,不属于全局规则里"bot 推送/合并需要 RELEASE_TOKEN"那种下游 workflow 联动场景。
+
 ## 状态
 
-MVP 阶段一(F01~F19)已实现并通过:cargo test 9/9、vue-tsc、真机端到端(67 个已装包/35 过期真实渲染、单实例、语言切换)。未做(PRD 明确排除):自动更新计划、备份还原、托盘通知、scoop config 编辑、shims 管理。
+MVP 阶段一(F01~F19)已实现并通过:cargo test 9/9、tsc、真机端到端(67 个已装包/35 过期真实渲染、单实例、语言切换)。未做(PRD 明确排除):自动更新计划、备份还原、托盘通知、scoop config 编辑、shims 管理。
