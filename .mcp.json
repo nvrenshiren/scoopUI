@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "opcflow": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@dawipong/opcflow",
+        "mcp"
+      ]
+    }
+  }
+}

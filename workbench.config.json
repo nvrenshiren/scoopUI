@@ -1,0 +1,84 @@
+{
+  "endpoints": [
+    "rust",
+    "web"
+  ],
+  "pipeline": [
+    "product-manager",
+    "architect",
+    "designer",
+    "developer",
+    "qa"
+  ],
+  "docs": {
+    "prd": "docs/prd",
+    "architecture": "docs/architecture",
+    "design": "docs/design",
+    "acceptance": "docs/acceptance"
+  },
+  "codeRoots": {
+    "rust": ["src-tauri/src/{module}.rs"],
+    "web": ["src/{module}", "src/{module}.ts", "src/{module}.tsx"]
+  },
+  "cli": "npx -y @dawipong/opcflow",
+  "machineChecks": {
+    "enabled": false
+  },
+  "protocolLints": [],
+  "moduleMapping": {
+    "commands": "scoop-gui",
+    "installer": "scoop-gui",
+    "jobs": "scoop-gui",
+    "lib": "scoop-gui",
+    "main": "scoop-gui",
+    "parse": "scoop-gui",
+    "scoop": "scoop-gui",
+    "settings": "scoop-gui",
+    "components": "scoop-gui",
+    "pages": "scoop-gui",
+    "App": "scoop-gui",
+    "store": "scoop-gui",
+    "api": "scoop-gui",
+    "i18n": "scoop-gui",
+    "types": "scoop-gui",
+    "utils": "scoop-gui"
+  },
+  "kinds": {
+    "api-doc": { "defaultEndpoint": "rust" }
+  },
+  "roles": {
+    "architect": {
+      "dispatch": [
+        { "at": "module", "endpoint": "common", "content": "设计 {module} 模块数据库" },
+        { "at": "module", "endpoint": "rust", "content": "设计 {module} 模块 API 文档" }
+      ]
+    },
+    "developer": {
+      "dispatch": [
+        { "at": "module", "endpoint": "rust", "content": "实现 {module} 模块 Rust/Tauri 后端" },
+        { "at": "page", "content": "实现 {endpoint}/{page} 页面" }
+      ],
+      "requires": [
+        { "desc": "数据库文档", "kinds": ["db-doc"] },
+        { "desc": "API 文档", "kinds": ["api-doc"] },
+        { "desc": "designer web 设计稿", "kinds": ["design-prompt", "prototype"], "when": { "endpoint": "web" } }
+      ]
+    }
+  },
+  "feedbackHalfLifeDays": 15,
+  "gates": {
+    "approvalMode": "warn",
+    "writeGate": "observe"
+  },
+  "git": {
+    "taskTrailer": "off",
+    "trailerKey": "Task"
+  },
+  "platforms": [
+    "claude"
+  ],
+  "language": "zh",
+  "model": {
+    "claude": "claude-sonnet-5"
+  }
+}
