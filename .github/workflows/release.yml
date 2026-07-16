@@ -79,17 +79,14 @@ jobs:
           Copy-Item "src-tauri/target/release/WebView2Loader.dll" -Destination $portableDir -ErrorAction SilentlyContinue
           Compress-Archive -Path "$portableDir/*" -DestinationPath "src-tauri/target/release/scoop-gui-portable-x64.zip"
 
-      - name: Publish rolling "latest" release
+      - name: Publish versioned release
         shell: bash
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release delete latest --yes --cleanup-tag || true
-          gh release create latest \
-            --title "持续构建 v${{ steps.bump.outputs.version }} (${{ steps.meta.outputs.sha_short }})" \
-            --notes "自动构建版本,基于提交 ${{ steps.bump.outputs.sha }} 生成(版本号随每次发布自动递增)。随 master 分支每次提交自动更新,可能包含未完全测试的改动,日常使用建议关注正式 Release。附带两种下载:NSIS 安装包(*-setup.exe)与免安装绿色版(scoop-gui-portable-x64.zip,解压后直接运行,需本机已装 WebView2 Runtime)。" \
-            --prerelease \
-            --latest=false \
+          gh release create "v${{ steps.bump.outputs.version }}" \
+            --title "v${{ steps.bump.outputs.version }} (${{ steps.meta.outputs.sha_short }})" \
+            --notes "自动构建版本 v${{ steps.bump.outputs.version }},基于提交 ${{ steps.bump.outputs.sha }} 生成(版本号随每次 master 提交自动递增)。附带两种下载:NSIS 安装包(*-setup.exe)与免安装绿色版(scoop-gui-portable-x64.zip,解压后直接运行,需本机已装 WebView2 Runtime)。" \
             --target "${{ steps.bump.outputs.sha }}" \
             src-tauri/target/release/bundle/nsis/*.exe \
             src-tauri/target/release/scoop-gui-portable-x64.zip
