@@ -75,9 +75,9 @@ jobs:
           $exe = Get-ChildItem -Path "src-tauri/target/release" -Filter "*.exe" -File | Select-Object -First 1
           $portableDir = "src-tauri/target/release/portable"
           New-Item -ItemType Directory -Path $portableDir | Out-Null
-          Copy-Item $exe.FullName -Destination $portableDir
+          Copy-Item $exe.FullName -Destination "$portableDir/scoopUI.exe"
           Copy-Item "src-tauri/target/release/WebView2Loader.dll" -Destination $portableDir -ErrorAction SilentlyContinue
-          Compress-Archive -Path "$portableDir/*" -DestinationPath "src-tauri/target/release/scoop-gui-portable-x64.zip"
+          Compress-Archive -Path "$portableDir/*" -DestinationPath "src-tauri/target/release/scoopUI-portable-x64.zip"
 
       - name: Publish versioned release
         shell: bash
@@ -86,7 +86,7 @@ jobs:
         run: |
           gh release create "v${{ steps.bump.outputs.version }}" \
             --title "v${{ steps.bump.outputs.version }} (${{ steps.meta.outputs.sha_short }})" \
-            --notes "自动构建版本 v${{ steps.bump.outputs.version }},基于提交 ${{ steps.bump.outputs.sha }} 生成(版本号随每次 master 提交自动递增)。附带两种下载:NSIS 安装包(*-setup.exe)与免安装绿色版(scoop-gui-portable-x64.zip,解压后直接运行,需本机已装 WebView2 Runtime)。" \
+            --notes "自动构建版本 v${{ steps.bump.outputs.version }},基于提交 ${{ steps.bump.outputs.sha }} 生成(版本号随每次 master 提交自动递增)。附带两种下载:NSIS 安装包(*-setup.exe)与免安装绿色版(scoopUI-portable-x64.zip,解压后直接运行,需本机已装 WebView2 Runtime)。" \
             --target "${{ steps.bump.outputs.sha }}" \
             src-tauri/target/release/bundle/nsis/*.exe \
-            src-tauri/target/release/scoop-gui-portable-x64.zip
+            src-tauri/target/release/scoopUI-portable-x64.zip

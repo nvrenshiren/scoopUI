@@ -32,7 +32,7 @@ export function LanguagePick() {
         <div className="mb-4 flex size-16 items-center justify-center rounded-xl border border-[var(--primary-glow)] bg-card text-primary shadow-[0_0_24px_var(--primary-glow)]">
           <Terminal className="size-[26px]" />
         </div>
-        <h1 className="text-[32px] font-bold">Scoop GUI</h1>
+        <h1 className="text-[32px] font-bold">scoopUI</h1>
         {/* 首次选择前无语言偏好,双语并列呈现(此页即语言选择本身) */}
         <p className="mt-2 text-muted-foreground">选择界面语言 · Choose your language</p>
         <p className="mt-0.5 text-xs text-subtle">

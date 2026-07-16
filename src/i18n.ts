@@ -6,7 +6,7 @@ import type { Language } from "./types";
 type Dict = Record<string, { zh: string; en: string }>;
 
 const dict: Dict = {
-  "app.name": { zh: "Scoop GUI", en: "Scoop GUI" },
+  "app.name": { zh: "scoopUI", en: "scoopUI" },
 
   // ---------------- 导航(P03)
   "nav.installed": { zh: "已装软件", en: "Installed" },
@@ -50,7 +50,7 @@ const dict: Dict = {
   "setup.notFoundTitle": { zh: "未检测到 Scoop", en: "Scoop Not Detected" },
   "setup.notFoundDesc": {
     zh: "本机尚未安装 Scoop 包管理器。你可以在下方确认安装配置后,由本产品协助完成首次安装;安装过程需要网络连接。",
-    en: "Scoop is not installed on this machine. Review the configuration below and let Scoop GUI run the official installer for you. An internet connection is required.",
+    en: "Scoop is not installed on this machine. Review the configuration below and let scoopUI run the official installer for you. An internet connection is required.",
   },
   "setup.formTitle": { zh: "安装配置", en: "Installation Options" },
   "setup.formDesc": {

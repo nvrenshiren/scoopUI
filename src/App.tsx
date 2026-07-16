@@ -82,7 +82,7 @@ function Shell() {
             <Terminal className="size-[18px]" />
           </div>
           <div className="min-w-0">
-            <div className="font-heading text-[15px] font-bold">Scoop GUI</div>
+            <div className="font-heading text-[15px] font-bold">scoopUI</div>
             <div className="max-w-[160px] overflow-hidden font-mono text-[10px] text-ellipsis whitespace-nowrap text-subtle">
               {scoopVersion || "scoop"}
             </div>

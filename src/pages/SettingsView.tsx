@@ -124,7 +124,7 @@ export function SettingsView() {
         <Section icon={<Info className="size-[18px]" />} title={t("settings.about")}>
           <dl className="mt-3 grid grid-cols-[240px_1fr] gap-x-4 gap-y-1.5 font-mono text-xs">
             <dt className="text-subtle">{t("settings.appVersion")}</dt>
-            <dd className="m-0 select-text">Scoop GUI 0.1.0</dd>
+            <dd className="m-0 select-text">scoopUI 0.1.0</dd>
             <dt className="text-subtle">{t("settings.scoopVersion")}</dt>
             <dd className="m-0 select-text">{scoopVersion || "—"}</dd>
           </dl>

@@ -1,5 +1,5 @@
 name: Bug 报告
-description: 报告 Scoop GUI 中的问题
+description: 报告 scoopUI 中的问题
 title: "[Bug] "
 labels: ["bug"]
 body:
@@ -42,7 +42,7 @@ body:
   - type: input
     id: app-version
     attributes:
-      label: Scoop GUI 版本
+      label: scoopUI 版本
       placeholder: 例如 0.1.0 / latest 持续构建
     validations:
       required: true

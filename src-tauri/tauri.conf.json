@@ -1,6 +1,6 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "Scoop GUI",
+  "productName": "scoopUI",
   "version": "../package.json",
   "identifier": "com.dawi.scoop-gui",
   "build": {
@@ -13,7 +13,7 @@
     "windows": [
       {
         "label": "main",
-        "title": "Scoop GUI",
+        "title": "scoopUI",
         "width": 1280,
         "height": 800,
         "minWidth": 1024,

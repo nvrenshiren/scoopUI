@@ -1,8 +1,8 @@
 <div align="center">
 
-<img src="src-tauri/icons/128x128.png" alt="Scoop GUI" width="96" />
+<img src="src-tauri/icons/128x128.png" alt="scoopUI" width="96" />
 
-# Scoop GUI
+# scoopUI
 
 **Windows 上 [Scoop](https://scoop.sh) 命令行包管理器的图形化桌面客户端**
 
@@ -15,7 +15,7 @@
 
 简体中文 | [English](README.en.md)
 
-<img src="screen.png" alt="Scoop GUI 界面截图" width="840" />
+<img src="screen.png" alt="scoopUI 界面截图" width="840" />
 
 </div>
 

@@ -1,8 +1,8 @@
 <div align="center">
 
-<img src="src-tauri/icons/128x128.png" alt="Scoop GUI" width="96" />
+<img src="src-tauri/icons/128x128.png" alt="scoopUI" width="96" />
 
-# Scoop GUI
+# scoopUI
 
 **A graphical desktop client for the [Scoop](https://scoop.sh) command-line package manager on Windows**
 
@@ -15,13 +15,13 @@
 
 English | [简体中文](README.md)
 
-<img src="screen.png" alt="Scoop GUI screenshot" width="840" />
+<img src="screen.png" alt="scoopUI screenshot" width="840" />
 
 </div>
 
 ---
 
-Scoop GUI turns everyday `scoop` command-line workflows — browsing, searching, installing, uninstalling, updating packages, and managing buckets — into a point-and-click desktop experience. On first launch, if Scoop isn't installed yet, the app can walk you through a guided, parameterized run of the official install script. Built with **Rust (Tauri 2) + React 19 + shadcn/ui + Tailwind CSS v4** for a small install footprint and low memory usage.
+scoopUI turns everyday `scoop` command-line workflows — browsing, searching, installing, uninstalling, updating packages, and managing buckets — into a point-and-click desktop experience. On first launch, if Scoop isn't installed yet, the app can walk you through a guided, parameterized run of the official install script. Built with **Rust (Tauri 2) + React 19 + shadcn/ui + Tailwind CSS v4** for a small install footprint and low memory usage.
 
 ## Features
 
