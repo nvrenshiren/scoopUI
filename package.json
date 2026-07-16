@@ -1,7 +1,7 @@
 {
   "name": "scoop-gui",
   "private": true,
-  "version": "0.1.4",
+  "version": "0.1.5",
   "type": "module",
   "description": "Scoop 包管理器的 Windows 桌面图形化客户端",
   "license": "MIT",
