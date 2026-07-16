@@ -1,6 +1,6 @@
 [package]
 name = "scoop-gui"
-version = "0.1.5"
+version = "0.1.6"
 description = "A desktop GUI for the Scoop package manager on Windows"
 edition = "2021"
 
