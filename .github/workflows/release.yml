@@ -3,6 +3,12 @@ name: Release
 on:
   push:
     branches: [master]
+    # 纯文档 / Markdown / .claude 配置改动不触发完整构建与版本递增;
+    # 只要本次 push 含其它(代码等)改动,仍会照常触发。
+    paths-ignore:
+      - 'docs/**'
+      - '**/*.md'
+      - '.claude/**'
   workflow_dispatch:
 
 concurrency:
