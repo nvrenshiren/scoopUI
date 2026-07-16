@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=1280">
+<title>P11 · Scoop 配置页 · scoop-gui</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=JetBrains+Mono:wght@400;500&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  /* ============================================================
+     P11 设计 token · docs/design/systems/web.md §2/§11.1(与 P09 原型同源)
+     真相源:src/pages/ConfigView.tsx / src/scoopConfig.ts / src/store.ts / src/i18n.ts
+     ============================================================ */
+  :root {
+    color-scheme: dark;
+    --background: oklch(0.13 0.02 250);
+    --foreground: oklch(0.96 0.005 250);
+    --card: oklch(0.17 0.02 250);
+    --primary: oklch(0.72 0.18 145);
+    --primary-hover: oklch(0.76 0.18 145);
+    --primary-foreground: oklch(0.18 0.05 150);
+    --secondary: oklch(0.20 0.02 250);
+    --muted-foreground: oklch(0.72 0.01 250);
+    --subtle: oklch(0.55 0.01 250);
+    --border: oklch(0.30 0.01 250);
+    --border-strong: oklch(0.45 0.01 250);
+    --info: oklch(0.70 0.16 250);
+    --warning: oklch(0.80 0.16 80);
+    --destructive: oklch(0.65 0.22 25);
+    --primary-glow: oklch(0.72 0.18 145 / 0.25);
+    --primary-glow-soft: oklch(0.72 0.18 145 / 0.10);
+    --warning-15: oklch(0.80 0.16 80 / 0.15);
+    --radius-sm: 4px; --radius-md: 8px; --radius-lg: 12px; --radius-xl: 16px;
+    --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.5), 0 2px 4px -2px rgb(0 0 0 / 0.4);
+    --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.6), 0 4px 6px -4px rgb(0 0 0 / 0.4);
+    --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.7), 0 8px 10px -6px rgb(0 0 0 / 0.5);
+    --font-heading: 'Space Grotesk', system-ui, sans-serif;
+    --font-body: 'DM Sans', 'Microsoft YaHei UI', system-ui, sans-serif;
+    --font-mono: 'JetBrains Mono', 'Cascadia Code', Consolas, monospace;
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+  body {
+    min-height: 100vh;
+    background:
+      radial-gradient(ellipse 900px 420px at 50% -18%, oklch(0.72 0.18 145 / 0.10), transparent 58%),
+      radial-gradient(ellipse 740px 360px at 95% 8%, oklch(0.70 0.16 250 / 0.08), transparent 60%),
+      var(--background);
+    color: var(--foreground); font-family: var(--font-body); -webkit-font-smoothing: antialiased;
+  }
+  h1, h2, h3 { font-family: var(--font-heading); line-height: 1.2; margin: 0; }
+  button, input { font: inherit; }
+  .font-heading { font-family: var(--font-heading); }
+  .font-mono { font-family: var(--font-mono); }
+
+  .bg-grid {
+    background-image:
+      linear-gradient(to right, oklch(0.30 0.01 250 / 0.10) 1px, transparent 1px),
+      linear-gradient(to bottom, oklch(0.30 0.01 250 / 0.10) 1px, transparent 1px);
+    background-size: 32px 32px;
+  }
+  .bg-glow-top { background: radial-gradient(ellipse 800px 200px at 50% -50%, var(--primary-glow), transparent); }
+  .gradient-line { height: 1px; background: linear-gradient(to right, transparent, var(--primary), transparent); flex-shrink: 0; }
+
+  .window-shell { width: 1280px; height: 800px; background: var(--background); border: 1px solid var(--border); border-radius: var(--radius-xl); box-shadow: var(--shadow-xl); overflow: hidden; }
+
+  /* -------- Sidebar(P03 壳层上下文) -------- */
+  .sidebar { width: 240px; flex-shrink: 0; background: var(--card); border-right: 1px solid var(--border); }
+  .logo-box { width: 36px; height: 36px; border-radius: var(--radius-md); display: flex; align-items: center; justify-content: center; border: 1px solid var(--primary-glow); background: var(--primary-glow-soft); color: var(--primary); }
+  .nav-item { display: flex; align-items: center; gap: 10px; width: 100%; height: 40px; padding: 0 12px; border: 0; border-radius: var(--radius-md); background: transparent; color: var(--muted-foreground); font-size: 13px; font-weight: 500; cursor: pointer; transition: background .15s ease, color .15s ease; }
+  .nav-item:hover { background: var(--secondary); color: var(--foreground); }
+  .nav-item.active { background: var(--primary-glow-soft); color: var(--primary); box-shadow: inset 2px 0 0 var(--primary); }
+  .nav-item .lbl { flex: 1; text-align: left; }
+  .badge { display: inline-flex; height: 20px; align-items: center; gap: 4px; border-radius: var(--radius-sm); border: 1px solid; padding: 0 8px; font-size: 12px; font-weight: 500; white-space: nowrap; }
+  .badge-warning { border-color: color-mix(in oklab, var(--warning) 30%, transparent); background: var(--warning-15); color: var(--warning); }
+
+  /* -------- P11 主体:分区卡片(真相源 ConfigView.tsx) -------- */
+  .cfg-card { margin-bottom: 12px; max-width: 820px; border-radius: var(--radius-lg); border: 1px solid var(--border); background: var(--card); padding: 20px; box-shadow: var(--shadow-md); }
+  .cfg-head { display: flex; align-items: center; gap: 8px; }
+  .cfg-icon { color: var(--primary); flex-shrink: 0; display: flex; }
+  .cfg-title { font-family: var(--font-heading); font-size: 13px; font-weight: 600; }
+  .cfg-desc { margin-top: 2px; font-size: 12px; color: var(--muted-foreground); }
+  .cfg-body { margin-top: 8px; }
+  .cfg-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; padding: 12px 0; border-bottom: 1px solid color-mix(in oklab, var(--border) 60%, transparent); }
+  .cfg-row:last-child { border-bottom: 0; }
+  .cfg-left { min-width: 0; flex: 1; }
+  .cfg-name { display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 500; }
+  .cfg-help { margin-top: 2px; font-size: 12px; color: var(--muted-foreground); }
+  .cfg-key { margin-top: 4px; font-family: var(--font-mono); font-size: 10px; color: var(--subtle); user-select: text; }
+  .cfg-right { flex-shrink: 0; display: flex; align-items: center; gap: 8px; padding-top: 2px; }
+
+  .switch { position: relative; display: inline-flex; align-items: center; width: 36px; height: 20px; border-radius: 999px; background: var(--border-strong); cursor: pointer; transition: background .15s; border: 0; padding: 0; }
+  .switch[data-on="true"] { background: var(--primary); }
+  .switch .knob { position: absolute; left: 2px; width: 16px; height: 16px; border-radius: 999px; background: #fff; transition: transform .15s; box-shadow: 0 1px 2px rgb(0 0 0 / .3); }
+  .switch[data-on="true"] .knob { transform: translateX(16px); }
+
+  .seg { display: flex; gap: 6px; }
+  .seg-btn { height: 32px; padding: 0 12px; border-radius: var(--radius-md); border: 1px solid var(--border); background: transparent; color: var(--foreground); font-size: 13px; font-weight: 500; cursor: pointer; transition: all .1s; }
+  .seg-btn[data-on="true"] { background: var(--primary); color: var(--primary-foreground); border-color: transparent; box-shadow: 0 0 12px var(--primary-glow); }
+
+  .cfg-input { height: 36px; border-radius: var(--radius-md); border: 1px solid var(--border); background: var(--secondary); color: var(--foreground); padding: 0 12px; font-size: 14px; outline: none; transition: border-color .1s, box-shadow .1s; }
+  .cfg-input::placeholder { color: var(--subtle); }
+  .cfg-input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px var(--primary-glow-soft); }
+  .cfg-input.num { width: 112px; }
+  .cfg-input.str { width: 256px; }
+  .icon-btn { width: 32px; height: 32px; display: inline-flex; align-items: center; justify-content: center; border-radius: var(--radius-md); border: 0; background: transparent; color: var(--subtle); cursor: pointer; }
+  .icon-btn:hover { background: var(--secondary); color: var(--foreground); }
+  .readonly-val { max-width: 260px; font-family: var(--font-mono); font-size: 12px; color: var(--subtle); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+  /* -------- 危险目录项确认对话框(复用 ConfirmDialog 形态) -------- */
+  .overlay { position: absolute; inset: 0; z-index: 50; display: none; align-items: center; justify-content: center; background: rgb(0 0 0 / .5); }
+  .overlay.show { display: flex; }
+  .dialog { width: min(480px, calc(100% - 64px)); border-radius: var(--radius-lg); border: 1px solid var(--border); background: var(--card); box-shadow: var(--shadow-xl); padding: 24px; }
+  .dialog h3 { font-family: var(--font-heading); font-size: 16px; font-weight: 600; margin: 0 0 8px; }
+  .dialog p { font-size: 13px; color: var(--muted-foreground); margin: 0 0 20px; line-height: 1.6; }
+  .dialog-foot { display: flex; justify-content: flex-end; gap: 12px; }
+  .btn { height: 40px; padding: 0 16px; border-radius: var(--radius-md); font-size: 14px; font-weight: 500; cursor: pointer; border: 1px solid transparent; }
+  .btn-cancel { background: var(--secondary); border-color: var(--border); color: var(--muted-foreground); }
+  .btn-primary { background: var(--primary); color: var(--primary-foreground); box-shadow: 0 0 12px var(--primary-glow); }
+
+  .proto-affordance { position: absolute; right: 20px; bottom: 20px; z-index: 30; display: inline-flex; align-items: center; gap: 6px; height: 30px; padding: 0 12px; border-radius: var(--radius-md); border: 1px dashed var(--border-strong); background: var(--secondary); color: var(--subtle); font-size: 11px; font-weight: 600; cursor: pointer; }
+  .proto-affordance:hover { color: var(--foreground); border-color: var(--primary); }
+  [data-en] { display: none; }
+  .lang-en [data-zh] { display: none; }
+  .lang-en [data-en] { display: inline; }
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+</head>
+<body class="lang-zh">
+<div class="min-h-screen w-full flex items-center justify-center p-6">
+  <div id="window" class="window-shell relative flex flex-col overflow-hidden">
+    <div class="gradient-line"></div>
+    <div class="relative flex flex-1 min-h-0">
+
+      <!-- ============== Sidebar(P03 壳层上下文;第 5 项 Scoop 配置为选中态) ============== -->
+      <aside class="sidebar flex flex-col pb-3">
+        <div class="flex items-center gap-2.5 px-4 pt-4 pb-3.5">
+          <div class="logo-box">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19h8"/><path d="m4 17 6-6-6-6"/></svg>
+          </div>
+          <div class="min-w-0">
+            <div class="font-heading text-[15px] font-bold">Scoop GUI</div>
+            <div class="font-mono text-[10px] text-subtle">0.5.3</div>
+          </div>
+        </div>
+        <nav class="flex flex-col gap-0.5 px-3">
+          <button type="button" class="nav-item">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 21.73a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73z"/><path d="M12 22V12"/><polyline points="3.29 7 12 12 20.71 7"/></svg>
+            <span class="lbl"><span data-zh>已装软件</span><span data-en>Installed</span></span>
+          </button>
+          <button type="button" class="nav-item">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21 21-4.34-4.34"/><circle cx="11" cy="11" r="8"/></svg>
+            <span class="lbl"><span data-zh>浏览软件包</span><span data-en>Browse</span></span>
+          </button>
+          <button type="button" class="nav-item">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83z"/><path d="M2 12a1 1 0 0 0 .58.91l8.6 3.91a2 2 0 0 0 1.65 0l8.58-3.9A1 1 0 0 0 22 12"/><path d="M2 17a1 1 0 0 0 .58.91l8.6 3.91a2 2 0 0 0 1.65 0l8.58-3.9A1 1 0 0 0 22 17"/></svg>
+            <span class="lbl"><span data-zh>桶管理</span><span data-en>Buckets</span></span>
+          </button>
+          <button type="button" class="nav-item active">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
+            <span class="lbl"><span data-zh>Scoop 配置</span><span data-en>Scoop Config</span></span>
+          </button>
+          <button type="button" class="nav-item">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 8h4"/><path d="M12 21v-9"/><path d="M12 8V3"/><path d="M17 16h4"/><path d="M19 12V3"/><path d="M19 21v-5"/><path d="M3 14h4"/><path d="M5 10V3"/><path d="M5 21v-7"/></svg>
+            <span class="lbl"><span data-zh>设置</span><span data-en>Settings</span></span>
+          </button>
+        </nav>
+        <div class="flex-1"></div>
+        <div class="px-3">
+          <button type="button" class="nav-item">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 5h.01"/><path d="M3 12h.01"/><path d="M3 19h.01"/><path d="M8 5h13"/><path d="M8 12h13"/><path d="M8 19h13"/></svg>
+            <span class="lbl"><span data-zh>任务</span><span data-en>Jobs</span></span>
+          </button>
+        </div>
+      </aside>
+
+      <!-- ============== 主区:P11 配置页本体(真相源 src/pages/ConfigView.tsx) ============== -->
+      <main class="relative flex-1 min-w-0 flex flex-col overflow-hidden">
+        <div class="bg-grid relative px-7 pt-6 pb-4">
+          <div class="bg-glow-top pointer-events-none absolute inset-0"></div>
+          <div class="relative">
+            <h1 class="text-2xl font-semibold"><span data-zh>Scoop 配置</span><span data-en>Scoop Configuration</span></h1>
+            <p class="mt-1 text-[13px]" style="color:var(--muted-foreground);"><span data-zh>管理 Scoop 自身的全部配置项(scoop config);修改即时生效。</span><span data-en>Manage all of Scoop's own settings (scoop config). Changes apply immediately.</span></p>
+          </div>
+        </div>
+        <div id="cats" class="min-h-0 flex-1 overflow-auto px-7 pb-6"></div>
+      </main>
+
+      <!-- 危险目录项确认对话框 -->
+      <div id="overlay" class="overlay">
+        <div class="dialog" role="dialog" aria-modal="true">
+          <h3><span data-zh>修改目录配置</span><span data-en>Change directory setting</span></h3>
+          <p>
+            <span data-zh><b id="dz-name-zh"></b> 只会修改 Scoop 配置,不会搬移已安装的软件包或缓存。改错可能导致 Scoop 找不到已装应用。确定继续吗?</span>
+            <span data-en><b id="dz-name-en"></b> only changes Scoop's configuration — it does NOT move already-installed apps or cache. A wrong value may make Scoop lose track of installed apps. Continue?</span>
+          </p>
+          <div class="dialog-foot">
+            <button type="button" id="dlg-cancel" class="btn btn-cancel"><span data-zh>取消</span><span data-en>Cancel</span></button>
+            <button type="button" id="dlg-confirm" class="btn btn-primary"><span data-zh>仍然修改</span><span data-en>Change anyway</span></button>
+          </div>
+        </div>
+      </div>
+
+      <button type="button" id="lang-toggle" class="proto-affordance">
+        <span data-zh>原型自检 · 切换 中 / EN</span><span data-en>Prototype check · Toggle ZH / EN</span>
+      </button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  var body = document.body;
+  var lang = 'zh';
+
+  // -------- 图标(lucide path,与 ConfigView 分区图标一致) --------
+  var I = {
+    download: '<path d="M12 15V3"/><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/>',
+    globe: '<circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/>',
+    refresh: '<path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/>',
+    wrench: '<path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>',
+    hd: '<rect width="20" height="8" x="2" y="14" rx="2"/><path d="M6.01 18H6"/><path d="M10.01 18H10"/><path d="M15 6.5 12 3 9 6.5"/><path d="M12 3v11"/>',
+    key: '<circle cx="7.5" cy="15.5" r="5.5"/><path d="m21 2-9.6 9.6"/><path d="m15.5 7.5 3 3L22 7l-3-3"/>',
+    reset: '<path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/>',
+    eye: '<path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/>'
+  };
+  function svg(p, s) { return '<svg width="' + (s || 18) + '" height="' + (s || 18) + '" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' + p + '</svg>'; }
+  function tt(o) { return o ? (o[lang] || o.zh) : ''; }
+
+  // -------- 配置数据(6 类 32 项;文案取自 src/i18n.ts,当前值取自 api.ts mock) --------
+  var CATS = [
+    { id:'download', icon:I.download, title:{zh:'下载器',en:'Downloader'}, desc:{zh:'启用 aria2 可多线程加速下载;以下为其连接与重试参数。',en:'aria2 enables multi-connection download acceleration; the options below tune it.'}, items:[
+      { key:'aria2-enabled', type:'bool', def:false, cur:true, label:{zh:'启用 aria2 下载',en:'Enable aria2'}, help:{zh:'用 aria2c 多线程下载,通常更快;需已安装 aria2。',en:'Use aria2c for multi-connection downloads; requires aria2.'} },
+      { key:'aria2-warning-enabled', type:'bool', def:true, cur:false, label:{zh:'显示 aria2 警告',en:'aria2 warnings'}, help:{zh:'下载时是否显示 aria2 相关警告提示。',en:'Show aria2-related warnings during downloads.'} },
+      { key:'aria2-retry-wait', type:'number', def:2, label:{zh:'重试等待(秒)',en:'Retry wait (s)'}, help:{zh:'两次下载重试之间的等待秒数,默认 2。',en:'Seconds to wait between retries. Default 2.'} },
+      { key:'aria2-split', type:'number', def:5, cur:5, label:{zh:'分段数(split)',en:'Split'}, help:{zh:'单个文件的并行下载分段数,默认 5。',en:'Parallel connections per download. Default 5.'} },
+      { key:'aria2-max-connection-per-server', type:'number', def:5, label:{zh:'每服务器最大连接数',en:'Max connections/server'}, help:{zh:'对同一服务器的最大连接数,默认 5。',en:'Max connections to one server. Default 5.'} },
+      { key:'aria2-min-split-size', type:'string', def:'5M', label:{zh:'最小分段大小',en:'Min split size'}, help:{zh:'触发多连接分段的最小文件大小,如 5M。',en:'Min file size before splitting, e.g. 5M.'} },
+      { key:'aria2-options', type:'string', def:'', label:{zh:'额外 aria2 参数',en:'Extra aria2 options'}, help:{zh:'追加到 aria2c 的命令行参数,如 --max-tries=5。',en:'Extra aria2c args, e.g. --max-tries=5.'} }
+    ]},
+    { id:'network', icon:I.globe, title:{zh:'网络与代理',en:'Network & Proxy'}, desc:{zh:'代理服务器与需要认证的私有主机。',en:'Proxy server and authenticated private hosts.'}, items:[
+      { key:'proxy', type:'string', def:'', cur:'currentuser@default', label:{zh:'代理服务器',en:'Proxy'}, help:{zh:'格式 host:port 或 user:pass@host:port;也可用 currentuser@default。',en:'host:port or user:pass@host:port; or currentuser@default.'} },
+      { key:'private_hosts', type:'readonly', label:{zh:'私有主机',en:'Private hosts'}, help:{zh:'需额外认证头的私有主机(对象数组);请用命令行 scoop config 编辑。',en:'Private hosts needing auth headers (array); edit via command line.'} }
+    ]},
+    { id:'update', icon:I.refresh, title:{zh:'更新策略',en:'Update'}, desc:{zh:'Scoop 自身与软件包的更新来源和行为。',en:'Where and how Scoop and apps update.'}, items:[
+      { key:'scoop_repo', type:'string', def:'https://github.com/ScoopInstaller/Scoop', label:{zh:'Scoop 仓库',en:'Scoop repo'}, help:{zh:'Scoop 自身源码仓库地址;用于自定义 fork。',en:'Git repo of Scoop source; for custom forks.'} },
+      { key:'scoop_branch', type:'enum', options:['master','develop'], def:'master', cur:'master', label:{zh:'Scoop 分支',en:'Scoop branch'}, help:{zh:'接收更新的分支:master 稳定,develop 测试。',en:'master (stable) or develop (testing).'} },
+      { key:'force_update', type:'bool', def:false, label:{zh:'强制更新',en:'Force update'}, help:{zh:'即使版本相同也强制更新到桶内版本。',en:'Force update to bucket version even if unchanged.'} },
+      { key:'update_nightly', type:'bool', def:false, label:{zh:'每日更新 nightly',en:'Update nightly'}, help:{zh:'对 nightly 版本每日自动更新。',en:'Update nightly apps once per day.'} },
+      { key:'hold_update_until', type:'string', def:'', label:{zh:'暂停自更新至',en:'Hold updates until'}, help:{zh:'在该日期(YYYY-MM-DD)前暂停 Scoop 自更新。',en:'Postpone self-update until this date.'} },
+      { key:'autostash_on_conflict', type:'bool', def:false, label:{zh:'冲突时自动暂存',en:'Autostash on conflict'}, help:{zh:'更新遇到未提交改动时自动 stash 后再更新。',en:'Auto-stash uncommitted changes on conflict.'} },
+      { key:'show_update_log', type:'bool', def:true, label:{zh:'显示更新日志',en:'Show update log'}, help:{zh:'更新时显示变更的提交记录,默认开启。',en:'Show changed commits during updates.'} }
+    ]},
+    { id:'tools', icon:I.wrench, title:{zh:'安装与工具',en:'Install & Tools'}, desc:{zh:'安装行为、架构、解压与 shim 等底层选项。',en:'Install behavior, architecture, extraction and shim.'}, items:[
+      { key:'default_architecture', type:'enum', options:['64bit','32bit','arm64'], def:'64bit', cur:'64bit', label:{zh:'默认架构',en:'Default architecture'}, help:{zh:'安装软件包时优先使用的架构。',en:'Preferred architecture when installing.'} },
+      { key:'use_external_7zip', type:'bool', def:false, label:{zh:'使用外部 7-Zip',en:'External 7-Zip'}, help:{zh:'用 PATH 中的 7-Zip 解压,而非 Scoop 内置。',en:'Use 7-Zip from PATH instead of bundled.'} },
+      { key:'use_lessmsi', type:'bool', def:false, cur:true, label:{zh:'使用 lessmsi',en:'Use lessmsi'}, help:{zh:'用 lessmsi 处理 MSI,而非系统 msiexec。',en:'Prefer lessmsi over native msiexec.'} },
+      { key:'use_sqlite_cache', type:'bool', def:false, label:{zh:'SQLite 缓存',en:'SQLite cache'}, help:{zh:'用 SQLite 数据库加速搜索与 shim。',en:'Use SQLite DB to speed up search/shim.'} },
+      { key:'no_junction', type:'bool', def:false, label:{zh:'禁用 current 联结',en:'No junction'}, help:{zh:'不使用 current 版本别名(junction)。',en:"Do not use the 'current' alias (junction)."} },
+      { key:'shim', type:'enum', options:['kiennq','scoopcs','71'], def:'kiennq', cur:'kiennq', label:{zh:'Shim 实现',en:'Shim'}, help:{zh:'生成可执行入口的 shim 实现。',en:'Which shim implementation to use.'} },
+      { key:'ignore_running_processes', type:'bool', def:false, label:{zh:'忽略运行中的进程',en:'Ignore running processes'}, help:{zh:'目标进程正在运行时仍继续操作。',en:'Continue even if target processes run.'} },
+      { key:'show_manifest', type:'bool', def:false, label:{zh:'安装前显示清单',en:'Show manifest'}, help:{zh:'安装前展示软件包的 manifest。',en:'Show app manifest before install.'} },
+      { key:'use_isolated_path', type:'bool', def:false, label:{zh:'隔离 PATH',en:'Isolated PATH'}, help:{zh:'用 SCOOP_PATH 环境变量隔离软件包 PATH。',en:'Isolate app PATHs via SCOOP_PATH.'} },
+      { key:'cat_style', type:'string', def:'', label:{zh:'cat 高亮风格',en:'cat style'}, help:{zh:'用 bat 查看 manifest 时的高亮风格。',en:'Highlight style when viewing with bat.'} },
+      { key:'debug', type:'bool', def:false, label:{zh:'调试输出',en:'Debug'}, help:{zh:'输出详细诊断信息。',en:'Enable verbose diagnostic output.'} }
+    ]},
+    { id:'paths', icon:I.hd, title:{zh:'目录',en:'Directories'}, desc:{zh:'Scoop 根目录、全局目录与缓存目录。修改仅改配置,不搬移已有数据。',en:'Scoop root, global and cache directories. Changing only updates config.'}, items:[
+      { key:'root_path', type:'string', def:'%USERPROFILE%\\scoop', danger:true, label:{zh:'Scoop 根目录',en:'Scoop root'}, help:{zh:'Scoop 本体与软件包位置;仅改配置,不搬移已装数据。',en:'Location of Scoop and apps; config only.'} },
+      { key:'global_path', type:'string', def:'%ProgramData%\\scoop', danger:true, label:{zh:'全局目录',en:'Global directory'}, help:{zh:'以 --global 安装的软件包位置。',en:'Location for --global apps.'} },
+      { key:'cache_path', type:'string', def:'', danger:true, label:{zh:'缓存目录',en:'Cache directory'}, help:{zh:'安装包下载缓存位置。',en:'Download cache location.'} }
+    ]},
+    { id:'secret', icon:I.key, title:{zh:'令牌与密钥',en:'Tokens & Keys'}, desc:{zh:'API 令牌;仅保存在本机 Scoop 配置中。',en:'API tokens; stored only in your local config.'}, items:[
+      { key:'gh_token', type:'secret', def:'', label:{zh:'GitHub 令牌',en:'GitHub token'}, help:{zh:'GitHub API 令牌,用于提升访问速率;仅存本机。',en:'GitHub API token to raise rate limits; local only.'} },
+      { key:'virustotal_api_key', type:'secret', def:'', label:{zh:'VirusTotal 密钥',en:'VirusTotal key'}, help:{zh:'VirusTotal 扫描用 API 密钥;仅存本机。',en:'API key for VirusTotal scanning; local only.'} }
+    ]}
+  ];
+  function findItem(key) {
+    for (var c = 0; c < CATS.length; c++) for (var i = 0; i < CATS[c].items.length; i++) if (CATS[c].items[i].key === key) return CATS[c].items[i];
+    return null;
+  }
+  function isSet(it) { return it.cur !== undefined && it.cur !== null; }
+
+  // -------- 渲染 --------
+  function renderControl(it) {
+    if (it.type === 'bool') {
+      var on = isSet(it) ? (it.cur === true) : (it.def === true);
+      return '<button type="button" class="switch" data-on="' + on + '" data-key="' + it.key + '"><span class="knob"></span></button>';
+    }
+    if (it.type === 'enum') {
+      var cur = isSet(it) ? String(it.cur) : String(it.def);
+      return '<div class="seg">' + it.options.map(function (o) {
+        return '<button type="button" class="seg-btn" data-on="' + (cur === o) + '" data-key="' + it.key + '" data-val="' + o + '">' + o + '</button>';
+      }).join('') + '</div>';
+    }
+    if (it.type === 'readonly') {
+      return '<div class="readonly-val">' + (isSet(it) ? String(it.cur) : tt({ zh: '未设置', en: 'Not set' })) + '</div>';
+    }
+    var cls = it.type === 'number' ? 'num' : 'str';
+    var typeAttr = it.type === 'secret' ? 'password' : (it.type === 'number' ? 'number' : 'text');
+    var val = isSet(it) ? String(it.cur) : '';
+    var ph = (it.def !== undefined && it.def !== '') ? String(it.def) : '';
+    var input = '<input class="cfg-input ' + cls + '" type="' + typeAttr + '" value="' + val + '" placeholder="' + ph + '" data-key="' + it.key + '"' + (it.danger ? ' data-danger="1"' : '') + '>';
+    if (it.type === 'secret') input += '<button type="button" class="icon-btn" data-eye="' + it.key + '" title="' + tt({ zh: '显示/隐藏', en: 'Show / hide' }) + '">' + svg(I.eye, 15) + '</button>';
+    return input;
+  }
+  function renderRow(it) {
+    var badge = it.danger ? '<span class="badge badge-warning">' + tt({ zh: '谨慎', en: 'Caution' }) + '</span>' : '';
+    var reset = (isSet(it) && it.type !== 'readonly') ? '<button type="button" class="icon-btn" data-reset="' + it.key + '" title="' + tt({ zh: '恢复默认', en: 'Reset to default' }) + '">' + svg(I.reset, 15) + '</button>' : '';
+    return '<div class="cfg-row">' +
+      '<div class="cfg-left"><div class="cfg-name">' + tt(it.label) + badge + '</div>' +
+      '<div class="cfg-help">' + tt(it.help) + '</div>' +
+      '<div class="cfg-key">' + it.key + '</div></div>' +
+      '<div class="cfg-right">' + renderControl(it) + reset + '</div></div>';
+  }
+  function render() {
+    document.getElementById('cats').innerHTML = CATS.map(function (c) {
+      return '<section class="cfg-card"><div class="cfg-head"><span class="cfg-icon">' + svg(c.icon, 18) + '</span>' +
+        '<div class="min-w-0 flex-1"><div class="cfg-title">' + tt(c.title) + '</div><div class="cfg-desc">' + tt(c.desc) + '</div></div></div>' +
+        '<div class="cfg-body">' + c.items.map(renderRow).join('') + '</div></section>';
+    }).join('');
+  }
+
+  // -------- 危险确认对话框 --------
+  var overlay = document.getElementById('overlay');
+  var pendingConfirm = null;
+  function openDialog(name, onConfirm) {
+    document.getElementById('dz-name-zh').textContent = name.zh;
+    document.getElementById('dz-name-en').textContent = name.en;
+    pendingConfirm = onConfirm;
+    overlay.classList.add('show');
+  }
+  function closeDialog() { overlay.classList.remove('show'); pendingConfirm = null; }
+  document.getElementById('dlg-cancel').addEventListener('click', function () { render(); closeDialog(); });
+  document.getElementById('dlg-confirm').addEventListener('click', function () { if (pendingConfirm) pendingConfirm(); closeDialog(); });
+
+  // -------- 交互(事件委托;即时写入 = 改数据后重渲) --------
+  var cats = document.getElementById('cats');
+  cats.addEventListener('click', function (e) {
+    var sw = e.target.closest('.switch');
+    if (sw) { var it = findItem(sw.dataset.key); var on = isSet(it) ? it.cur === true : it.def === true; it.cur = !on; render(); return; }
+    var seg = e.target.closest('.seg-btn');
+    if (seg) { findItem(seg.dataset.key).cur = seg.dataset.val; render(); return; }
+    var eye = e.target.closest('[data-eye]');
+    if (eye) { var inp = cats.querySelector('input[data-key="' + eye.dataset.eye + '"]'); if (inp) inp.type = inp.type === 'password' ? 'text' : 'password'; return; }
+    var rs = e.target.closest('[data-reset]');
+    if (rs) {
+      var ri = findItem(rs.dataset.key);
+      if (ri.danger) openDialog(ri.label, function () { delete ri.cur; render(); });
+      else { delete ri.cur; render(); }
+      return;
+    }
+  });
+  // 文本/数值/令牌:失焦提交;危险项弹确认,清空即恢复默认
+  cats.addEventListener('change', function (e) {
+    var inp = e.target.closest('input[data-key]');
+    if (!inp) return;
+    var it = findItem(inp.dataset.key); var v = inp.value.trim();
+    if (it.danger) { openDialog(it.label, function () { if (v === '') delete it.cur; else it.cur = v; render(); }); return; }
+    if (v === '') delete it.cur; else it.cur = v;
+    render();
+  });
+
+  // -------- 双语切换(原型自检) --------
+  document.getElementById('lang-toggle').addEventListener('click', function () {
+    lang = lang === 'zh' ? 'en' : 'zh';
+    body.classList.toggle('lang-en', lang === 'en');
+    document.documentElement.lang = lang === 'en' ? 'en' : 'zh-CN';
+    render();
+  });
+
+  render();
+})();
+</script>
+</body>
+</html>
