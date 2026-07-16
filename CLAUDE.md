@@ -6,10 +6,10 @@ Windows 桌面应用:Scoop 包管理器的图形化前端。**Rust(Tauri 2)+ Rea
 
 - `docs/prd/project.md` — 项目范围与硬约束(软件源唯一性 / 单实例 / 仅中英双语 / 安装参数集边界)
 - `docs/prd/flows/scoop-gui.md` — **全部实体状态机的唯一真相源**(App / Scoop 自身 / Bucket / InstallJob / UI Language / Boot Sequence);任何状态流转改动先改这里
-- `docs/prd/modules/scoop-gui.md` — 功能清单 F01~F19、页面清单 P01~P10、每个功能对应的 scoop CLI 命令
+- `docs/prd/modules/scoop-gui.md` — 功能清单 F01~F20、页面清单 P01~P11、每个功能对应的 scoop CLI 命令
 - `docs/design/systems/web.md` — 设计系统 v2(暗色默认、run-green、字体、组件形态硬约束)
-- `ARCHITECTURE.md` — 技术基线(架构决策 ARCH01~10);`docs/architecture/database/scoop-gui.md` — 本机持久化结构;`docs/architecture/api/scoop-gui.md` — 14 条 Tauri IPC 命令契约
-- `docs/acceptance/web/scoop-gui/P01~P10.md` — 每页 QA 验收标准(含与实际实现的已知偏差记录)
+- `ARCHITECTURE.md` — 技术基线(架构决策 ARCH01~10);`docs/architecture/database/scoop-gui.md` — 本机持久化结构;`docs/architecture/api/scoop-gui.md` — 17 条 Tauri IPC 命令契约
+- `docs/acceptance/web/scoop-gui/P01~P11.md` — 每页 QA 验收标准(含与实际实现的已知偏差记录)
 
 ## 常用命令
 
@@ -31,6 +31,7 @@ cd src-tauri && cargo test   # 解析器/安装脚本单测(基于真实 scoop 0
 - **协助安装**(`installer.rs`):生成 runner.ps1 下载并执行官方 install.ps1。**RunAsAdmin 勾选走提权路径**:外层 `Start-Process -Verb RunAs -Wait` 弹 UAC,内层输出 `*>>` 落盘日志 + marker 文件传退出码(提权进程 stdout 接不回来)。PS 脚本写盘带 UTF-8 BOM(PowerShell 5.1 无 BOM 按 ANSI 读,中文路径会坏)。
 - **批量更新**(F08)实现为前端逐个 enqueue `scoop update <app>`(每对象一条 InstallJob),与 flow §1.6 状态机吻合,而非 `scoop update *`。
 - 命令入队前用白名单正则校验包名/桶名/repo(防 cmd 元字符注入)。
+- **Scoop 配置读写**(`config.rs` + `commands.rs` 的 `scoop_config_*`,F20):读直接读 `%USERPROFILE%\.config\scoop\config.json`(XDG_CONFIG_HOME 优先)一次拿全,不解析 CLI;写走 `scoop config <k> <v>` / `scoop config rm <k>` 让 scoop 处理布尔/数值类型转换与切分支副作用;这三条命令**不入 InstallJob 队列**(毫秒级同步操作);key 走 32 项白名单 `CONFIG_KEYS`、value 走 `CONFIG_VALUE_RE` 防注入。
 
 ### 前端(src/)
 
@@ -42,6 +43,7 @@ cd src-tauri && cargo test   # 解析器/安装脚本单测(基于真实 scoop 0
 - 设计 token:`index.css` 的 Tailwind v4 `@theme`,设计系统色映射到 shadcn 语义变量(background/card/primary/…),扩展 `info`(信息蓝)/`warning`/`subtle`/`border-strong`;亮色用 `:root.light` 覆盖变量(非 shadcn 惯例的 `.dark` 类,因暗色是默认)。shadcn 组件在 `components/ui/`(手写源码,非 CLI 生成)。
 - 取消按钮用 `<Button variant="cancel">`(中性灰),**不得**用 destructive 色(取消≠失败,设计系统硬约束)。
 - 表格用 `TableWrap`(overflow-x hidden,不出横向滚动条);来源桶经 `bucketNameOf()` 规范化(manifest 路径 → 桶名,title 保留原值)。
+- **Scoop 配置页**(P11,`ConfigView.tsx` + `scoopConfig.ts`,F20):32 项 `scoop config` 按 6 类分区,控件按类型映射(bool→自绘 `Switch`、enum→Button 段选、number/string→Input、secret→password+显隐、private_hosts→只读展示);改一项即时写入(`store.ts` 的 `setScoopConfigItem` 乐观更新,失败回滚 + toast),恢复默认走 `resetScoopConfigItem`(`scoop config rm`);目录类危险项(root/global/cache_path)写入/恢复前 `ConfirmDialog` 确认;新增 UI 文案照例 zh/en 成对(`config.*` 键)。
 
 ### 调试技巧
 
@@ -59,7 +61,7 @@ cd src-tauri && cargo test   # 解析器/安装脚本单测(基于真实 scoop 0
 
 ## 状态
 
-MVP 阶段一(F01~F19)已实现并通过:cargo test 9/9、tsc、真机端到端(67 个已装包/35 过期真实渲染、单实例、语言切换)。未做(PRD 明确排除):自动更新计划、备份还原、托盘通知、scoop config 编辑、shims 管理。
+MVP 阶段一(F01~F19)已实现并通过:cargo test 9/9、tsc、真机端到端(67 个已装包/35 过期真实渲染、单实例、语言切换)。阶段一后追加 **F20 · Scoop 配置可视化编辑**(P11 `ConfigView`,见模块 PRD 决策 D13):32 项 `scoop config` 分类即时读写,`cargo check` + `npm run build` + 浏览器 mock 预览均已验证。未做(PRD 明确排除):自动更新计划、备份还原、托盘通知、shims 管理。
 
 ## opcflow 工作流集成
 

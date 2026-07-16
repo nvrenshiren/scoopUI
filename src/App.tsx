@@ -2,7 +2,7 @@
 // boot != ready 时呈现 P02(语言选择)/ P01(检测与协助安装);
 // ready 后:侧边栏(240px)+ 主区 + 任务浮层(P08)+ 详情对话框(P07)
 import { useMemo, type ComponentType, type ReactNode } from "react";
-import { Layers, List, LoaderCircle, Package, Search, SlidersVertical, Terminal } from "lucide-react";
+import { Layers, List, LoaderCircle, Package, Search, SlidersVertical, Terminal, Wrench } from "lucide-react";
 import { Toaster } from "sonner";
 
 import { t } from "@/i18n";
@@ -17,12 +17,14 @@ import { BootView } from "@/pages/BootView";
 import { InstalledView } from "@/pages/InstalledView";
 import { BrowseView } from "@/pages/BrowseView";
 import { BucketsView } from "@/pages/BucketsView";
+import { ConfigView } from "@/pages/ConfigView";
 import { SettingsView } from "@/pages/SettingsView";
 
 const VIEWS: Record<ViewId, ComponentType> = {
   installed: InstalledView,
   browse: BrowseView,
   buckets: BucketsView,
+  config: ConfigView,
   settings: SettingsView,
 };
 
@@ -106,6 +108,12 @@ function Shell() {
             icon={Layers}
             label={t("nav.buckets")}
             onClick={() => useApp.setState({ view: "buckets" })}
+          />
+          <NavItem
+            active={view === "config"}
+            icon={Wrench}
+            label={t("nav.config")}
+            onClick={() => useApp.setState({ view: "config" })}
           />
           <NavItem
             active={view === "settings"}

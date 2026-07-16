@@ -89,4 +89,9 @@ export type BootStage =
   | "installing" // 协助安装中
   | "ready"; // 进入主界面
 
-export type ViewId = "installed" | "browse" | "buckets" | "settings";
+/** scoop config 单项值:读回可能是布尔/数字/字符串/数组/对象(原样来自 config.json) */
+export type ScoopConfigValue = boolean | number | string | string[] | Record<string, unknown> | null;
+/** key → 当前值(仅含已显式设置过的项;未出现即视为 scoop 默认) */
+export type ScoopConfigMap = Record<string, ScoopConfigValue>;
+
+export type ViewId = "installed" | "browse" | "buckets" | "config" | "settings";

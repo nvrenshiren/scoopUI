@@ -20,6 +20,8 @@
 
 前端统一在 `src/api.ts` 封装每条命令;浏览器 mock 模式(无 `__TAURI_INTERNALS__` 时)在同文件内降级为假数据,契约形状必须与本文档一致。
 
+> 例外:`scoop_config_get/set/rm`(F20,§3.16~3.18)是同步读写命令 —— 读直接读 scoop 配置文件、写走 `scoop config` CLI 即时生效,**均不**入 InstallJob 队列(配置写入是毫秒级操作,无需进度流)。
+
 ## 2. 安全校验(公共约束)
 
 所有写操作与查询参数在 Rust 侧过 `commands.rs` 顶部的白名单正则,防止拼进 `cmd` 的参数携带元字符:
@@ -29,6 +31,8 @@
 | `NAME_RE` | 包名 / 桶名(含 `bucket/name` 形式) | `^[A-Za-z0-9][A-Za-z0-9._/-]{0,127}$` |
 | `REPO_RE` | 桶仓库地址(https URL 或 git 形式) | `^[A-Za-z0-9][A-Za-z0-9._:/@~+-]{0,255}$` |
 | `QUERY_RE` | 搜索关键字 | `^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$` |
+| `CONFIG_KEYS` | scoop config 键(白名单) | 32 项已知配置键的固定集合(见 `commands.rs`);非白名单键报 `unknown config key` |
+| `CONFIG_VALUE_RE` | scoop config 值 | `^[A-Za-z0-9 ._:/\\@~+=,#-]{1,512}$`(覆盖路径/代理/日期/aria2 选项/令牌,排除 cmd 元字符) |
 
 校验失败统一返回 `Err(String)`,前端按 F19"错误处理与友好提示"转换为业务语言提示。
 
@@ -112,6 +116,20 @@ interface JobDto { id: number; kind: JobKind; target: string; state: JobState; e
 ### 3.15 `job_log(id: u64) -> string[]`
 返回该任务累计的逐行输出(已清理 ANSI 转义与 `\r` 行内重绘,取每段最后非空内容)。`id` 不存在返回空数组(非错误)。
 
+### 3.16 `scoop_config_get() -> Result<ScoopConfigMap, string>`(异步)
+F20。直接读取 scoop 配置文件 `%USERPROFILE%\.config\scoop\config.json`(`XDG_CONFIG_HOME` 优先),返回"键→当前值"映射(仅含**已显式设置过**的项);文件缺失/解析失败返回空对象(视作全部为默认)。**不**经 scoop CLI,**不**入 InstallJob 队列。
+
+```ts
+type ScoopConfigValue = boolean | number | string | string[] | Record<string, unknown> | null
+type ScoopConfigMap = Record<string, ScoopConfigValue>
+```
+
+### 3.17 `scoop_config_set(name: string, value: string) -> Result<(), string>`(异步)
+F20。`name` 必须 ∈ `CONFIG_KEYS`(32 项白名单),否则报 `unknown config key`;`value` 校验 `CONFIG_VALUE_RE`。对应 `scoop config <name> <value>`,由 scoop 负责布尔/数值类型转换与切换分支等副作用。即时生效,不入队。
+
+### 3.18 `scoop_config_rm(name: string) -> Result<(), string>`(异步)
+F20。`name` 校验白名单;对应 `scoop config rm <name>`,恢复该项默认。
+
 ## 4. 事件流(前端订阅,非请求-响应)
 
 | 事件名 | Payload | 触发时机 |
@@ -132,6 +150,7 @@ interface JobDto { id: number; kind: JobKind; target: string; state: JobState; e
 | --- | --- | --- | --- |
 | API01 | 2026-07-12 | `scoop_info` 返回二元组数组而非固定结构体 | `scoop info` 输出字段因包而异(如是否为 global 安装、是否有 notes),固定结构体无法覆盖;前端已按 key 做 i18n 回退,契约维持现状 |
 | API02 | 2026-07-12 | 写操作一律不同步返回结果,统一走 `enqueue_job`/`install_scoop` + 事件流 | 安装/卸载/更新/桶增删/协助安装均为长耗时操作,同步等待会阻塞 UI;F17"安装任务进度反馈"要求可观察的中间进度,事件流是唯一满足该要求的形状 |
+| API03 | 2026-07-16 | scoop config 读用直接读 `config.json`、写用 `scoop config` CLI,且三条命令均不入 InstallJob 队列 | 读文件一次拿全部当前值,避免解析 `scoop config` 无参输出的非表格键值;写走 CLI 让 scoop 处理布尔/数值类型转换与切分支等副作用;配置写入毫秒级完成,不属于 F17"长时任务"范畴,无需队列与进度事件 |
 
 ## 7. 文档范围声明
 

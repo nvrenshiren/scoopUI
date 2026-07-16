@@ -14,6 +14,8 @@ import type {
   JobKind,
   JobLogEvent,
   Language,
+  ScoopConfigMap,
+  ScoopConfigValue,
   SearchResult,
   Settings,
   StatusEntry,
@@ -39,9 +41,10 @@ interface AppState {
   availableLoaded: boolean;
   buckets: BucketInfo[];
   knownBuckets: string[];
+  scoopConfig: ScoopConfigMap;
 
-  loading: { installed: boolean; status: boolean; available: boolean; buckets: boolean };
-  errors: { installed: string; available: string; buckets: string; knownBuckets: string };
+  loading: { installed: boolean; status: boolean; available: boolean; buckets: boolean; config: boolean };
+  errors: { installed: string; available: string; buckets: string; knownBuckets: string; config: string };
 
   jobs: Record<number, JobDto>;
   jobLogs: Record<number, string[]>;
@@ -71,9 +74,10 @@ export const useApp = create<AppState>()(() => ({
   availableLoaded: false,
   buckets: [],
   knownBuckets: [],
+  scoopConfig: {},
 
-  loading: { installed: false, status: false, available: false, buckets: false },
-  errors: { installed: "", available: "", buckets: "", knownBuckets: "" },
+  loading: { installed: false, status: false, available: false, buckets: false, config: false },
+  errors: { installed: "", available: "", buckets: "", knownBuckets: "", config: "" },
 
   jobs: {},
   jobLogs: {},
@@ -210,7 +214,7 @@ export async function refreshBuckets() {
 }
 
 async function initialLoad() {
-  await Promise.all([refreshInstalled(), refreshStatus(), refreshBuckets()]);
+  await Promise.all([refreshInstalled(), refreshStatus(), refreshBuckets(), refreshScoopConfig()]);
 }
 
 // ------------------------------------------------------------- Boot Sequence
@@ -406,5 +410,55 @@ export async function switchTheme(theme: Theme) {
     await api.setTheme(theme);
   } catch {
     toast.info(t("settings.persistFailed"));
+  }
+}
+
+// ------------------------------------------------------------- scoop config(F20)
+
+export async function refreshScoopConfig() {
+  set((s) => ({ loading: { ...s.loading, config: true } }));
+  try {
+    const scoopConfig = await api.configGet();
+    set((s) => ({
+      scoopConfig,
+      errors: { ...s.errors, config: "" },
+      loading: { ...s.loading, config: false },
+    }));
+  } catch (e) {
+    set((s) => ({ errors: { ...s.errors, config: String(e) }, loading: { ...s.loading, config: false } }));
+  }
+}
+
+/** 写回 CLI 的字符串值 → 本地存储用的 typed 值(与后端读 config.json 的形态一致)。 */
+function typedFromRaw(value: string): ScoopConfigValue {
+  if (value === "true") return true;
+  if (value === "false") return false;
+  if (value !== "" && /^-?\d+(\.\d+)?$/.test(value)) return Number(value);
+  return value;
+}
+
+/** 即时写入单项(乐观更新本地,失败回滚 + toast)。value 为传给 scoop config 的字符串。 */
+export async function setScoopConfigItem(key: string, value: string) {
+  const prev = get().scoopConfig;
+  set({ scoopConfig: { ...prev, [key]: typedFromRaw(value) } });
+  try {
+    await api.configSet(key, value);
+  } catch (e) {
+    set({ scoopConfig: prev });
+    toast.error(t("config.saveFailed", { msg: String(e) }));
+  }
+}
+
+/** 恢复单项默认(scoop config rm)。 */
+export async function resetScoopConfigItem(key: string) {
+  const prev = get().scoopConfig;
+  const next = { ...prev };
+  delete next[key];
+  set({ scoopConfig: next });
+  try {
+    await api.configRemove(key);
+  } catch (e) {
+    set({ scoopConfig: prev });
+    toast.error(t("config.saveFailed", { msg: String(e) }));
   }
 }

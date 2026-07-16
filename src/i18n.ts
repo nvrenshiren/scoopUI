@@ -12,6 +12,7 @@ const dict: Dict = {
   "nav.installed": { zh: "已装软件", en: "Installed" },
   "nav.browse": { zh: "浏览软件包", en: "Browse" },
   "nav.buckets": { zh: "桶管理", en: "Buckets" },
+  "nav.config": { zh: "Scoop 配置", en: "Scoop Config" },
   "nav.settings": { zh: "设置", en: "Settings" },
   "nav.jobs": { zh: "任务", en: "Jobs" },
 
@@ -282,6 +283,229 @@ const dict: Dict = {
     en: "Options confirmed during assisted install; pre-filled on reinstall",
   },
   "settings.notConfigured": { zh: "尚未通过本产品安装过 Scoop", en: "Scoop has not been installed through this app" },
+
+  // ---------------- Scoop 配置 P11(F20)
+  "config.title": { zh: "Scoop 配置", en: "Scoop Configuration" },
+  "config.desc": {
+    zh: "管理 Scoop 自身的全部配置项(scoop config);修改即时生效。",
+    en: "Manage all of Scoop's own settings (scoop config). Changes apply immediately.",
+  },
+  "config.loadFailed": { zh: "配置读取失败", en: "Failed to read configuration" },
+  "config.notSet": { zh: "未设置", en: "Not set" },
+  "config.reset": { zh: "恢复默认", en: "Reset to default" },
+  "config.toggleShow": { zh: "显示/隐藏", en: "Show / hide" },
+  "config.saveFailed": { zh: "保存失败:{msg}", en: "Save failed: {msg}" },
+  "config.dangerBadge": { zh: "谨慎", en: "Caution" },
+  "config.dangerTitle": { zh: "修改目录配置", en: "Change directory setting" },
+  "config.dangerDesc": {
+    zh: "{name} 只会修改 Scoop 配置,不会搬移已安装的软件包或缓存。改错可能导致 Scoop 找不到已装应用。确定继续吗?",
+    en: "{name} only changes Scoop's configuration — it does NOT move already-installed apps or cache. A wrong value may make Scoop lose track of installed apps. Continue?",
+  },
+  "config.dangerConfirm": { zh: "仍然修改", en: "Change anyway" },
+
+  // 分类
+  "config.cat.download.title": { zh: "下载器", en: "Downloader" },
+  "config.cat.download.desc": {
+    zh: "启用 aria2 可多线程加速下载;以下为其连接与重试参数。",
+    en: "aria2 enables multi-connection download acceleration; the options below tune it.",
+  },
+  "config.cat.network.title": { zh: "网络与代理", en: "Network & Proxy" },
+  "config.cat.network.desc": {
+    zh: "代理服务器与需要认证的私有主机。",
+    en: "Proxy server and authenticated private hosts.",
+  },
+  "config.cat.update.title": { zh: "更新策略", en: "Update" },
+  "config.cat.update.desc": {
+    zh: "Scoop 自身与软件包的更新来源和行为。",
+    en: "Where and how Scoop and apps update.",
+  },
+  "config.cat.tools.title": { zh: "安装与工具", en: "Install & Tools" },
+  "config.cat.tools.desc": {
+    zh: "安装行为、架构、解压与 shim 等底层选项。",
+    en: "Install behavior, architecture, extraction and shim options.",
+  },
+  "config.cat.paths.title": { zh: "目录", en: "Directories" },
+  "config.cat.paths.desc": {
+    zh: "Scoop 根目录、全局目录与缓存目录。修改仅改配置,不搬移已有数据。",
+    en: "Scoop root, global and cache directories. Changing only updates config — it does NOT move existing data.",
+  },
+  "config.cat.secret.title": { zh: "令牌与密钥", en: "Tokens & Keys" },
+  "config.cat.secret.desc": {
+    zh: "API 令牌;仅保存在本机 Scoop 配置中。",
+    en: "API tokens; stored only in your local Scoop config.",
+  },
+
+  // 下载器 aria2
+  "config.item.aria2-enabled.label": { zh: "启用 aria2 下载", en: "Enable aria2" },
+  "config.item.aria2-enabled.help": {
+    zh: "用 aria2c 多线程下载,通常更快;需已安装 aria2。",
+    en: "Use aria2c for multi-connection downloads (usually faster); requires aria2 installed.",
+  },
+  "config.item.aria2-warning-enabled.label": { zh: "显示 aria2 警告", en: "aria2 warnings" },
+  "config.item.aria2-warning-enabled.help": {
+    zh: "下载时是否显示 aria2 相关警告提示。",
+    en: "Show aria2-related warnings during downloads.",
+  },
+  "config.item.aria2-retry-wait.label": { zh: "重试等待(秒)", en: "Retry wait (s)" },
+  "config.item.aria2-retry-wait.help": {
+    zh: "两次下载重试之间的等待秒数,默认 2。",
+    en: "Seconds to wait between download retries. Default 2.",
+  },
+  "config.item.aria2-split.label": { zh: "分段数(split)", en: "Split" },
+  "config.item.aria2-split.help": {
+    zh: "单个文件的并行下载分段数,默认 5。",
+    en: "Number of parallel connections per download. Default 5.",
+  },
+  "config.item.aria2-max-connection-per-server.label": { zh: "每服务器最大连接数", en: "Max connections/server" },
+  "config.item.aria2-max-connection-per-server.help": {
+    zh: "对同一服务器的最大连接数,默认 5。",
+    en: "Maximum connections to one server. Default 5.",
+  },
+  "config.item.aria2-min-split-size.label": { zh: "最小分段大小", en: "Min split size" },
+  "config.item.aria2-min-split-size.help": {
+    zh: "触发多连接分段的最小文件大小,如 5M。",
+    en: "Minimum file size before splitting into multiple connections, e.g. 5M.",
+  },
+  "config.item.aria2-options.label": { zh: "额外 aria2 参数", en: "Extra aria2 options" },
+  "config.item.aria2-options.help": {
+    zh: "追加到 aria2c 的命令行参数,如 --max-tries=5。",
+    en: "Extra command-line arguments passed to aria2c, e.g. --max-tries=5.",
+  },
+
+  // 网络与代理
+  "config.item.proxy.label": { zh: "代理服务器", en: "Proxy" },
+  "config.item.proxy.help": {
+    zh: "格式 host:port 或 user:pass@host:port;也可用 currentuser@default 走系统代理。",
+    en: "Format host:port or user:pass@host:port; or currentuser@default to use the system proxy.",
+  },
+  "config.item.private_hosts.label": { zh: "私有主机", en: "Private hosts" },
+  "config.item.private_hosts.help": {
+    zh: "需额外认证头的私有主机(对象数组);请用命令行 scoop config 编辑。",
+    en: "Private hosts needing extra auth headers (array of objects); edit via the scoop config command line.",
+  },
+
+  // 更新策略
+  "config.item.scoop_repo.label": { zh: "Scoop 仓库", en: "Scoop repo" },
+  "config.item.scoop_repo.help": {
+    zh: "Scoop 自身源码仓库地址;用于自定义 fork。",
+    en: "Git repository of Scoop's own source; for custom forks.",
+  },
+  "config.item.scoop_branch.label": { zh: "Scoop 分支", en: "Scoop branch" },
+  "config.item.scoop_branch.help": {
+    zh: "接收更新的分支:master 稳定,develop 测试新特性。",
+    en: "Branch to update from: master (stable) or develop (testing).",
+  },
+  "config.item.force_update.label": { zh: "强制更新", en: "Force update" },
+  "config.item.force_update.help": {
+    zh: "即使版本相同也强制更新到桶内版本。",
+    en: "Force apps to update to the bucket version even if unchanged.",
+  },
+  "config.item.update_nightly.label": { zh: "每日更新 nightly", en: "Update nightly" },
+  "config.item.update_nightly.help": {
+    zh: "对 nightly 版本每日自动更新。",
+    en: "Update nightly-versioned apps once per day.",
+  },
+  "config.item.hold_update_until.label": { zh: "暂停自更新至", en: "Hold updates until" },
+  "config.item.hold_update_until.help": {
+    zh: "在该日期(YYYY-MM-DD)前暂停 Scoop 自更新。",
+    en: "Postpone Scoop self-update until this date (YYYY-MM-DD).",
+  },
+  "config.item.autostash_on_conflict.label": { zh: "冲突时自动暂存", en: "Autostash on conflict" },
+  "config.item.autostash_on_conflict.help": {
+    zh: "更新遇到未提交改动时自动 stash 后再更新。",
+    en: "Auto-stash uncommitted changes during update conflicts.",
+  },
+  "config.item.show_update_log.label": { zh: "显示更新日志", en: "Show update log" },
+  "config.item.show_update_log.help": {
+    zh: "更新时显示变更的提交记录,默认开启。",
+    en: "Show changed commits during updates. On by default.",
+  },
+
+  // 安装与工具
+  "config.item.default_architecture.label": { zh: "默认架构", en: "Default architecture" },
+  "config.item.default_architecture.help": {
+    zh: "安装软件包时优先使用的架构。",
+    en: "Preferred architecture when installing apps.",
+  },
+  "config.item.use_external_7zip.label": { zh: "使用外部 7-Zip", en: "External 7-Zip" },
+  "config.item.use_external_7zip.help": {
+    zh: "用 PATH 中的 7-Zip 解压,而非 Scoop 内置。",
+    en: "Use 7-Zip from PATH for extraction instead of the bundled one.",
+  },
+  "config.item.use_lessmsi.label": { zh: "使用 lessmsi", en: "Use lessmsi" },
+  "config.item.use_lessmsi.help": {
+    zh: "用 lessmsi 处理 MSI,而非系统 msiexec。",
+    en: "Prefer lessmsi over the native msiexec for MSI files.",
+  },
+  "config.item.use_sqlite_cache.label": { zh: "SQLite 缓存", en: "SQLite cache" },
+  "config.item.use_sqlite_cache.help": {
+    zh: "用 SQLite 数据库加速搜索与 shim。",
+    en: "Use a SQLite database to speed up search and shim.",
+  },
+  "config.item.no_junction.label": { zh: "禁用 current 联结", en: "No junction" },
+  "config.item.no_junction.help": {
+    zh: "不使用 current 版本别名(junction)。",
+    en: "Do not use the 'current' version alias (junction).",
+  },
+  "config.item.shim.label": { zh: "Shim 实现", en: "Shim" },
+  "config.item.shim.help": {
+    zh: "生成可执行入口的 shim 实现。",
+    en: "Which shim implementation to generate executables with.",
+  },
+  "config.item.ignore_running_processes.label": { zh: "忽略运行中的进程", en: "Ignore running processes" },
+  "config.item.ignore_running_processes.help": {
+    zh: "目标进程正在运行时仍继续操作。",
+    en: "Continue even if the target's processes are running.",
+  },
+  "config.item.show_manifest.label": { zh: "安装前显示清单", en: "Show manifest" },
+  "config.item.show_manifest.help": {
+    zh: "安装前展示软件包的 manifest。",
+    en: "Show the app manifest before installing.",
+  },
+  "config.item.use_isolated_path.label": { zh: "隔离 PATH", en: "Isolated PATH" },
+  "config.item.use_isolated_path.help": {
+    zh: "用 SCOOP_PATH 环境变量隔离软件包 PATH。",
+    en: "Isolate app PATHs via the SCOOP_PATH environment variable.",
+  },
+  "config.item.cat_style.label": { zh: "cat 高亮风格", en: "cat style" },
+  "config.item.cat_style.help": {
+    zh: "用 bat 查看 manifest 时的高亮风格。",
+    en: "Highlight style used by bat when viewing manifests.",
+  },
+  "config.item.debug.label": { zh: "调试输出", en: "Debug" },
+  "config.item.debug.help": {
+    zh: "输出详细诊断信息。",
+    en: "Enable verbose diagnostic output.",
+  },
+
+  // 目录(危险)
+  "config.item.root_path.label": { zh: "Scoop 根目录", en: "Scoop root" },
+  "config.item.root_path.help": {
+    zh: "Scoop 本体与软件包位置;仅改配置,不搬移已装数据。",
+    en: "Location of Scoop and its apps; changes config only, does not move installed data.",
+  },
+  "config.item.global_path.label": { zh: "全局目录", en: "Global directory" },
+  "config.item.global_path.help": {
+    zh: "以 --global 安装的软件包位置。",
+    en: "Location for apps installed with --global.",
+  },
+  "config.item.cache_path.label": { zh: "缓存目录", en: "Cache directory" },
+  "config.item.cache_path.help": {
+    zh: "安装包下载缓存位置。",
+    en: "Download cache location.",
+  },
+
+  // 令牌与密钥
+  "config.item.gh_token.label": { zh: "GitHub 令牌", en: "GitHub token" },
+  "config.item.gh_token.help": {
+    zh: "GitHub API 令牌,用于提升访问速率;仅存本机。",
+    en: "GitHub API token to raise rate limits; stored locally only.",
+  },
+  "config.item.virustotal_api_key.label": { zh: "VirusTotal 密钥", en: "VirusTotal key" },
+  "config.item.virustotal_api_key.help": {
+    zh: "VirusTotal 扫描用 API 密钥;仅存本机。",
+    en: "API key for VirusTotal scanning; stored locally only.",
+  },
 
   // ---------------- 错误 / 空态 P10
   "error.readFailed": { zh: "无法读取数据", en: "Failed to read data" },

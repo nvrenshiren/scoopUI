@@ -7,6 +7,7 @@ import type {
   InstalledApp,
   JobDto,
   JobKind,
+  ScoopConfigMap,
   SearchResult,
   Settings,
   StatusEntry,
@@ -63,6 +64,17 @@ const mockState = {
     { name: "extras", source: "https://github.com/ScoopInstaller/Extras", updated: "2026/7/10 22:23:53", manifests: "2344" },
   ] as BucketInfo[],
   known: ["main", "extras", "versions", "nirsoft", "sysinternals", "php", "nerd-fonts", "nonportable", "java", "games"],
+  // scoop 自身配置(F20);仅含已显式设置过的项,未出现即为默认。含各控件类型的示例值便于预览。
+  scoopConfig: {
+    "aria2-enabled": true,
+    "aria2-warning-enabled": false,
+    "aria2-split": 5,
+    "default_architecture": "64bit",
+    "scoop_branch": "master",
+    "shim": "kiennq",
+    "proxy": "currentuser@default",
+    "use_lessmsi": true,
+  } as Record<string, unknown>,
 };
 
 function mockRunJob(kind: JobKind, target: string) {
@@ -164,6 +176,20 @@ async function mockInvoke<T>(cmd: string, args?: Record<string, unknown>): Promi
       return structuredClone(mockState.buckets) as T;
     case "bucket_known":
       return structuredClone(mockState.known) as T;
+    case "scoop_config_get":
+      return structuredClone(mockState.scoopConfig) as T;
+    case "scoop_config_set": {
+      const raw = String(args?.value ?? "");
+      let v: unknown = raw;
+      if (raw === "true") v = true;
+      else if (raw === "false") v = false;
+      else if (raw !== "" && /^-?\d+(\.\d+)?$/.test(raw)) v = Number(raw);
+      mockState.scoopConfig[String(args?.name)] = v;
+      return undefined as T;
+    }
+    case "scoop_config_rm":
+      delete mockState.scoopConfig[String(args?.name)];
+      return undefined as T;
     case "enqueue_job":
       return mockRunJob(args?.kind as JobKind, args?.target as string) as T;
     case "install_scoop":
@@ -223,4 +249,7 @@ export const api = {
   cancelJob: (id: number) => invoke<void>("cancel_job", { id }),
   listJobs: () => invoke<JobDto[]>("list_jobs"),
   jobLog: (id: number) => invoke<string[]>("job_log", { id }),
+  configGet: () => invoke<ScoopConfigMap>("scoop_config_get"),
+  configSet: (name: string, value: string) => invoke<void>("scoop_config_set", { name, value }),
+  configRemove: (name: string) => invoke<void>("scoop_config_rm", { name }),
 };

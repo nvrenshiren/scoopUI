@@ -9,7 +9,7 @@ use tauri::State;
 
 use crate::jobs::{JobDto, JobKind};
 use crate::settings::{self, InstallConfig, Settings};
-use crate::{installer, parse, scoop, Core};
+use crate::{config, installer, parse, scoop, Core};
 
 /// 包名/桶名白名单(允许 bucket/name 形式);防止拼进 cmd 的参数携带元字符。
 static NAME_RE: LazyLock<Regex> =
@@ -20,6 +20,53 @@ static REPO_RE: LazyLock<Regex> =
 /// 搜索关键字。
 static QUERY_RE: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$").unwrap());
+
+/// `scoop config` 已知配置项白名单(= GUI 可视化的 32 项);拒绝把任意 key 拼进 scoop config。
+static CONFIG_KEYS: &[&str] = &[
+    // 下载器 aria2
+    "aria2-enabled",
+    "aria2-warning-enabled",
+    "aria2-retry-wait",
+    "aria2-split",
+    "aria2-max-connection-per-server",
+    "aria2-min-split-size",
+    "aria2-options",
+    // 网络与代理
+    "proxy",
+    "private_hosts",
+    // 更新策略
+    "scoop_repo",
+    "scoop_branch",
+    "force_update",
+    "update_nightly",
+    "hold_update_until",
+    "autostash_on_conflict",
+    "show_update_log",
+    // 安装与工具
+    "default_architecture",
+    "use_external_7zip",
+    "use_lessmsi",
+    "use_sqlite_cache",
+    "no_junction",
+    "shim",
+    "ignore_running_processes",
+    "show_manifest",
+    "use_isolated_path",
+    "cat_style",
+    "debug",
+    // 路径
+    "root_path",
+    "global_path",
+    "cache_path",
+    // 令牌与安全
+    "gh_token",
+    "virustotal_api_key",
+];
+
+/// config 值字符白名单:覆盖路径(反斜杠/盘符冒号/空格)、代理(user:pass@host:port)、
+/// 日期、架构、aria2 选项(空格/=/-)、令牌、仓库 URL;排除 cmd 元字符(& | < > ^ " 等)防注入。
+static CONFIG_VALUE_RE: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"^[A-Za-z0-9 ._:/\\@~+=,#-]{1,512}$").unwrap());
 
 fn shims_of(core: &Core) -> Option<String> {
     core.scoop
@@ -268,4 +315,45 @@ pub fn list_jobs(core: State<'_, Arc<Core>>) -> Vec<JobDto> {
 #[tauri::command]
 pub fn job_log(core: State<'_, Arc<Core>>, id: u64) -> Vec<String> {
     core.jobs.log_of(id)
+}
+
+// ----------------------------------------------------------- scoop config (F20)
+
+/// 读取 scoop 自身全部配置(直接读 config.json,一次拿全;不解析 CLI 输出)。
+#[tauri::command]
+pub async fn scoop_config_get() -> Result<serde_json::Value, String> {
+    tauri::async_runtime::spawn_blocking(config::read_config)
+        .await
+        .map_err(|e| e.to_string())
+}
+
+/// 写入单个配置项 → `scoop config <name> <value>`(即时生效,由 scoop 处理类型与副作用)。
+#[tauri::command]
+pub async fn scoop_config_set(
+    core: State<'_, Arc<Core>>,
+    name: String,
+    value: String,
+) -> Result<(), String> {
+    if !CONFIG_KEYS.contains(&name.as_str()) {
+        return Err(format!("unknown config key: {name}"));
+    }
+    if !CONFIG_VALUE_RE.is_match(&value) {
+        return Err("invalid config value".into());
+    }
+    blocking_query!(core, move |core: Arc<Core>| {
+        run_read(&core, &["config", &name, &value])?;
+        Ok(())
+    })
+}
+
+/// 删除单个配置项 → `scoop config rm <name>`(恢复该项默认)。
+#[tauri::command]
+pub async fn scoop_config_rm(core: State<'_, Arc<Core>>, name: String) -> Result<(), String> {
+    if !CONFIG_KEYS.contains(&name.as_str()) {
+        return Err(format!("unknown config key: {name}"));
+    }
+    blocking_query!(core, move |core: Arc<Core>| {
+        run_read(&core, &["config", "rm", &name])?;
+        Ok(())
+    })
 }

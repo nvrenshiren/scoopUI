@@ -1,4 +1,5 @@
 mod commands;
+mod config;
 mod installer;
 mod jobs;
 mod parse;
@@ -57,6 +58,9 @@ pub fn run() {
             commands::cancel_job,
             commands::list_jobs,
             commands::job_log,
+            commands::scoop_config_get,
+            commands::scoop_config_set,
+            commands::scoop_config_rm,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
