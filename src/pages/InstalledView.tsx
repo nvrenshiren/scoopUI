@@ -1,6 +1,7 @@
 // P04 · 已装软件包列表页(F01 已装部分 / F03 / F04 / F06 / F07 / F08)
-import { useMemo, useState } from "react";
-import { Check, CircleArrowUp, LoaderCircle, RefreshCw, Search, TriangleAlert } from "lucide-react";
+// 支持复选框多选,对所选软件包执行批量更新/批量卸载(flow §1.6:逐项生成 InstallJob)
+import { useEffect, useMemo, useState } from "react";
+import { Check, CircleArrowUp, LoaderCircle, RefreshCw, Search, Trash2, TriangleAlert, X } from "lucide-react";
 
 import { t } from "@/i18n";
 import {
@@ -15,6 +16,7 @@ import {
 import { bucketNameOf } from "@/utils";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableWrap } from "@/components/ui/table";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
@@ -32,6 +34,9 @@ export function InstalledView() {
   const [filter, setFilter] = useState("");
   const [updateAllOpen, setUpdateAllOpen] = useState(false);
   const [updateAsk, setUpdateAsk] = useState("");
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [batchUpdateOpen, setBatchUpdateOpen] = useState(false);
+  const [batchUninstallOpen, setBatchUninstallOpen] = useState(false);
 
   const outdated = useMemo(() => selectOutdatedNames(statusEntries), [statusEntries]);
   const busy = useMemo(() => selectBusyTargets(jobs), [jobs]);
@@ -50,9 +55,47 @@ export function InstalledView() {
     [installed, outdated],
   );
 
+  // 已装列表变化后(卸载完成/刷新),剔除已不存在的选中项,避免残留
+  useEffect(() => {
+    const names = new Set(installed.map((a) => a.name));
+    setSelected((prev) => {
+      const next = new Set([...prev].filter((n) => names.has(n)));
+      return next.size === prev.size ? prev : next;
+    });
+  }, [installed]);
+
+  const selectedNames = useMemo(
+    () => rows.filter((a) => selected.has(a.name)).map((a) => a.name),
+    [rows, selected],
+  );
+  const selectedUpdatable = useMemo(
+    () => selectedNames.filter((n) => outdated.has(n) && !busy.has(n)),
+    [selectedNames, outdated, busy],
+  );
+  const selectedUninstallable = useMemo(
+    () => selectedNames.filter((n) => !busy.has(n)),
+    [selectedNames, busy],
+  );
+
+  const allRowsSelected = rows.length > 0 && rows.every((a) => selected.has(a.name));
+  const someRowsSelected = rows.some((a) => selected.has(a.name));
+
   function refresh() {
     void refreshInstalled();
     void refreshStatus();
+  }
+
+  function toggleSelect(name: string, checked: boolean) {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (checked) next.add(name);
+      else next.delete(name);
+      return next;
+    });
+  }
+
+  function toggleSelectAll(checked: boolean) {
+    setSelected(checked ? new Set(rows.map((a) => a.name)) : new Set());
   }
 
   function confirmUpdateAll() {
@@ -71,6 +114,18 @@ export function InstalledView() {
     const name = updateAsk;
     setUpdateAsk("");
     if (name) void enqueue("update", name);
+  }
+
+  function confirmBatchUpdate() {
+    setBatchUpdateOpen(false);
+    for (const name of selectedUpdatable) void enqueue("update", name);
+    setSelected(new Set());
+  }
+
+  function confirmBatchUninstall() {
+    setBatchUninstallOpen(false);
+    for (const name of selectedUninstallable) void enqueue("uninstall", name);
+    setSelected(new Set());
   }
 
   return (
@@ -116,6 +171,38 @@ export function InstalledView() {
           </Button>
         </div>
 
+        {selected.size > 0 && (
+          <div className="flex items-center gap-3 rounded-lg border border-primary/30 bg-[var(--primary-glow-soft)] px-4 py-2.5">
+            <span className="text-[13px] font-medium text-primary">
+              {t("installed.selectedCount", { n: selected.size })}
+            </span>
+            <div className="flex-1" />
+            <Button
+              size="sm"
+              disabled={selectedUpdatable.length === 0}
+              onClick={() => setBatchUpdateOpen(true)}
+            >
+              <CircleArrowUp className="size-4" />
+              {t("installed.updateSelected")}
+              {selectedUpdatable.length > 0 && (
+                <span className="rounded-sm bg-black/25 px-1.5 text-xs">{selectedUpdatable.length}</span>
+              )}
+            </Button>
+            <Button
+              size="sm"
+              variant="destructive"
+              disabled={selectedUninstallable.length === 0}
+              onClick={() => setBatchUninstallOpen(true)}
+            >
+              <Trash2 className="size-4" />
+              {t("installed.uninstallSelected")}
+            </Button>
+            <Button variant="ghost" size="icon" aria-label={t("common.cancel")} onClick={() => setSelected(new Set())}>
+              <X className="size-4" />
+            </Button>
+          </div>
+        )}
+
         {loading.installed && installed.length === 0 ? (
           <div className="flex items-center justify-center gap-2 py-12 text-muted-foreground">
             <LoaderCircle className="size-4 animate-spin text-primary" />
@@ -139,6 +226,13 @@ export function InstalledView() {
             <Table>
               <TableHeader>
                 <TableRow className="hover:bg-transparent">
+                  <TableHead className="w-10">
+                    <Checkbox
+                      checked={allRowsSelected ? true : someRowsSelected ? "indeterminate" : false}
+                      onCheckedChange={(v) => toggleSelectAll(v === true)}
+                      aria-label={t("installed.selectAll")}
+                    />
+                  </TableHead>
                   <TableHead>{t("common.name")}</TableHead>
                   <TableHead>{t("common.version")}</TableHead>
                   <TableHead>{t("installed.latest")}</TableHead>
@@ -151,12 +245,19 @@ export function InstalledView() {
                 {rows.map((app) => {
                   const isOutdated = outdated.has(app.name);
                   const isBusy = busy.has(app.name);
+                  const isSelected = selected.has(app.name);
                   return (
                     <TableRow
                       key={app.name}
                       tabIndex={0}
                       role="button"
-                      className={isOutdated ? "cursor-pointer bg-[var(--warning-soft)]" : "cursor-pointer"}
+                      className={
+                        isOutdated
+                          ? "cursor-pointer bg-[var(--warning-soft)]"
+                          : isSelected
+                            ? "cursor-pointer bg-[var(--primary-glow-soft)]"
+                            : "cursor-pointer"
+                      }
                       onClick={() => useApp.setState({ detailName: app.name })}
                       onKeyDown={(e) => {
                         if (e.key === "Enter" || e.key === " ") {
@@ -165,6 +266,13 @@ export function InstalledView() {
                         }
                       }}
                     >
+                      <TableCell onClick={(e) => e.stopPropagation()}>
+                        <Checkbox
+                          checked={isSelected}
+                          onCheckedChange={(v) => toggleSelect(app.name, v === true)}
+                          aria-label={app.name}
+                        />
+                      </TableCell>
                       <TableCell className="font-mono font-medium">{app.name}</TableCell>
                       <TableCell className="font-mono text-muted-foreground">{app.version}</TableCell>
                       <TableCell className="font-mono">
@@ -249,6 +357,27 @@ export function InstalledView() {
         confirmText={t("installed.updateAll")}
         onConfirm={confirmUpdateAll}
         onCancel={() => setUpdateAllOpen(false)}
+      />
+
+      <ConfirmDialog
+        open={batchUpdateOpen}
+        title={t("installed.batchUpdateTitle")}
+        message={t("installed.batchUpdateDesc", { n: selectedUpdatable.length })}
+        items={selectedUpdatable}
+        confirmText={t("installed.updateSelected")}
+        onConfirm={confirmBatchUpdate}
+        onCancel={() => setBatchUpdateOpen(false)}
+      />
+
+      <ConfirmDialog
+        open={batchUninstallOpen}
+        title={t("installed.batchUninstallTitle")}
+        message={t("installed.batchUninstallDesc", { n: selectedUninstallable.length })}
+        items={selectedUninstallable}
+        destructive
+        confirmText={t("installed.uninstallSelected")}
+        onConfirm={confirmBatchUninstall}
+        onCancel={() => setBatchUninstallOpen(false)}
       />
     </div>
   );

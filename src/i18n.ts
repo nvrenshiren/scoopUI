@@ -168,6 +168,20 @@ const dict: Dict = {
     en: "Really uninstall {name} from this machine?",
   },
   "installed.statusFailed": { zh: "过期检查失败", en: "Update check failed" },
+  "installed.selectAll": { zh: "全选", en: "Select all" },
+  "installed.selectedCount": { zh: "已选 {n} 项", en: "{n} selected" },
+  "installed.updateSelected": { zh: "更新所选", en: "Update selected" },
+  "installed.uninstallSelected": { zh: "卸载所选", en: "Uninstall selected" },
+  "installed.batchUpdateTitle": { zh: "批量更新确认", en: "Confirm bulk update" },
+  "installed.batchUpdateDesc": {
+    zh: "将按顺序更新以下 {n} 个软件包,每个软件包对应一条任务:",
+    en: "The following {n} apps will be updated one by one, each as its own task:",
+  },
+  "installed.batchUninstallTitle": { zh: "批量卸载确认", en: "Confirm bulk uninstall" },
+  "installed.batchUninstallDesc": {
+    zh: "将按顺序从本机卸载以下 {n} 个软件包,每个软件包对应一条任务:",
+    en: "The following {n} apps will be uninstalled from this machine one by one, each as its own task:",
+  },
 
   // ---------------- 浏览/搜索 P05
   "browse.title": { zh: "浏览软件包", en: "Browse Packages" },
