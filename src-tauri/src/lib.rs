@@ -49,6 +49,7 @@ pub fn run() {
             commands::detect_scoop,
             commands::scoop_list,
             commands::scoop_status,
+            commands::scoop_update_repo,
             commands::scoop_search,
             commands::scoop_info,
             commands::bucket_list,

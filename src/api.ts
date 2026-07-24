@@ -157,6 +157,8 @@ async function mockInvoke<T>(cmd: string, args?: Record<string, unknown>): Promi
     }
     case "scoop_status":
       return structuredClone(mockState.status) as T;
+    case "scoop_update_repo":
+      return undefined as T;
     case "scoop_search": {
       const q = ((args?.query as string) ?? "").toLowerCase();
       await new Promise((r) => setTimeout(r, 500));
@@ -239,6 +241,7 @@ export const api = {
   detectScoop: () => invoke<DetectResult>("detect_scoop"),
   list: (query?: string) => invoke<InstalledApp[]>("scoop_list", { query: query || null }),
   status: () => invoke<StatusEntry[]>("scoop_status"),
+  updateRepo: () => invoke<void>("scoop_update_repo"),
   search: (query?: string) => invoke<SearchResult[]>("scoop_search", { query: query || null }),
   info: (name: string) => invoke<[string, string][]>("scoop_info", { name }),
   bucketList: () => invoke<BucketInfo[]>("bucket_list"),

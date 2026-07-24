@@ -168,6 +168,7 @@ const dict: Dict = {
     en: "Really uninstall {name} from this machine?",
   },
   "installed.statusFailed": { zh: "过期检查失败", en: "Update check failed" },
+  "installed.repoRefreshFailed": { zh: "刷新软件源失败,基于现有数据检查", en: "Repo refresh failed; checking with cached data" },
   "installed.selectAll": { zh: "全选", en: "Select all" },
   "installed.selectedCount": { zh: "已选 {n} 项", en: "{n} selected" },
   "installed.updateSelected": { zh: "更新所选", en: "Update selected" },

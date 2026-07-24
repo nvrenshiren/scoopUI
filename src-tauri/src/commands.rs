@@ -205,6 +205,26 @@ pub async fn scoop_status(core: State<'_, Arc<Core>>) -> Result<Vec<parse::Statu
     })
 }
 
+/// 仅刷新 Scoop 自身与桶元数据(git fetch/pull),不动已装软件包。
+/// 供"检查更新"在跑 status 前调用,保证过期清单基于最新 bucket 数据。
+/// 注意:scoop update 更新 Scoop 本体后会退出非零提示重启 scoop,因此失败仅上抛、由前端降级。
+#[tauri::command]
+pub async fn scoop_update_repo(core: State<'_, Arc<Core>>) -> Result<(), String> {
+    blocking_query!(core, |core: Arc<Core>| {
+        let shims = shims_of(&core);
+        let out = scoop::run_scoop(&shims, &["update"])?;
+        if out.status.success() {
+            Ok(())
+        } else {
+            Err(format!(
+                "scoop update failed (exit {:?}): {}",
+                out.status.code(),
+                scoop::stderr_text(&out).trim()
+            ))
+        }
+    })
+}
+
 #[tauri::command]
 pub async fn scoop_search(
     core: State<'_, Arc<Core>>,

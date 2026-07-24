@@ -138,6 +138,13 @@ export async function refreshInstalled() {
 export async function refreshStatus() {
   set((s) => ({ loading: { ...s.loading, status: true } }));
   try {
+    // 先刷新 Scoop 自身与桶元数据(scoop update 裸命令,不动已装包),
+    // 保证 status 基于最新 bucket 数据;刷新失败仅提示,不阻塞状态读取。
+    try {
+      await api.updateRepo();
+    } catch (e) {
+      toast.warning(`${t("installed.repoRefreshFailed")}: ${e}`);
+    }
     const statusEntries = await api.status();
     set((s) => ({ statusEntries, loading: { ...s.loading, status: false } }));
   } catch (e) {
