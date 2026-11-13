@@ -99,18 +99,22 @@ export function BrowseView() {
                     return (
                       <TableRow
                         key={pkg.source + "/" + pkg.name}
-                        tabIndex={0}
-                        role="button"
                         className="cursor-pointer"
                         onClick={() => useApp.setState({ detailName: pkg.name })}
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter" || e.key === " ") {
-                            e.preventDefault();
-                            useApp.setState({ detailName: pkg.name });
-                          }
-                        }}
                       >
-                        <TableCell className="font-mono font-medium">{pkg.name}</TableCell>
+                        <TableCell className="font-mono font-medium">
+                          <button
+                            type="button"
+                            className="cursor-pointer border-0 bg-transparent p-0 text-left font-mono font-medium text-foreground hover:text-primary"
+                            aria-label={`${t("detail.title")}: ${pkg.name}`}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              useApp.setState({ detailName: pkg.name });
+                            }}
+                          >
+                            {pkg.name}
+                          </button>
+                        </TableCell>
                         <TableCell className="font-mono text-muted-foreground">{pkg.version}</TableCell>
                         <TableCell className="text-muted-foreground" title={pkg.source}>
                           {bucketNameOf(pkg.source)}

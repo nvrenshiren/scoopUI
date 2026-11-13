@@ -281,8 +281,6 @@ export function InstalledView() {
                   return (
                     <TableRow
                       key={app.name}
-                      tabIndex={0}
-                      role="button"
                       className={
                         isOutdated
                           ? "cursor-pointer bg-[var(--warning-soft)]"
@@ -291,12 +289,6 @@ export function InstalledView() {
                             : "cursor-pointer"
                       }
                       onClick={() => useApp.setState({ detailName: app.name })}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter" || e.key === " ") {
-                          e.preventDefault();
-                          useApp.setState({ detailName: app.name });
-                        }
-                      }}
                     >
                       <TableCell onClick={(e) => e.stopPropagation()}>
                         <Checkbox
@@ -305,7 +297,19 @@ export function InstalledView() {
                           aria-label={app.name}
                         />
                       </TableCell>
-                      <TableCell className="font-mono font-medium">{app.name}</TableCell>
+                      <TableCell className="font-mono font-medium">
+                        <button
+                          type="button"
+                          className="cursor-pointer border-0 bg-transparent p-0 text-left font-mono font-medium text-foreground hover:text-primary"
+                          aria-label={`${t("detail.title")}: ${app.name}`}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            useApp.setState({ detailName: app.name });
+                          }}
+                        >
+                          {app.name}
+                        </button>
+                      </TableCell>
                       <TableCell className="font-mono text-muted-foreground">{app.version}</TableCell>
                       <TableCell className="font-mono">
                         {isOutdated ? (
