@@ -6,6 +6,7 @@ import { t } from "@/i18n";
 import { switchLanguage, switchTheme, useApp, useLang } from "@/store";
 import type { Theme } from "@/types";
 import { Button } from "@/components/ui/button";
+import { PageHeader } from "@/components/PageHeader";
 
 const THEMES: Theme[] = ["dark", "light", "system"];
 
@@ -14,16 +15,18 @@ function Section({
   title,
   desc,
   children,
+  className,
 }: {
   icon: ReactNode;
   title: string;
   desc?: string;
   children: ReactNode;
+  className?: string;
 }) {
   return (
-    <section className="mb-3 max-w-[720px] rounded-lg border border-border bg-card p-5 shadow-[var(--shadow-md)]">
-      <div className="flex items-center gap-2">
-        <span className="text-primary">{icon}</span>
+    <section className={`rounded-xl border border-border/80 bg-card/80 p-5 shadow-sm ${className ?? ""}`}>
+      <div className="flex items-center gap-3">
+        <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-accent text-accent-foreground">{icon}</span>
         <div className="min-w-0 flex-1">
           <div className="font-heading text-sm font-semibold">{title}</div>
           {desc && <div className="mt-0.5 text-xs text-muted-foreground">{desc}</div>}
@@ -57,15 +60,10 @@ export function SettingsView() {
 
   return (
     <div className="flex h-full min-w-0 flex-col">
-      <div className="bg-grid relative px-7 pt-6 pb-4">
-        <div className="bg-glow-top pointer-events-none absolute inset-0" />
-        <div className="relative">
-          <h1 className="text-2xl font-semibold">{t("settings.title")}</h1>
-          <p className="mt-1 text-[13px] text-muted-foreground">{t("settings.desc")}</p>
-        </div>
-      </div>
+      <PageHeader icon={SlidersVertical} title={t("settings.title")} description={t("settings.desc")} />
 
-      <div className="min-h-0 flex-1 overflow-auto px-7 pb-6">
+      <div className="min-h-0 flex-1 overflow-auto px-7 pt-4 pb-6">
+        <div className="mx-auto grid w-full max-w-5xl grid-cols-1 gap-4 xl:grid-cols-2">
         {/* 语言(F14:切换立即生效并持久化) */}
         <Section
           icon={<Globe className="size-[18px]" />}
@@ -105,11 +103,12 @@ export function SettingsView() {
           icon={<Download className="size-[18px]" />}
           title={t("settings.installConfig")}
           desc={t("settings.installConfigDesc")}
+          className="xl:col-span-2"
         >
           {installCfgRows.length === 0 ? (
             <div className="mt-3 text-[13px] text-subtle">{t("settings.notConfigured")}</div>
           ) : (
-            <dl className="mt-3 grid grid-cols-[240px_1fr] gap-x-4 gap-y-1.5 font-mono text-xs">
+            <dl className="mt-3 grid grid-cols-[minmax(140px,240px)_1fr] gap-x-4 gap-y-1.5 font-mono text-xs">
               {installCfgRows.map(([key, value]) => (
                 <div key={key} className="contents">
                   <dt className="text-subtle">{key}</dt>
@@ -122,13 +121,14 @@ export function SettingsView() {
 
         {/* 关于 */}
         <Section icon={<Info className="size-[18px]" />} title={t("settings.about")}>
-          <dl className="mt-3 grid grid-cols-[240px_1fr] gap-x-4 gap-y-1.5 font-mono text-xs">
+          <dl className="mt-3 grid grid-cols-[minmax(100px,160px)_1fr] gap-x-4 gap-y-1.5 font-mono text-xs">
             <dt className="text-subtle">{t("settings.appVersion")}</dt>
             <dd className="m-0 select-text">scoopUI 0.1.0</dd>
             <dt className="text-subtle">{t("settings.scoopVersion")}</dt>
             <dd className="m-0 select-text">{scoopVersion || "—"}</dd>
           </dl>
         </Section>
+        </div>
       </div>
     </div>
   );

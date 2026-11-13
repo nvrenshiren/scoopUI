@@ -2,7 +2,17 @@
 // boot != ready 时呈现 P02(语言选择)/ P01(检测与协助安装);
 // ready 后:侧边栏(240px)+ 主区 + 任务浮层(P08)+ 详情对话框(P07)
 import { useMemo, type ComponentType, type ReactNode } from "react";
-import { Layers, List, LoaderCircle, Package, Search, SlidersVertical, Terminal, Wrench } from "lucide-react";
+import {
+  ChevronRight,
+  Layers,
+  ListChecks,
+  LoaderCircle,
+  Package,
+  Search,
+  SlidersVertical,
+  Terminal,
+  Wrench,
+} from "lucide-react";
 import { Toaster } from "sonner";
 
 import { t } from "@/i18n";
@@ -45,13 +55,14 @@ function NavItem({
     <button
       onClick={onClick}
       className={cn(
-        "flex h-10 cursor-pointer items-center gap-2.5 rounded-md px-3 text-[13px] font-medium transition-colors",
+        "group flex h-10 cursor-pointer items-center gap-2.5 rounded-lg px-3 text-[13px] font-medium transition-colors duration-150",
         active
-          ? "bg-[var(--primary-glow-soft)] text-primary shadow-[inset_2px_0_0_var(--primary)]"
-          : "text-muted-foreground hover:bg-secondary hover:text-foreground",
+          ? "bg-accent text-accent-foreground shadow-[inset_2px_0_0_var(--primary)]"
+          : "text-muted-foreground hover:bg-secondary/80 hover:text-foreground",
       )}
+      aria-current={active ? "page" : undefined}
     >
-      <Icon className="size-4" />
+      <Icon className="size-4 shrink-0 opacity-80 group-hover:opacity-100" />
       <span className="flex-1 text-left">{label}</span>
       {badge}
     </button>
@@ -74,22 +85,25 @@ function Shell() {
   const View = VIEWS[view];
 
   return (
-    <div className="flex h-full">
-      <aside className="flex w-[240px] shrink-0 flex-col border-r border-border bg-card pb-3">
+    <div className="app-shell flex h-full min-w-0 text-foreground">
+      <aside className="flex w-[232px] shrink-0 flex-col border-r border-border/70 bg-card/90 pb-3 backdrop-blur-xl">
         <div className="gradient-line" />
-        <div className="flex items-center gap-2.5 px-4 pt-4 pb-3.5">
-          <div className="flex size-9 items-center justify-center rounded-md border border-[var(--primary-glow)] bg-[var(--primary-glow-soft)] text-primary">
-            <Terminal className="size-[18px]" />
+        <div className="flex items-center gap-3 px-5 pt-5 pb-4">
+          <div className="flex size-10 items-center justify-center rounded-xl border border-border bg-secondary text-primary shadow-sm">
+            <Terminal className="size-[19px]" />
           </div>
           <div className="min-w-0">
-            <div className="font-heading text-[15px] font-bold">scoopUI</div>
-            <div className="max-w-[160px] overflow-hidden font-mono text-[10px] text-ellipsis whitespace-nowrap text-subtle">
-              {scoopVersion || "scoop"}
+            <div className="font-heading text-[15px] font-semibold tracking-[-0.02em]">scoopUI</div>
+            <div className="max-w-[160px] overflow-hidden text-[11px] text-ellipsis whitespace-nowrap text-muted-foreground">
+              {t("app.subtitle")}
             </div>
           </div>
         </div>
 
-        <nav className="flex flex-col gap-0.5 px-3">
+        <div className="px-5 pb-2 pt-4 text-[10px] font-semibold uppercase tracking-[0.12em] text-subtle">
+          {t("nav.workspace")}
+        </div>
+        <nav className="flex flex-col gap-1 px-3">
           <NavItem
             active={view === "installed"}
             icon={Package}
@@ -125,10 +139,10 @@ function Shell() {
 
         <div className="flex-1" />
 
-        <div className="px-3">
+        <div className="mx-3 mb-3 rounded-xl border border-border/70 bg-background/45 p-2">
           <NavItem
             active={jobsPanelOpen}
-            icon={List}
+            icon={ListChecks}
             label={t("nav.jobs")}
             badge={
               activeJobCount > 0 ? (
@@ -140,12 +154,30 @@ function Shell() {
             }
             onClick={() => useApp.setState({ jobsPanelOpen: !jobsPanelOpen })}
           />
+          <div className="mt-1 flex items-center gap-2 px-3 pb-1 pt-2 text-[11px] text-muted-foreground">
+            <span className="size-1.5 rounded-full bg-success" />
+            <span className="truncate">{scoopVersion ? `Scoop ${scoopVersion}` : "Scoop"}</span>
+          </div>
         </div>
+        <div className="px-5 text-[10px] tracking-wide text-subtle">scoopUI</div>
       </aside>
 
-      <main className="h-full min-w-0 flex-1">
-        <View />
-      </main>
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+        <header className="flex h-12 shrink-0 items-center justify-between border-b border-border/70 bg-card/45 px-7 backdrop-blur-xl">
+          <div className="flex items-center gap-2 text-xs">
+            <span className="font-medium text-muted-foreground">scoopUI</span>
+            <ChevronRight className="size-3.5 text-subtle" />
+            <span className="font-medium text-foreground">{t(`nav.${view}`)}</span>
+          </div>
+          <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
+            <span className="size-1.5 rounded-full bg-success" />
+            {t("app.localManager")}
+          </div>
+        </header>
+        <main className="min-h-0 min-w-0 flex-1">
+          <View />
+        </main>
+      </div>
     </div>
   );
 }

@@ -7,7 +7,7 @@ Windows 桌面应用:Scoop 包管理器的图形化前端。**Rust(Tauri 2)+ Rea
 - `docs/prd/project.md` — 项目范围与硬约束(软件源唯一性 / 单实例 / 仅中英双语 / 安装参数集边界)
 - `docs/prd/flows/scoop-gui.md` — **全部实体状态机的唯一真相源**(App / Scoop 自身 / Bucket / InstallJob / UI Language / Boot Sequence);任何状态流转改动先改这里
 - `docs/prd/modules/scoop-gui.md` — 功能清单 F01~F20、页面清单 P01~P11、每个功能对应的 scoop CLI 命令
-- `docs/design/systems/web.md` — 设计系统 v2(暗色默认、run-green、字体、组件形态硬约束)
+- `docs/design/systems/web.md` — COHESION v2.0.0 shadcn 主题接入与 scoopUI 专属布局约定
 - `ARCHITECTURE.md` — 技术基线(架构决策 ARCH01~10);`docs/architecture/database/scoop-gui.md` — 本机持久化结构;`docs/architecture/api/scoop-gui.md` — 17 条 Tauri IPC 命令契约
 - `docs/acceptance/web/scoop-gui/P01~P11.md` — 每页 QA 验收标准(含与实际实现的已知偏差记录)
 
@@ -40,7 +40,7 @@ cd src-tauri && cargo test   # 解析器/安装脚本单测(基于真实 scoop 0
 - **单包任务成功后只做单包刷新**(用户明确要求):install/update/uninstall 成功 → `refreshApp(name)`(`scoop list <name>`,子串匹配需精确名过滤)+ 本地移除该包的过期条目;**不得**触发全局 `scoop status`/全量 list。全局检查更新仅由用户点"检查更新"按钮或首次进入时触发。
 - 任务进度浮层(P08,`JobsPanel.tsx` 自绘非 modal)点击外部时**优先关闭面板并吞掉该次点击**(pointerdown+click 双 capture 拦截),不与底层 UI 交互;radix portal 对话框与 sonner toast 例外。
 - i18n:`i18n.ts` 单文件双语字典 + zustand `store.lang` 驱动重渲(组件调 `useLang()`);禁止出现只有一种语言的文案(项目硬约束);新增 UI 文案必须 zh/en 成对;`scoop info` 动态字段名走 `tf("detail.field."+key, key)` 回退。
-- 设计 token:`index.css` 的 Tailwind v4 `@theme`,设计系统色映射到 shadcn 语义变量(background/card/primary/…),扩展 `info`(信息蓝)/`warning`/`subtle`/`border-strong`;亮色用 `:root.light` 覆盖变量(非 shadcn 惯例的 `.dark` 类,因暗色是默认)。shadcn 组件在 `components/ui/`(手写源码,非 CLI 生成)。
+- 设计 token:COHESION 官方 shadcn 主题派生快照位于 `src/theme/`,由 `npm run sync:cohesion` 从 `D:\Work\dawi\design` 刷新;`index.css` 将正式语义变量映射为 Tailwind v4 utilities,运行时通过 `data-shadcn-theme` 支持暗/亮主题。shadcn 组件在 `components/ui/`(本项目源码,按共享预设样式适配)。
 - 取消按钮用 `<Button variant="cancel">`(中性灰),**不得**用 destructive 色(取消≠失败,设计系统硬约束)。
 - 表格用 `TableWrap`(overflow-x hidden,不出横向滚动条);来源桶经 `bucketNameOf()` 规范化(manifest 路径 → 桶名,title 保留原值)。
 - **Scoop 配置页**(P11,`ConfigView.tsx` + `scoopConfig.ts`,F20):32 项 `scoop config` 按 6 类分区,控件按类型映射(bool→自绘 `Switch`、enum→Button 段选、number/string→Input、secret→password+显隐、private_hosts→只读展示);改一项即时写入(`store.ts` 的 `setScoopConfigItem` 乐观更新,失败回滚 + toast),恢复默认走 `resetScoopConfigItem`(`scoop config rm`);目录类危险项(root/global/cache_path)写入/恢复前 `ConfirmDialog` 确认;新增 UI 文案照例 zh/en 成对(`config.*` 键)。

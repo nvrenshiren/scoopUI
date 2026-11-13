@@ -95,13 +95,13 @@ export function JobsPanel() {
   return (
     <div
       ref={panelRef}
-      className="surface-glass fixed right-6 bottom-14 z-40 flex max-h-[min(560px,calc(100vh-120px))] w-[480px] flex-col overflow-hidden rounded-xl border border-border shadow-[var(--shadow-xl)]"
+      className="surface-glass fixed right-5 bottom-5 z-40 flex max-h-[min(600px,calc(100vh-40px))] w-[min(480px,calc(100vw-32px))] flex-col overflow-hidden rounded-2xl border border-border/80 shadow-[var(--shadow-xl)]"
     >
       {anyRunning && <div className="running-bar" />}
 
-      <div className="flex items-center gap-2 py-3 pr-3 pl-4">
+      <div className="flex items-center gap-2 border-b border-border/70 px-4 py-3.5">
         <List className="size-[15px]" />
-        <span className="font-heading text-sm font-semibold">{t("jobs.title")}</span>
+        <span className="font-heading text-sm font-semibold tracking-[-0.01em]">{t("jobs.title")}</span>
         <span className="flex-1" />
         <Button
           variant="ghost"
@@ -128,8 +128,8 @@ export function JobsPanel() {
                 className={cn(
                   "flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-[13px]",
                   selected?.id === job.id
-                    ? "bg-[var(--primary-glow-soft)] shadow-[inset_2px_0_0_var(--primary)]"
-                    : "hover:bg-secondary",
+                    ? "bg-accent shadow-[inset_2px_0_0_var(--primary)]"
+                    : "hover:bg-muted/70",
                 )}
               >
                 <StateGlyph job={job} />

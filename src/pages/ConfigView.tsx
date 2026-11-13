@@ -16,6 +16,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
+import { PageHeader } from "@/components/PageHeader";
 
 const CAT_ICONS: Record<string, ComponentType<{ className?: string }>> = {
   download: Download,
@@ -42,9 +43,9 @@ function Section({
   children: ReactNode;
 }) {
   return (
-    <section className="mb-3 max-w-[820px] rounded-lg border border-border bg-card p-5 shadow-[var(--shadow-md)]">
-      <div className="flex items-center gap-2">
-        <span className="text-primary">{icon}</span>
+    <section className="mx-auto mb-4 w-full max-w-5xl rounded-xl border border-border/80 bg-card/80 p-5 shadow-sm">
+      <div className="flex items-center gap-3">
+        <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-accent text-accent-foreground">{icon}</span>
         <div className="min-w-0 flex-1">
           <div className="font-heading text-sm font-semibold">{title}</div>
           {desc && <div className="mt-0.5 text-xs text-muted-foreground">{desc}</div>}
@@ -229,17 +230,11 @@ export function ConfigView() {
 
   return (
     <div className="flex h-full min-w-0 flex-col">
-      <div className="bg-grid relative px-7 pt-6 pb-4">
-        <div className="bg-glow-top pointer-events-none absolute inset-0" />
-        <div className="relative">
-          <h1 className="text-2xl font-semibold">{t("config.title")}</h1>
-          <p className="mt-1 text-[13px] text-muted-foreground">{t("config.desc")}</p>
-        </div>
-      </div>
+      <PageHeader icon={Wrench} title={t("config.title")} description={t("config.desc")} />
 
-      <div className="min-h-0 flex-1 overflow-auto px-7 pb-6">
+      <div className="min-h-0 flex-1 overflow-auto px-7 pt-4 pb-6">
         {error ? (
-          <div className="mt-2 max-w-[820px] rounded-lg border border-destructive/40 bg-destructive/5 px-4 py-3 text-sm text-destructive">
+          <div className="mx-auto mt-2 max-w-5xl rounded-xl border border-destructive/30 bg-[var(--destructive-glow)] px-4 py-3 text-sm text-destructive">
             {t("config.loadFailed")}: {error}
           </div>
         ) : firstLoad ? (

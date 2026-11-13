@@ -402,6 +402,7 @@ export function applyTheme(theme: Theme) {
   const root = document.documentElement;
   const dark =
     theme === "dark" || (theme === "system" && window.matchMedia("(prefers-color-scheme: dark)").matches);
+  root.dataset.shadcnTheme = dark ? "dark" : "light";
   root.classList.toggle("light", !dark);
   if (!mediaBound) {
     mediaBound = true;

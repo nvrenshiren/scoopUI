@@ -190,30 +190,33 @@ export function BootView() {
 
   if (bootStage === "detecting" || bootStage === "init") {
     return (
-      <div className="bg-grid relative flex h-full items-center justify-center">
-        <div className="bg-glow-top pointer-events-none absolute inset-x-0 top-0 bottom-[60%]" />
-        <div className="z-[1] flex flex-col items-center gap-3">
-          <LoaderCircle className="size-8 animate-spin text-primary" />
-          <div className="text-[15px] font-medium">{t("boot.detecting")}</div>
-          <div className="font-mono text-xs text-subtle">{t("boot.detectHint")}</div>
+      <div className="app-shell relative flex h-full items-center justify-center px-6">
+        <div className="bg-grid pointer-events-none absolute inset-0 opacity-40" />
+        <div className="relative flex min-w-[320px] flex-col items-center rounded-2xl border border-border/80 bg-card/85 px-10 py-9 text-center shadow-lg backdrop-blur-xl">
+          <div className="mb-5 flex size-12 items-center justify-center rounded-xl border border-border bg-secondary text-primary">
+            <LoaderCircle className="size-5 animate-spin" />
+          </div>
+          <div className="font-heading text-lg font-semibold">{t("boot.detecting")}</div>
+          <div className="mt-2 max-w-[360px] text-xs leading-5 text-muted-foreground">{t("boot.detectHint")}</div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="bg-grid relative flex h-full items-center justify-center overflow-auto">
-      <div className="bg-glow-top pointer-events-none absolute inset-x-0 top-0 bottom-[60%]" />
+    <div className="app-shell relative flex h-full items-center justify-center overflow-auto px-6 py-7">
+      <div className="bg-grid pointer-events-none absolute inset-0 opacity-40" />
 
-      <div className="z-[1] flex max-h-[calc(100vh-80px)] w-[min(720px,calc(100vw-96px))] flex-col overflow-hidden rounded-lg border border-border bg-card shadow-[var(--shadow-md)]">
+      <div className="relative z-[1] flex max-h-[calc(100vh-56px)] w-[min(900px,calc(100vw-48px))] flex-col overflow-hidden rounded-2xl border border-border/80 bg-card/90 shadow-xl backdrop-blur-xl">
         <div className="gradient-line" />
-        <div className="overflow-auto px-7 pt-6 pb-7">
-          <div className="flex items-start gap-4">
-            <div className="flex size-12 shrink-0 items-center justify-center rounded-lg border border-warning/30 bg-[var(--warning-15)] text-warning">
+        <div className="overflow-auto px-7 pt-6 pb-7 sm:px-9">
+          <div className="mb-6 flex items-start gap-4">
+            <div className="flex size-11 shrink-0 items-center justify-center rounded-xl border border-warning/25 bg-[var(--warning-soft)] text-warning">
               {installing ? <Download className="size-6" /> : <TriangleAlert className="size-6" />}
             </div>
             <div>
-              <h2 className="text-xl font-semibold">
+              <div className="mb-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-primary">scoopUI</div>
+              <h2 className="mb-0 text-2xl font-semibold tracking-[-0.025em]">
                 {installing ? t("setup.installing") : t("setup.notFoundTitle")}
               </h2>
               <p className="mt-1.5 text-[13px] leading-relaxed text-muted-foreground">
@@ -251,10 +254,10 @@ export function BootView() {
             </>
           ) : (
             <>
-              <h3 className="mt-6 text-[15px] font-semibold">{t("setup.formTitle")}</h3>
-              <p className="mt-1 mb-4 text-xs leading-relaxed text-subtle">{t("setup.formDesc")}</p>
+              <h3 className="mt-6 mb-0 text-base font-semibold">{t("setup.formTitle")}</h3>
+              <p className="mt-1 mb-4 text-xs leading-relaxed text-muted-foreground">{t("setup.formDesc")}</p>
 
-              <div className="flex flex-col gap-3.5">
+              <div className="grid grid-cols-1 gap-x-5 gap-y-3.5 md:grid-cols-2">
                 <Field
                   id="f-dir"
                   label={t("setup.scoopDir")}
@@ -300,7 +303,7 @@ export function BootView() {
                   placeholder="localhost,127.0.0.1"
                   onChange={(v) => patch({ noProxy: v })}
                 />
-                <div className="flex items-start gap-3">
+                <div className="col-span-full grid grid-cols-1 items-start gap-3 sm:grid-cols-2">
                   <div className="min-w-0 flex-1">
                     <Field
                       id="f-puser"
@@ -322,7 +325,7 @@ export function BootView() {
                   </div>
                 </div>
 
-                <label className="flex cursor-pointer items-center gap-2.5 text-[13px]">
+                <label className="col-span-full flex cursor-pointer items-center gap-2.5 rounded-lg border border-border/70 bg-background/45 px-3 py-2.5 text-[13px]">
                   <Checkbox
                     checked={form.proxyUseDefaultCredentials}
                     onCheckedChange={(v) => patch({ proxyUseDefaultCredentials: v === true })}
@@ -330,11 +333,11 @@ export function BootView() {
                   {t("setup.useDefaultCred")}
                 </label>
                 {errors.proxyUseDefaultCredentials && (
-                  <div className="-mt-2.5 text-xs leading-relaxed text-destructive">
+                  <div className="col-span-full -mt-2.5 text-xs leading-relaxed text-destructive">
                     {errors.proxyUseDefaultCredentials}
                   </div>
                 )}
-                <label className="flex cursor-pointer items-start gap-2.5 text-[13px]">
+                <label className="col-span-full flex cursor-pointer items-start gap-2.5 rounded-lg border border-border/70 bg-background/45 px-3 py-2.5 text-[13px]">
                   <Checkbox
                     className="mt-0.5"
                     checked={form.runAsAdmin}

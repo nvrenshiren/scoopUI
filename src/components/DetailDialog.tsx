@@ -62,12 +62,12 @@ export function DetailDialog() {
     <Dialog open={!!name} onOpenChange={(v) => !v && close()}>
       <DialogContent aria-describedby={undefined}>
         {/* 头部:图标 + 名称 + 版本(mono)+ 状态 Badge(设计系统 §10.3) */}
-        <div className="flex items-center gap-3 px-6 pt-5 pb-3">
-          <div className="flex size-11 shrink-0 items-center justify-center rounded-md border border-[var(--primary-glow)] bg-[var(--primary-glow-soft)] text-primary">
+        <div className="flex items-center gap-3 border-b border-border/70 bg-background/35 px-6 pt-5 pb-4">
+          <div className="flex size-11 shrink-0 items-center justify-center rounded-xl border border-border bg-accent text-accent-foreground">
             <Package className="size-[22px]" />
           </div>
           <div className="flex min-w-0 flex-1 items-center gap-2.5">
-            <h3 className="font-mono text-lg font-semibold">{name}</h3>
+            <h3 className="mb-0 font-mono text-lg font-semibold tracking-[-0.015em]">{name}</h3>
             {version && <span className="font-mono text-[13px] text-muted-foreground">{version}</span>}
             {isOutdated ? (
               <Badge variant="warning">
@@ -85,7 +85,7 @@ export function DetailDialog() {
           </div>
         </div>
 
-        <div className="min-h-[120px] overflow-auto px-6 py-1">
+        <div className="min-h-[160px] overflow-auto px-6 py-3">
           {loading ? (
             <div className="flex items-center justify-center gap-2 py-8 text-muted-foreground">
               <LoaderCircle className="size-4 animate-spin text-primary" />
@@ -108,13 +108,13 @@ export function DetailDialog() {
               </div>
             </div>
           ) : (
-            <dl className="my-2 grid grid-cols-[120px_1fr] gap-x-4 gap-y-2 text-[13px]">
+            <dl className="my-1 grid grid-cols-[minmax(100px,140px)_1fr] gap-x-5 gap-y-3 text-[13px]">
               {pairs.map(([key, value]) => (
                 <div key={key} className="contents">
                   <dt className="text-subtle">{tf("detail.field." + key, key)}</dt>
                   <dd
                     className={
-                      "m-0 break-words whitespace-pre-wrap select-text " +
+                    "m-0 break-words whitespace-pre-wrap select-text " +
                       (key !== "Description" && key !== "Notes" ? "font-mono" : "")
                     }
                   >
@@ -139,7 +139,7 @@ export function DetailDialog() {
           )}
         </div>
 
-        <div className="flex items-center justify-end gap-2 border-t border-border px-6 py-4">
+        <div className="flex items-center justify-end gap-2 border-t border-border/70 bg-background/35 px-6 py-3.5">
           <Button variant="secondary" onClick={close}>
             {t("common.close")}
           </Button>

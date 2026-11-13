@@ -32,7 +32,7 @@ scoopUI turns everyday `scoop` command-line workflows — browsing, searching, i
 - **Job queue** — every write operation (install/uninstall/update/bucket add-remove/Scoop install) runs through a single sequential queue with live streaming logs, cancellation (kills the entire process tree), and retry on failure
 - **Guided first-run Scoop install** — detects whether `scoop` is available; if not, presents an editable form covering every parameter of the official `install.ps1` (ScoopDir / ScoopGlobalDir / ScoopCacheDir / Proxy / NoProxy / ProxyCredential / ProxyUseDefaultCredentials / RunAsAdmin), runs once confirmed, supports the UAC elevation path, and persists your settings locally for reinstalls
 - **Bilingual (Chinese/English)** — choose on first launch, switch anytime from Settings with instant effect and persistence
-- **Three themes** — dark / light / follow system, dark by default (terminal-inspired "run-green" design language)
+- **Three themes** — dark / light / follow system, dark by default with the COHESION shadcn theme
 - **Single instance** — relaunching focuses the existing window instead of opening a duplicate
 
 ## Installation

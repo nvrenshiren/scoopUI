@@ -22,16 +22,16 @@ export function EmptyState({
     <div className="flex flex-1 flex-col items-center justify-center gap-2 px-6 py-12 text-center">
       <div
         className={cn(
-          "mb-1 flex size-14 items-center justify-center rounded-lg border",
+          "mb-1 flex size-14 items-center justify-center rounded-2xl border",
           error
-            ? "border-warning/30 bg-[var(--warning-soft)] text-warning"
-            : "border-border bg-secondary text-subtle",
+            ? "border-destructive/25 bg-[var(--destructive-glow)] text-destructive"
+            : "border-border/80 bg-card text-muted-foreground shadow-sm",
         )}
       >
         <Glyph className="size-7" />
       </div>
-      <div className="text-[15px] font-medium">{title}</div>
-      {hint && <div className="max-w-[480px] text-[13px] text-muted-foreground">{hint}</div>}
+      <div className="text-base font-medium">{title}</div>
+      {hint && <div className="max-w-[480px] text-[13px] leading-6 text-muted-foreground">{hint}</div>}
       {children && <div className="mt-3">{children}</div>}
     </div>
   );

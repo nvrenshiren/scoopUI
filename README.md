@@ -32,7 +32,7 @@
 - **任务队列** — 所有写操作(安装/卸载/更新/桶增删/装 Scoop)统一排队顺序执行,实时日志流、可取消(终止整棵进程树)、失败可重试
 - **首启协助安装 Scoop** — 检测 `scoop` 可用性;未安装时呈现官方 `install.ps1` 全部参数(ScoopDir / ScoopGlobalDir / ScoopCacheDir / Proxy / NoProxy / ProxyCredential / ProxyUseDefaultCredentials / RunAsAdmin)的可填写表单,一次确认后执行,支持 UAC 提权路径,配置本机持久化供重装复用
 - **中英双语** — 首启二选一,设置页随时切换、立即生效并持久化
-- **三主题** — 暗 / 亮 / 跟随系统,暗色默认(终端 run-green 设计语言)
+- **三主题** — 暗 / 亮 / 跟随系统,暗色默认;界面沿用逐科 COHESION shadcn 主题
 - **单实例** — 重复启动自动唤起并聚焦已有窗口
 
 ## 安装

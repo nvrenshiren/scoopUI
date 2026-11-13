@@ -5,25 +5,25 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 
 const buttonVariants = cva(
-  "inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-md text-sm font-medium transition-all duration-100 outline-none focus-visible:ring-[3px] focus-visible:ring-ring/40 focus-visible:border-ring disabled:pointer-events-none disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.98] active:brightness-90 [&_svg]:pointer-events-none [&_svg]:shrink-0",
+  "inline-flex shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-colors duration-150 outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/70 focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-2 aria-invalid:ring-destructive/20 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*=size-])]:size-4",
   {
     variants: {
       variant: {
-        default:
-          "bg-primary text-primary-foreground shadow-[0_0_12px_var(--primary-glow)] hover:bg-primary-hover hover:shadow-[0_0_20px_var(--primary-glow),0_0_40px_var(--primary-glow)]",
-        secondary: "bg-secondary text-secondary-foreground border border-border hover:border-border-strong",
-        outline: "border border-border bg-transparent hover:bg-secondary",
-        ghost: "hover:bg-secondary",
-        destructive: "bg-destructive text-white hover:shadow-[0_0_16px_var(--destructive-glow)]",
-        /* 取消 ≠ 失败:中性灰(设计系统 §9 硬约束) */
+        default: "bg-primary text-primary-foreground hover:bg-primary-hover active:bg-primary-active",
+        secondary: "bg-secondary text-secondary-foreground hover:bg-secondary/80",
+        outline: "border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground",
+        ghost: "hover:bg-accent hover:text-accent-foreground",
+        destructive:
+          "bg-destructive-solid text-destructive-foreground hover:bg-destructive-hover active:bg-destructive-active focus-visible:ring-destructive",
+        /* Cancellation remains neutral; danger styling is reserved for destructive actions. */
         cancel:
-          "bg-secondary border border-border text-muted-foreground hover:border-border-strong hover:text-foreground",
+          "bg-secondary text-secondary-foreground hover:bg-secondary/80",
       },
       size: {
-        default: "h-10 px-4",
-        sm: "h-8 px-3 text-[13px]",
-        lg: "h-12 px-6 rounded-lg text-[15px]",
-        icon: "size-10",
+        default: "h-9 px-4 has-[>svg]:px-3",
+        sm: "h-8 px-3 text-[13px] has-[>svg]:px-2.5",
+        lg: "h-10 px-6 has-[>svg]:px-4",
+        icon: "size-9",
         iconSm: "size-8",
       },
     },

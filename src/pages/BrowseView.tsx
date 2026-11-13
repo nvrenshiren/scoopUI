@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableWrap } from "@/components/ui/table";
 import { EmptyState } from "@/components/EmptyState";
+import { PageHeader } from "@/components/PageHeader";
 
 const LIMIT = 500;
 
@@ -41,25 +42,19 @@ export function BrowseView() {
 
   return (
     <div className="flex h-full min-w-0 flex-col">
-      <div className="bg-grid relative px-7 pt-6 pb-4">
-        <div className="bg-glow-top pointer-events-none absolute inset-0" />
-        <div className="relative flex items-center gap-2">
-          <div className="min-w-0 flex-1">
-            <h1 className="text-2xl font-semibold">{t("browse.title")}</h1>
-            <p className="mt-1 text-[13px] text-muted-foreground">{t("browse.desc")}</p>
-          </div>
+      <PageHeader
+        icon={Search}
+        title={t("browse.title")}
+        description={t("browse.desc")}
+        actions={
           <Button variant="outline" disabled={loading} onClick={() => void refreshAvailable(true)}>
-            {loading ? (
-              <LoaderCircle className="size-4 animate-spin text-primary" />
-            ) : (
-              <RefreshCw className="size-4" />
-            )}
+            {loading ? <LoaderCircle className="size-4 animate-spin" /> : <RefreshCw className="size-4" />}
             {t("common.refresh")}
           </Button>
-        </div>
-      </div>
+        }
+      />
 
-      <div className="flex min-h-0 flex-1 flex-col gap-3 px-7 pb-6">
+      <div className="flex min-h-0 flex-1 flex-col gap-3 px-7 pt-4 pb-6">
         <div className="relative">
           <Search className="absolute top-3 left-3 size-4 text-subtle" />
           <Input

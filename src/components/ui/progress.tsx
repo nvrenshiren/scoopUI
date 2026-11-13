@@ -15,13 +15,13 @@ function Progress({
   const indeterminate = value == null;
   return (
     <ProgressPrimitive.Root
-      className={cn("relative h-2 w-full overflow-hidden rounded-full bg-secondary", className)}
+      className={cn("relative h-2 w-full overflow-hidden rounded-full bg-muted", className)}
       value={indeterminate ? undefined : value}
       {...props}
     >
       <ProgressPrimitive.Indicator
         className={cn(
-          "absolute h-full rounded-full bg-primary shadow-[0_0_12px_var(--primary-glow)] transition-transform",
+          "absolute h-full rounded-full bg-primary transition-transform",
           indeterminate ? "progress-indeterminate" : "left-0 w-full",
         )}
         style={indeterminate ? undefined : { transform: `translateX(-${100 - (value ?? 0)}%)` }}

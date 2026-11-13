@@ -19,6 +19,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableWra
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { EmptyState } from "@/components/EmptyState";
+import { PageHeader } from "@/components/PageHeader";
 
 export function BucketsView() {
   useLang();
@@ -64,29 +65,25 @@ export function BucketsView() {
 
   return (
     <div className="flex h-full min-w-0 flex-col">
-      <div className="bg-grid relative px-7 pt-6 pb-4">
-        <div className="bg-glow-top pointer-events-none absolute inset-0" />
-        <div className="relative flex items-center gap-2">
-          <div className="min-w-0 flex-1">
-            <h1 className="text-2xl font-semibold">{t("buckets.title")}</h1>
-            <p className="mt-1 text-[13px] text-muted-foreground">{t("buckets.desc")}</p>
-          </div>
-          <Button variant="outline" disabled={loading} onClick={() => void refreshBuckets()}>
-            {loading ? (
-              <LoaderCircle className="size-4 animate-spin text-primary" />
-            ) : (
-              <RefreshCw className="size-4" />
-            )}
-            {t("common.refresh")}
-          </Button>
-          <Button onClick={() => setAddOpen(true)}>
-            <Plus className="size-4" />
-            {t("buckets.addCustom")}
-          </Button>
-        </div>
-      </div>
+      <PageHeader
+        icon={Layers}
+        title={t("buckets.title")}
+        description={t("buckets.desc")}
+        actions={
+          <>
+            <Button variant="outline" disabled={loading} onClick={() => void refreshBuckets()}>
+              {loading ? <LoaderCircle className="size-4 animate-spin" /> : <RefreshCw className="size-4" />}
+              {t("common.refresh")}
+            </Button>
+            <Button onClick={() => setAddOpen(true)}>
+              <Plus className="size-4" />
+              {t("buckets.addCustom")}
+            </Button>
+          </>
+        }
+      />
 
-      <div className="flex min-h-0 flex-1 flex-col gap-3 px-7 pb-6">
+      <div className="flex min-h-0 flex-1 flex-col gap-4 px-7 pt-4 pb-6">
         {error ? (
           <EmptyState error title={t("buckets.loadFailed")} hint={t("error.scoopUnavailable")}>
             <Button variant="secondary" onClick={() => void refreshBuckets()}>
@@ -95,7 +92,7 @@ export function BucketsView() {
             </Button>
           </EmptyState>
         ) : (
-          <Tabs defaultValue="added" className="flex min-h-0 flex-1 flex-col gap-3">
+          <Tabs defaultValue="added" className="flex min-h-0 flex-1 flex-col gap-4">
             <TabsList>
               <TabsTrigger value="added">
                 {t("buckets.addedTab")}

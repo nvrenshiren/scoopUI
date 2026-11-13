@@ -15,30 +15,30 @@ function Option({
   return (
     <button
       onClick={onClick}
-      className="group relative flex w-[220px] cursor-pointer flex-col items-start gap-0.5 rounded-lg border border-border bg-card p-5 text-left transition-all duration-150 hover:-translate-y-0.5 hover:border-primary hover:shadow-[0_0_0_1px_var(--primary),0_0_20px_var(--primary-glow)]"
+      className="group relative flex min-h-[104px] w-[220px] cursor-pointer flex-col items-start justify-center gap-1 rounded-xl border border-border/80 bg-background/50 p-5 text-left transition-all duration-150 hover:border-primary/60 hover:bg-accent/70 hover:shadow-md focus-visible:ring-[3px] focus-visible:ring-ring/70"
     >
-      <span className="font-heading text-xl font-semibold">{main}</span>
+      <span className="font-heading text-xl font-semibold tracking-[-0.02em]">{main}</span>
       <span className="text-[13px] text-muted-foreground">{sub}</span>
-      <ChevronRight className="absolute top-1/2 right-4 size-[18px] -translate-y-1/2 text-subtle group-hover:text-primary" />
+      <ChevronRight className="absolute top-1/2 right-4 size-[18px] -translate-y-1/2 text-muted-foreground transition-transform group-hover:translate-x-0.5 group-hover:text-primary" />
     </button>
   );
 }
 
 export function LanguagePick() {
   return (
-    <div className="bg-grid relative flex h-full items-center justify-center">
-      <div className="bg-glow-top pointer-events-none absolute inset-x-0 top-0 bottom-[60%]" />
-      <div className="z-[1] flex flex-col items-center gap-1 p-12">
-        <div className="mb-4 flex size-16 items-center justify-center rounded-xl border border-[var(--primary-glow)] bg-card text-primary shadow-[0_0_24px_var(--primary-glow)]">
+    <div className="app-shell relative flex h-full items-center justify-center overflow-auto px-6 py-8">
+      <div className="bg-grid pointer-events-none absolute inset-0 opacity-40" />
+      <div className="relative z-[1] flex w-full max-w-[640px] flex-col items-center rounded-2xl border border-border/80 bg-card/85 px-8 py-10 shadow-xl backdrop-blur-xl sm:px-12">
+        <div className="mb-5 flex size-14 items-center justify-center rounded-2xl border border-border bg-secondary text-primary shadow-sm">
           <Terminal className="size-[26px]" />
         </div>
-        <h1 className="text-[32px] font-bold">scoopUI</h1>
+        <h1 className="mb-0 text-[30px] font-semibold tracking-[-0.035em]">scoopUI</h1>
         {/* 首次选择前无语言偏好,双语并列呈现(此页即语言选择本身) */}
-        <p className="mt-2 text-muted-foreground">选择界面语言 · Choose your language</p>
-        <p className="mt-0.5 text-xs text-subtle">
+        <p className="mt-3 mb-0 text-sm text-muted-foreground">选择界面语言 · Choose your language</p>
+        <p className="mt-1 text-xs text-subtle">
           之后可在设置中随时切换 · You can change it anytime in Settings
         </p>
-        <div className="mt-8 flex gap-4">
+        <div className="mt-7 flex flex-col gap-3 sm:flex-row sm:gap-4">
           <Option main="中文" sub="简体中文界面" onClick={() => void chooseLanguage("zh")} />
           <Option main="English" sub="English interface" onClick={() => void chooseLanguage("en")} />
         </div>

@@ -7,8 +7,11 @@ type Dict = Record<string, { zh: string; en: string }>;
 
 const dict: Dict = {
   "app.name": { zh: "scoopUI", en: "scoopUI" },
+  "app.subtitle": { zh: "Windows 软件包管理", en: "Windows package manager" },
+  "app.localManager": { zh: "本机环境已连接", en: "Local environment connected" },
 
   // ---------------- 导航(P03)
+  "nav.workspace": { zh: "工作区", en: "Workspace" },
   "nav.installed": { zh: "已装软件", en: "Installed" },
   "nav.browse": { zh: "浏览软件包", en: "Browse" },
   "nav.buckets": { zh: "桶管理", en: "Buckets" },
@@ -135,6 +138,8 @@ const dict: Dict = {
 
   // ---------------- 已装列表 P04
   "installed.title": { zh: "已装软件包", en: "Installed Apps" },
+  "installed.total": { zh: "本机软件包", en: "Packages on this device" },
+  "installed.outdatedCount": { zh: "待更新", en: "Updates available" },
   "installed.desc": {
     zh: "本机已通过 Scoop 安装的软件包;存在新版本的软件包会标记为“过期”。",
     en: "Apps installed via Scoop on this machine. Apps with a newer version available are marked as outdated.",

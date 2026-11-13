@@ -1,7 +1,17 @@
 // P04 · 已装软件包列表页(F01 已装部分 / F03 / F04 / F06 / F07 / F08)
 // 支持复选框多选,对所选软件包执行批量更新/批量卸载(flow §1.6:逐项生成 InstallJob)
 import { useEffect, useMemo, useState } from "react";
-import { Check, CircleArrowUp, LoaderCircle, RefreshCw, Search, Trash2, TriangleAlert, X } from "lucide-react";
+import {
+  Check,
+  CircleArrowUp,
+  LoaderCircle,
+  Package,
+  RefreshCw,
+  Search,
+  Trash2,
+  TriangleAlert,
+  X,
+} from "lucide-react";
 
 import { t } from "@/i18n";
 import {
@@ -21,6 +31,7 @@ import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableWrap } from "@/components/ui/table";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { EmptyState } from "@/components/EmptyState";
+import { PageHeader } from "@/components/PageHeader";
 
 export function InstalledView() {
   useLang();
@@ -130,32 +141,53 @@ export function InstalledView() {
 
   return (
     <div className="flex h-full min-w-0 flex-col">
-      <div className="bg-grid relative px-7 pt-6 pb-4">
-        <div className="bg-glow-top pointer-events-none absolute inset-0" />
-        <div className="relative flex items-center gap-2">
-          <div className="min-w-0 flex-1">
-            <h1 className="text-2xl font-semibold">{t("installed.title")}</h1>
-            <p className="mt-1 text-[13px] text-muted-foreground">{t("installed.desc")}</p>
-          </div>
-          <Button variant="outline" disabled={loading.status} onClick={() => void refreshStatus()}>
-            {loading.status ? (
-              <LoaderCircle className="size-4 animate-spin text-primary" />
-            ) : (
-              <RefreshCw className="size-4" />
-            )}
-            {t("installed.checkUpdates")}
-          </Button>
-          <Button disabled={!outdatedList.length} onClick={() => setUpdateAllOpen(true)}>
-            <CircleArrowUp className="size-4" />
-            {t("installed.updateAll")}
-            {outdatedList.length > 0 && (
-              <span className="rounded-sm bg-black/25 px-1.5 text-xs">{outdatedList.length}</span>
-            )}
-          </Button>
-        </div>
-      </div>
+      <PageHeader
+        icon={Package}
+        title={t("installed.title")}
+        description={t("installed.desc")}
+        actions={
+          <>
+            <Button variant="outline" disabled={loading.status} onClick={() => void refreshStatus()}>
+              {loading.status ? (
+                <LoaderCircle className="size-4 animate-spin" />
+              ) : (
+                <RefreshCw className="size-4" />
+              )}
+              {t("installed.checkUpdates")}
+            </Button>
+            <Button disabled={!outdatedList.length} onClick={() => setUpdateAllOpen(true)}>
+              <CircleArrowUp className="size-4" />
+              {t("installed.updateAll")}
+              {outdatedList.length > 0 && (
+                <span className="rounded bg-black/15 px-1.5 text-xs">{outdatedList.length}</span>
+              )}
+            </Button>
+          </>
+        }
+      />
 
-      <div className="flex min-h-0 flex-1 flex-col gap-3 px-7 pb-6">
+      <div className="flex min-h-0 flex-1 flex-col gap-3 px-7 pt-4 pb-6">
+        <div className="grid shrink-0 grid-cols-2 gap-3">
+          <div className="flex items-center gap-3 rounded-xl border border-border/75 bg-card/70 px-4 py-2.5 shadow-sm">
+            <div className="flex size-8 items-center justify-center rounded-lg bg-muted text-muted-foreground">
+              <Package className="size-4" />
+            </div>
+            <div>
+              <div className="text-[11px] font-medium text-muted-foreground">{t("installed.total")}</div>
+              <div className="font-mono text-lg font-semibold leading-5 tabular-nums">{installed.length}</div>
+            </div>
+          </div>
+          <div className="flex items-center gap-3 rounded-xl border border-warning/20 bg-[var(--warning-soft)] px-4 py-2.5 shadow-sm">
+            <div className="flex size-8 items-center justify-center rounded-lg bg-background/60 text-warning">
+              <CircleArrowUp className="size-4" />
+            </div>
+            <div>
+              <div className="text-[11px] font-medium text-muted-foreground">{t("installed.outdatedCount")}</div>
+              <div className="font-mono text-lg font-semibold leading-5 tabular-nums text-warning">{outdatedList.length}</div>
+            </div>
+          </div>
+        </div>
+
         <div className="flex items-center gap-2">
           <div className="relative min-w-0 flex-1">
             <Search className="absolute top-3 left-3 size-4 text-subtle" />
@@ -222,7 +254,7 @@ export function InstalledView() {
             <EmptyState title={t("installed.noMatch")} hint={t("installed.noMatchHint")} />
           )
         ) : (
-          <TableWrap className="min-h-0 flex-1">
+            <TableWrap className="min-h-0 flex-1">
             <Table>
               <TableHeader>
                 <TableRow className="hover:bg-transparent">

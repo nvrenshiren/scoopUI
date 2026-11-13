@@ -1,0 +1,51 @@
+/* Generated from COHESION design system 2.0.0; do not edit. */
+:root.shadcn-scope[data-shadcn-theme="light"] {
+  --subtle: rgba(0,0,0,0.541);
+  --border-strong: #d9d9d9;
+  --success: #368011;
+  --success-solid: #52c41a;
+  --success-soft: #f6ffed;
+  --warning: #96670c;
+  --warning-solid: #faad14;
+  --warning-soft: #fffbe6;
+  --info: #1369e2;
+  --info-solid: #1677ff;
+  --info-soft: #e6f4ff;
+  --destructive-glow: #fff2f0;
+  --primary-glow: color-mix(in srgb, var(--primary) 18%, transparent);
+  --primary-glow-soft: color-mix(in srgb, var(--primary) 10%, transparent);
+  --warning-15: color-mix(in srgb, var(--warning) 16%, transparent);
+  --surface-glass: color-mix(in srgb, var(--card) 94%, transparent);
+  --canvas-grid: rgba(22,124,75,0.04);
+  --canvas-cyan: rgba(23,164,189,0.12);
+  --canvas-lime: rgba(177,198,64,0.105);
+  --canvas-green: rgba(66,161,54,0.065);
+  --font-heading-family: "Segoe UI Variable", "Segoe UI", "Microsoft YaHei UI", system-ui, sans-serif;
+  --font-body-family: "Segoe UI Variable", "Segoe UI", "Microsoft YaHei UI", system-ui, sans-serif;
+  --font-mono-family: "Cascadia Code", Consolas, "Liberation Mono", monospace;
+}
+:root.shadcn-scope[data-shadcn-theme="dark"] {
+  --subtle: rgba(255,255,255,0.459);
+  --border-strong: #424242;
+  --success: #49aa19;
+  --success-solid: #49aa19;
+  --success-soft: #162312;
+  --warning: #d89614;
+  --warning-solid: #d89614;
+  --warning-soft: #2b2111;
+  --info: #4486e3;
+  --info-solid: #1668dc;
+  --info-soft: #111a2c;
+  --destructive-glow: #2c1618;
+  --primary-glow: color-mix(in srgb, var(--primary) 18%, transparent);
+  --primary-glow-soft: color-mix(in srgb, var(--primary) 10%, transparent);
+  --warning-15: color-mix(in srgb, var(--warning) 16%, transparent);
+  --surface-glass: color-mix(in srgb, var(--card) 94%, transparent);
+  --canvas-grid: rgba(92,184,137,0.035);
+  --canvas-cyan: rgba(23,164,189,0.06);
+  --canvas-lime: rgba(177,198,64,0.035);
+  --canvas-green: rgba(66,161,54,0.035);
+  --font-heading-family: "Segoe UI Variable", "Segoe UI", "Microsoft YaHei UI", system-ui, sans-serif;
+  --font-body-family: "Segoe UI Variable", "Segoe UI", "Microsoft YaHei UI", system-ui, sans-serif;
+  --font-mono-family: "Cascadia Code", Consolas, "Liberation Mono", monospace;
+}

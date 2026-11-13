@@ -21,6 +21,7 @@
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
+    "sync:cohesion": "node scripts/sync-cohesion-theme.mjs",
     "tauri": "tauri"
   },
   "dependencies": {
