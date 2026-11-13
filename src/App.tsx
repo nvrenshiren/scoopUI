@@ -94,13 +94,13 @@ function Shell() {
           </div>
           <div className="min-w-0">
             <div className="font-heading text-[15px] font-semibold tracking-[-0.02em]">scoopUI</div>
-            <div className="max-w-[160px] overflow-hidden text-[11px] text-ellipsis whitespace-nowrap text-muted-foreground">
+            <div className="max-w-[160px] overflow-hidden text-xs text-ellipsis whitespace-nowrap text-muted-foreground">
               {t("app.subtitle")}
             </div>
           </div>
         </div>
 
-        <div className="px-5 pb-2 pt-4 text-[10px] font-semibold uppercase tracking-[0.12em] text-subtle">
+        <div className="px-5 pb-2 pt-4 text-xs font-semibold uppercase tracking-[0.12em] text-subtle">
           {t("nav.workspace")}
         </div>
         <nav className="flex flex-col gap-1 px-3">
@@ -154,12 +154,12 @@ function Shell() {
             }
             onClick={() => useApp.setState({ jobsPanelOpen: !jobsPanelOpen })}
           />
-          <div className="mt-1 flex items-center gap-2 px-3 pb-1 pt-2 text-[11px] text-muted-foreground">
+          <div className="mt-1 flex items-center gap-2 px-3 pb-1 pt-2 text-xs text-muted-foreground">
             <span className="size-1.5 rounded-full bg-success" />
             <span className="truncate">{scoopVersion ? `Scoop ${scoopVersion}` : "Scoop"}</span>
           </div>
         </div>
-        <div className="px-5 text-[10px] tracking-wide text-subtle">scoopUI</div>
+        <div className="px-5 text-xs tracking-wide text-subtle">scoopUI</div>
       </aside>
 
       <div className="flex min-h-0 min-w-0 flex-1 flex-col">
@@ -169,7 +169,7 @@ function Shell() {
             <ChevronRight className="size-3.5 text-subtle" />
             <span className="font-medium text-foreground">{t(`nav.${view}`)}</span>
           </div>
-          <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
+          <div className="flex items-center gap-2 text-xs text-muted-foreground">
             <span className="size-1.5 rounded-full bg-success" />
             {t("app.localManager")}
           </div>

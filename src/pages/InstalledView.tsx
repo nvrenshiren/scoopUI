@@ -173,7 +173,7 @@ export function InstalledView() {
               <Package className="size-4" />
             </div>
             <div>
-              <div className="text-[11px] font-medium text-muted-foreground">{t("installed.total")}</div>
+              <div className="text-xs font-medium text-muted-foreground">{t("installed.total")}</div>
               <div className="font-mono text-lg font-semibold leading-5 tabular-nums">{installed.length}</div>
             </div>
           </div>
@@ -182,7 +182,7 @@ export function InstalledView() {
               <CircleArrowUp className="size-4" />
             </div>
             <div>
-              <div className="text-[11px] font-medium text-muted-foreground">{t("installed.outdatedCount")}</div>
+              <div className="text-xs font-medium text-muted-foreground">{t("installed.outdatedCount")}</div>
               <div className="font-mono text-lg font-semibold leading-5 tabular-nums text-warning">{outdatedList.length}</div>
             </div>
           </div>
@@ -193,6 +193,7 @@ export function InstalledView() {
             <Search className="absolute top-3 left-3 size-4 text-subtle" />
             <Input
               className="pl-9"
+              aria-label={t("installed.filter")}
               placeholder={t("installed.filter")}
               value={filter}
               onChange={(e) => setFilter(e.target.value)}
@@ -294,7 +295,7 @@ export function InstalledView() {
                         <Checkbox
                           checked={isSelected}
                           onCheckedChange={(v) => toggleSelect(app.name, v === true)}
-                          aria-label={app.name}
+                          aria-label={t("installed.selectPackage", { name: app.name })}
                         />
                       </TableCell>
                       <TableCell className="font-mono font-medium">

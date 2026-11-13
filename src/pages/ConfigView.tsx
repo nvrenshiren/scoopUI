@@ -63,12 +63,16 @@ function EditableField({
   onCommit,
   secret,
   number,
+  labelId,
+  helpId,
 }: {
   item: ConfigItem;
   scoopConfig: ScoopConfigMap;
   onCommit: (item: ConfigItem, value: string) => void;
   secret?: boolean;
   number?: boolean;
+  labelId: string;
+  helpId: string;
 }) {
   const cur = scoopConfig[item.key];
   const curStr = cur != null ? String(cur) : "";
@@ -85,6 +89,9 @@ function EditableField({
   return (
     <div className="flex items-center gap-1.5">
       <Input
+        id={`config-${item.key}-input`}
+        aria-labelledby={labelId}
+        aria-describedby={helpId}
         type={secret && !show ? "password" : number ? "number" : "text"}
         value={draft}
         placeholder={item.def != null && item.def !== "" ? String(item.def) : ""}
@@ -103,6 +110,8 @@ function EditableField({
           variant="ghost"
           size="iconSm"
           title={t("config.toggleShow")}
+          aria-label={t("config.toggleShow")}
+          aria-pressed={show}
           onClick={() => setShow((s) => !s)}
         >
           {show ? <EyeOff className="size-3.5" /> : <Eye className="size-3.5" />}
@@ -116,26 +125,38 @@ function Control({
   item,
   scoopConfig,
   onCommit,
+  labelId,
+  helpId,
 }: {
   item: ConfigItem;
   scoopConfig: ScoopConfigMap;
   onCommit: (item: ConfigItem, value: string) => void;
+  labelId: string;
+  helpId: string;
 }) {
   const cur = scoopConfig[item.key];
   switch (item.control) {
     case "bool": {
       const checked = item.key in scoopConfig ? cur === true : item.def === true;
-      return <Switch checked={checked} onCheckedChange={(v) => onCommit(item, v ? "true" : "false")} />;
+      return (
+        <Switch
+          checked={checked}
+          ariaLabelledBy={labelId}
+          ariaDescribedBy={helpId}
+          onCheckedChange={(v) => onCommit(item, v ? "true" : "false")}
+        />
+      );
     }
     case "enum": {
       const curStr = cur != null ? String(cur) : String(item.def ?? "");
       return (
-        <div className="flex gap-1.5">
+        <div className="flex gap-1.5" role="group" aria-labelledby={labelId} aria-describedby={helpId}>
           {item.options?.map((opt) => (
             <Button
               key={opt}
               size="sm"
               variant={curStr === opt ? "default" : "outline"}
+              aria-pressed={curStr === opt}
               onClick={() => onCommit(item, opt)}
             >
               {opt}
@@ -147,6 +168,9 @@ function Control({
     case "readonly":
       return (
         <div
+          role="note"
+          aria-labelledby={labelId}
+          aria-describedby={helpId}
           className="max-w-[260px] truncate font-mono text-xs text-subtle"
           title={cur != null ? JSON.stringify(cur) : ""}
         >
@@ -161,6 +185,8 @@ function Control({
           onCommit={onCommit}
           secret={item.control === "secret"}
           number={item.control === "number"}
+          labelId={labelId}
+          helpId={helpId}
         />
       );
   }
@@ -178,20 +204,29 @@ function ConfigRow({
   onReset: (item: ConfigItem) => void;
 }) {
   const isSet = item.key in scoopConfig;
+  const labelId = `config-${item.key}-label`;
+  const helpId = `config-${item.key}-help`;
+  const label = t(`config.item.${item.key}.label`);
   return (
     <div className="flex items-start justify-between gap-4 border-b border-border/60 py-3 last:border-0">
       <div className="min-w-0 flex-1">
-        <div className="flex items-center gap-1.5 text-[13px] font-medium">
-          <span>{t(`config.item.${item.key}.label`)}</span>
+        <div id={labelId} className="flex items-center gap-1.5 text-[13px] font-medium">
+          <span>{label}</span>
           {item.danger && <Badge variant="warning">{t("config.dangerBadge")}</Badge>}
         </div>
-        <div className="mt-0.5 text-xs text-muted-foreground">{tf(`config.item.${item.key}.help`, "")}</div>
-        <div className="mt-1 font-mono text-[10px] text-subtle select-text">{item.key}</div>
+        <div id={helpId} className="mt-0.5 text-xs text-muted-foreground">{tf(`config.item.${item.key}.help`, "")}</div>
+        <div className="mt-1 font-mono text-xs text-subtle select-text">{item.key}</div>
       </div>
       <div className="flex shrink-0 items-center gap-2 pt-0.5">
-        <Control item={item} scoopConfig={scoopConfig} onCommit={onCommit} />
+        <Control item={item} scoopConfig={scoopConfig} onCommit={onCommit} labelId={labelId} helpId={helpId} />
         {isSet && item.control !== "readonly" && (
-          <Button variant="ghost" size="iconSm" title={t("config.reset")} onClick={() => onReset(item)}>
+          <Button
+            variant="ghost"
+            size="iconSm"
+            title={t("config.reset")}
+            aria-label={`${t("config.reset")}: ${label}`}
+            onClick={() => onReset(item)}
+          >
             <RotateCcw className="size-3.5 text-subtle" />
           </Button>
         )}

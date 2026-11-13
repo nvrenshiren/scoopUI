@@ -59,6 +59,7 @@ export function BrowseView() {
           <Search className="absolute top-3 left-3 size-4 text-subtle" />
           <Input
             className="pl-9"
+            aria-label={t("browse.searchPlaceholder")}
             placeholder={t("browse.searchPlaceholder")}
             value={query}
             onChange={(e) => setQuery(e.target.value)}

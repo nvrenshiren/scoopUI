@@ -7,6 +7,7 @@ import { switchLanguage, switchTheme, useApp, useLang } from "@/store";
 import type { Theme } from "@/types";
 import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/PageHeader";
+import packageJson from "../../package.json";
 
 const THEMES: Theme[] = ["dark", "light", "system"];
 
@@ -70,12 +71,20 @@ export function SettingsView() {
           title={t("settings.language")}
           desc={t("settings.languageDesc")}
         >
-          <div className="mt-3.5 flex gap-3">
-            <Button variant={lang === "zh" ? "default" : "outline"} onClick={() => void switchLanguage("zh")}>
+          <div className="mt-3.5 flex gap-3" role="group" aria-label={t("settings.language")}>
+            <Button
+              variant={lang === "zh" ? "default" : "outline"}
+              aria-pressed={lang === "zh"}
+              onClick={() => void switchLanguage("zh")}
+            >
               {lang === "zh" && <Check className="size-3.5" />}
               中文
             </Button>
-            <Button variant={lang === "en" ? "default" : "outline"} onClick={() => void switchLanguage("en")}>
+            <Button
+              variant={lang === "en" ? "default" : "outline"}
+              aria-pressed={lang === "en"}
+              onClick={() => void switchLanguage("en")}
+            >
               {lang === "en" && <Check className="size-3.5" />}
               English
             </Button>
@@ -84,11 +93,12 @@ export function SettingsView() {
 
         {/* 主题(暗色默认;亮/暗/跟随系统三选一) */}
         <Section icon={<SlidersVertical className="size-[18px]" />} title={t("settings.theme")}>
-          <div className="mt-3.5 flex gap-3">
+          <div className="mt-3.5 flex gap-3" role="group" aria-label={t("settings.theme")}>
             {THEMES.map((th) => (
               <Button
                 key={th}
                 variant={theme === th ? "default" : "outline"}
+                aria-pressed={theme === th}
                 onClick={() => void switchTheme(th)}
               >
                 {theme === th && <Check className="size-3.5" />}
@@ -123,7 +133,7 @@ export function SettingsView() {
         <Section icon={<Info className="size-[18px]" />} title={t("settings.about")}>
           <dl className="mt-3 grid grid-cols-[minmax(100px,160px)_1fr] gap-x-4 gap-y-1.5 font-mono text-xs">
             <dt className="text-subtle">{t("settings.appVersion")}</dt>
-            <dd className="m-0 select-text">scoopUI 0.1.0</dd>
+            <dd className="m-0 select-text">{`scoopUI ${packageJson.version}`}</dd>
             <dt className="text-subtle">{t("settings.scoopVersion")}</dt>
             <dd className="m-0 select-text">{scoopVersion || "—"}</dd>
           </dl>
