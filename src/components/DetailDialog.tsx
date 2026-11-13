@@ -8,7 +8,7 @@ import { enqueue, selectBusyTargets, selectOutdatedNames, useApp, useLang } from
 import { bucketNameOf } from "@/utils";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 
 export function DetailDialog() {
@@ -60,15 +60,15 @@ export function DetailDialog() {
 
   return (
     <Dialog open={!!name} onOpenChange={(v) => !v && close()}>
-      <DialogContent aria-describedby={undefined}>
+      <DialogContent className="sm:w-[min(672px,calc(100vw-64px))]" aria-describedby={undefined}>
         {/* 头部:图标 + 名称 + 版本(mono)+ 状态 Badge(设计系统 §10.3) */}
-        <div className="flex items-center gap-3 border-b border-border/70 bg-background/35 px-6 pt-5 pb-4">
+        <div className="flex items-center gap-3 border-b border-border/70 bg-popover px-6 pt-5 pb-4">
           <div className="flex size-11 shrink-0 items-center justify-center rounded-xl border border-border bg-accent text-accent-foreground">
             <Package className="size-[22px]" />
           </div>
           <div className="flex min-w-0 flex-1 items-center gap-2.5">
-            <h3 className="mb-0 font-mono text-lg font-semibold tracking-[-0.015em]">{name}</h3>
-            {version && <span className="font-mono text-[13px] text-muted-foreground">{version}</span>}
+            <DialogTitle className="mb-0 min-w-0 truncate font-mono text-lg font-semibold tracking-[-0.015em]">{name}</DialogTitle>
+            {version && <span className="font-mono text-xs text-muted-foreground">{version}</span>}
             {isOutdated ? (
               <Badge variant="warning">
                 <TriangleAlert />
@@ -108,7 +108,7 @@ export function DetailDialog() {
               </div>
             </div>
           ) : (
-            <dl className="my-1 grid grid-cols-[minmax(100px,140px)_1fr] gap-x-5 gap-y-3 text-[13px]">
+            <dl className="my-1 grid grid-cols-[minmax(100px,140px)_1fr] gap-x-5 gap-y-3 text-sm">
               {pairs.map(([key, value]) => (
                 <div key={key} className="contents">
                   <dt className="text-subtle">{tf("detail.field." + key, key)}</dt>
@@ -123,7 +123,7 @@ export function DetailDialog() {
                         href={website}
                         target="_blank"
                         rel="noreferrer"
-                        className="text-info hover:underline"
+                        className="text-link hover:text-link-hover hover:underline"
                       >
                         {value}
                       </a>
@@ -139,12 +139,12 @@ export function DetailDialog() {
           )}
         </div>
 
-        <div className="flex items-center justify-end gap-2 border-t border-border/70 bg-background/35 px-6 py-3.5">
+        <div className="flex items-center justify-end gap-2 border-t border-border/70 bg-popover px-6 py-3.5">
           <Button variant="secondary" onClick={close}>
             {t("common.close")}
           </Button>
           {busy ? (
-            <span className="flex items-center gap-2 text-[13px] text-muted-foreground">
+            <span className="flex items-center gap-2 text-sm text-muted-foreground">
               <LoaderCircle className="size-4 animate-spin text-primary" />
               {t("common.loading")}
             </span>

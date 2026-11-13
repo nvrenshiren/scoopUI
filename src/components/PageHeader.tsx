@@ -16,12 +16,12 @@ export function PageHeader({
       <div className="bg-grid pointer-events-none absolute inset-0 opacity-45" />
       <div className="bg-glow-top pointer-events-none absolute inset-0 opacity-60" />
       <div className="relative flex items-center gap-3.5">
-        <div className="flex size-10 shrink-0 items-center justify-center rounded-xl border border-border/80 bg-card/80 text-primary shadow-sm">
+        <div className="flex size-10 shrink-0 items-center justify-center rounded-xl border border-border/80 bg-card text-primary shadow-sm">
           <Icon className="size-[18px]" />
         </div>
         <div className="min-w-0 flex-1">
-          <h1 className="mb-1 text-[23px] font-semibold tracking-[-0.025em]">{title}</h1>
-          <p className="mb-0 max-w-[720px] text-[13px] leading-5 text-muted-foreground">{description}</p>
+          <h1 className="mb-1 text-2xl font-semibold tracking-[-0.025em]">{title}</h1>
+          <p className="mb-0 max-w-[720px] text-sm leading-5 text-muted-foreground">{description}</p>
         </div>
         {actions && <div className="relative flex shrink-0 items-center gap-2">{actions}</div>}
       </div>

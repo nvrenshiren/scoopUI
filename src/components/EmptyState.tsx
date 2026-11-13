@@ -19,10 +19,10 @@ export function EmptyState({
 }) {
   const Glyph = Icon ?? (error ? TriangleAlert : Package);
   return (
-    <div className="flex flex-1 flex-col items-center justify-center gap-2 px-6 py-12 text-center">
+    <div role={error ? "alert" : undefined} className="flex flex-1 flex-col items-center justify-center gap-2 px-6 py-12 text-center">
       <div
         className={cn(
-          "mb-1 flex size-14 items-center justify-center rounded-2xl border",
+          "mb-1 flex size-14 items-center justify-center rounded-xl border",
           error
             ? "border-destructive/25 bg-[var(--destructive-glow)] text-destructive"
             : "border-border/80 bg-card text-muted-foreground shadow-sm",
@@ -30,8 +30,8 @@ export function EmptyState({
       >
         <Glyph className="size-7" />
       </div>
-      <div className="text-base font-medium">{title}</div>
-      {hint && <div className="max-w-[480px] text-[13px] leading-6 text-muted-foreground">{hint}</div>}
+      <h2 className="mb-0 text-base font-medium">{title}</h2>
+      {hint && <div className="max-w-[480px] text-sm leading-6 text-muted-foreground">{hint}</div>}
       {children && <div className="mt-3">{children}</div>}
     </div>
   );

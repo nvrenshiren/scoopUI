@@ -26,8 +26,8 @@ function stateBadgeVariant(state: JobState): "success" | "destructive" | "info" 
 }
 
 function StateGlyph({ job }: { job: JobDto }) {
-  if (job.state === "running") return <LoaderCircle className="size-3.5 shrink-0 animate-spin text-primary" />;
-  if (job.state === "succeeded") return <Check className="size-3.5 shrink-0 text-primary" />;
+  if (job.state === "running") return <LoaderCircle className="size-3.5 shrink-0 animate-spin text-info" />;
+  if (job.state === "succeeded") return <Check className="size-3.5 shrink-0 text-success" />;
   if (job.state === "failed") return <TriangleAlert className="size-3.5 shrink-0 text-destructive" />;
   if (job.state === "cancelled") return <X className="size-3.5 shrink-0 text-subtle" />;
   return <List className="size-3.5 shrink-0 text-subtle" />;
@@ -53,6 +53,25 @@ export function JobsPanel() {
   useEffect(() => {
     if (logRef.current) logRef.current.scrollTop = logRef.current.scrollHeight;
   }, [selectedLog.length, selected?.id]);
+
+  function closePanel(restoreFocus = false) {
+    useApp.setState({ jobsPanelOpen: false });
+    if (restoreFocus) {
+      requestAnimationFrame(() => document.getElementById("jobs-toggle")?.focus());
+    }
+  }
+
+  useEffect(() => {
+    if (!open) return;
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.key !== "Escape") return;
+      e.preventDefault();
+      e.stopPropagation();
+      closePanel(true);
+    }
+    document.addEventListener("keydown", onKeyDown, true);
+    return () => document.removeEventListener("keydown", onKeyDown, true);
+  }, [open]);
 
   // 点外优先关闭 + 拦截穿透
   useEffect(() => {
@@ -95,53 +114,58 @@ export function JobsPanel() {
   return (
     <div
       ref={panelRef}
-      className="surface-glass fixed right-5 bottom-5 z-40 flex max-h-[min(600px,calc(100vh-40px))] w-[min(480px,calc(100vw-32px))] flex-col overflow-hidden rounded-2xl border border-border/80 shadow-[var(--shadow-xl)]"
+      role="region"
+      aria-labelledby="jobs-panel-title"
+      className="fixed right-5 bottom-5 z-40 flex max-h-[min(600px,calc(100vh-40px))] w-[min(480px,calc(100vw-32px))] flex-col overflow-hidden rounded-xl border border-border/80 bg-card shadow-xl"
     >
       {anyRunning && <div className="running-bar" />}
 
       <div className="flex items-center gap-2 border-b border-border/70 px-4 py-3.5">
         <List className="size-[15px]" />
-        <span className="font-heading text-sm font-semibold tracking-[-0.01em]">{t("jobs.title")}</span>
+        <h2 id="jobs-panel-title" className="mb-0 font-heading text-sm font-semibold tracking-[-0.01em]">{t("jobs.title")}</h2>
         <span className="flex-1" />
         <Button
           variant="ghost"
           size="iconSm"
           aria-label={t("common.close")}
-          onClick={() => useApp.setState({ jobsPanelOpen: false })}
+          onClick={() => closePanel(true)}
         >
           <X className="size-3.5" />
         </Button>
       </div>
 
       {sorted.length === 0 ? (
-        <div className="p-6 text-center text-[13px] text-muted-foreground">{t("jobs.empty")}</div>
+        <div className="p-6 text-center text-sm text-muted-foreground">{t("jobs.empty")}</div>
       ) : (
         <>
           <div className="flex max-h-[180px] flex-col gap-0.5 overflow-auto px-2">
             {sorted.map((job) => (
               <div
                 key={job.id}
-                role="button"
-                tabIndex={0}
-                onClick={() => setSelectedId(job.id)}
-                onKeyDown={(e) => e.key === "Enter" && setSelectedId(job.id)}
                 className={cn(
-                  "flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-[13px]",
+                  "flex items-center gap-2 rounded-md px-1 py-1",
                   selected?.id === job.id
                     ? "bg-accent shadow-[inset_2px_0_0_var(--primary)]"
-                    : "hover:bg-muted/70",
+                    : "",
                 )}
               >
-                <StateGlyph job={job} />
-                <span className="max-w-[200px] overflow-hidden text-ellipsis whitespace-nowrap">
-                  {jobTitle(job)}
-                </span>
-                <span className="flex-1" />
-                <Badge variant={stateBadgeVariant(job.state)}>{t("jobs.state." + job.state)}</Badge>
+                <button
+                  type="button"
+                  aria-current={selected?.id === job.id ? "true" : undefined}
+                  onClick={() => setSelectedId(job.id)}
+                  className="flex min-w-0 flex-1 cursor-pointer items-center gap-2 rounded-md px-1.5 py-1 text-left text-sm outline-none hover:bg-muted/70 focus-visible:ring-[3px] focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                >
+                  <StateGlyph job={job} />
+                  <span className="max-w-[200px] overflow-hidden text-ellipsis whitespace-nowrap">
+                    {jobTitle(job)}
+                  </span>
+                  <span className="flex-1" />
+                  <Badge variant={stateBadgeVariant(job.state)}>{t("jobs.state." + job.state)}</Badge>
+                </button>
                 {(job.state === "queued" || job.state === "running") && (
                   <Button
                     variant="cancel"
-                    className="h-6 px-2 text-xs"
+                    size="xs"
                     onClick={(e) => {
                       e.stopPropagation();
                       void cancelJob(job.id);
@@ -160,7 +184,7 @@ export function JobsPanel() {
                 {t("jobs.log")} · <span className="font-mono">{jobTitle(selected)}</span>
               </div>
               {(selected.state === "running" || selected.state === "queued") && (
-                <Progress className="mb-2" value={null} />
+                <Progress className="mb-2" value={null} aria-label={t("jobs.state.running")} />
               )}
               <div ref={logRef} className="log-box h-[180px]">
                 {selectedLog.length ? selectedLog.join("\n") : <span className="text-subtle">…</span>}

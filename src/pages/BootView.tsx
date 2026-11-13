@@ -83,6 +83,8 @@ function Field({
   type?: string;
   onChange: (v: string) => void;
 }) {
+  const helpId = `${id}-help`;
+  const errorId = `${id}-error`;
   return (
     <div>
       <Label htmlFor={id}>
@@ -100,12 +102,13 @@ function Field({
         placeholder={placeholder}
         className="font-mono"
         aria-invalid={!!error}
+        aria-describedby={error ? errorId : help ? helpId : undefined}
         onChange={(e) => onChange(e.target.value)}
       />
       {error ? (
-        <div className="mt-1 text-xs leading-relaxed text-destructive">{error}</div>
+        <div id={errorId} className="mt-1 text-sm leading-relaxed text-destructive">{error}</div>
       ) : (
-        help && <div className="mt-1 text-xs leading-relaxed text-subtle">{help}</div>
+        help && <div id={helpId} className="mt-1 text-xs leading-relaxed text-subtle">{help}</div>
       )}
     </div>
   );
@@ -192,11 +195,11 @@ export function BootView() {
     return (
       <div className="app-shell relative flex h-full items-center justify-center px-6">
         <div className="bg-grid pointer-events-none absolute inset-0 opacity-40" />
-        <div className="relative flex min-w-[320px] flex-col items-center rounded-2xl border border-border/80 bg-card/85 px-10 py-9 text-center shadow-lg backdrop-blur-xl">
+        <div className="relative flex min-w-[320px] flex-col items-center rounded-xl border border-border/80 bg-card px-10 py-9 text-center shadow-lg">
           <div className="mb-5 flex size-12 items-center justify-center rounded-xl border border-border bg-secondary text-primary">
             <LoaderCircle className="size-5 animate-spin" />
           </div>
-          <div className="font-heading text-lg font-semibold">{t("boot.detecting")}</div>
+          <h1 className="mb-0 font-heading text-lg font-semibold">{t("boot.detecting")}</h1>
           <div className="mt-2 max-w-[360px] text-xs leading-5 text-muted-foreground">{t("boot.detectHint")}</div>
         </div>
       </div>
@@ -207,7 +210,7 @@ export function BootView() {
     <div className="app-shell relative flex h-full items-center justify-center overflow-auto px-6 py-7">
       <div className="bg-grid pointer-events-none absolute inset-0 opacity-40" />
 
-      <div className="relative z-[1] flex max-h-[calc(100vh-56px)] w-[min(900px,calc(100vw-48px))] flex-col overflow-hidden rounded-2xl border border-border/80 bg-card/90 shadow-xl backdrop-blur-xl">
+      <div className="relative z-[1] flex max-h-[calc(100vh-56px)] w-[min(900px,calc(100vw-48px))] flex-col overflow-hidden rounded-xl border border-border/80 bg-card shadow-xl">
         <div className="gradient-line" />
         <div className="overflow-auto px-7 pt-6 pb-7 sm:px-9">
           <div className="mb-6 flex items-start gap-4">
@@ -215,11 +218,11 @@ export function BootView() {
               {installing ? <Download className="size-6" /> : <TriangleAlert className="size-6" />}
             </div>
             <div>
-              <div className="mb-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-primary">scoopUI</div>
+              <div className="mb-1 text-xs font-semibold uppercase tracking-[0.12em] text-primary">scoopUI</div>
               <h2 className="mb-0 text-2xl font-semibold tracking-[-0.025em]">
                 {installing ? t("setup.installing") : t("setup.notFoundTitle")}
               </h2>
-              <p className="mt-1.5 text-[13px] leading-relaxed text-muted-foreground">
+              <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">
                 {installing ? t("setup.installingDesc") : t("setup.notFoundDesc")}
               </p>
             </div>
@@ -227,18 +230,18 @@ export function BootView() {
 
           {/* 失败原因(F19:业务语言 + 可重试) */}
           {!installing && errorText && (
-            <div className="mt-4 flex gap-2.5 rounded-md border border-destructive/35 bg-[var(--destructive-glow)] px-3.5 py-3 text-[13px] text-destructive">
+            <div role="alert" className="mt-4 flex gap-2.5 rounded-md border border-destructive/35 bg-[var(--destructive-glow)] px-3.5 py-3 text-sm text-destructive">
               <TriangleAlert className="mt-0.5 size-[15px] shrink-0" />
               <div>
                 <div className="font-medium">{t("setup.failedTitle")}</div>
-                <div className="mt-0.5 text-xs">{errorText}</div>
+                <div className="mt-0.5 text-sm">{errorText}</div>
               </div>
             </div>
           )}
 
           {installing ? (
             <>
-              <Progress className="mt-4 mb-2" value={null} />
+              <Progress className="mt-4 mb-2" value={null} aria-label={t("setup.installing")} />
               <div ref={logRef} className="log-box h-[260px]">
                 {installLog.length ? installLog.join("\n") : <span className="text-subtle">…</span>}
               </div>
@@ -325,31 +328,48 @@ export function BootView() {
                   </div>
                 </div>
 
-                <label className="col-span-full flex cursor-pointer items-center gap-2.5 rounded-lg border border-border/70 bg-background/45 px-3 py-2.5 text-[13px]">
+                <div className="col-span-full flex items-center gap-2.5 rounded-lg border border-border/70 bg-background px-3 py-2.5 text-sm">
                   <Checkbox
                     checked={form.proxyUseDefaultCredentials}
+                    aria-labelledby="setup-default-credentials-label"
+                    aria-describedby={errors.proxyUseDefaultCredentials ? "setup-default-credentials-error" : undefined}
+                    aria-invalid={!!errors.proxyUseDefaultCredentials}
                     onCheckedChange={(v) => patch({ proxyUseDefaultCredentials: v === true })}
                   />
-                  {t("setup.useDefaultCred")}
-                </label>
+                  <span
+                    id="setup-default-credentials-label"
+                    className="cursor-pointer"
+                    onClick={() => patch({ proxyUseDefaultCredentials: !form.proxyUseDefaultCredentials })}
+                  >
+                    {t("setup.useDefaultCred")}
+                  </span>
+                </div>
                 {errors.proxyUseDefaultCredentials && (
-                  <div className="col-span-full -mt-2.5 text-xs leading-relaxed text-destructive">
+                  <div id="setup-default-credentials-error" className="col-span-full -mt-2.5 text-sm leading-relaxed text-destructive">
                     {errors.proxyUseDefaultCredentials}
                   </div>
                 )}
-                <label className="col-span-full flex cursor-pointer items-start gap-2.5 rounded-lg border border-border/70 bg-background/45 px-3 py-2.5 text-[13px]">
+                <div className="col-span-full flex items-start gap-2.5 rounded-lg border border-border/70 bg-background px-3 py-2.5 text-sm">
                   <Checkbox
                     className="mt-0.5"
                     checked={form.runAsAdmin}
+                    aria-labelledby="setup-run-as-admin-label"
+                    aria-describedby="setup-run-as-admin-help"
                     onCheckedChange={(v) => patch({ runAsAdmin: v === true })}
                   />
-                  <span>
-                    {t("setup.runAsAdmin")}
-                    <span className="mt-0.5 block text-xs leading-relaxed text-subtle">
+                  <div className="min-w-0">
+                    <span
+                      id="setup-run-as-admin-label"
+                      className="cursor-pointer"
+                      onClick={() => patch({ runAsAdmin: !form.runAsAdmin })}
+                    >
+                      {t("setup.runAsAdmin")}
+                    </span>
+                    <span id="setup-run-as-admin-help" className="mt-0.5 block text-xs leading-relaxed text-subtle">
                       {t("setup.runAsAdminHelp")}
                     </span>
-                  </span>
-                </label>
+                  </div>
+                </div>
               </div>
 
               <div className="mt-5 flex justify-end">

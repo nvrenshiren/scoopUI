@@ -13,6 +13,9 @@
   --color-primary-foreground: var(--primary-foreground);
   --color-primary-hover: var(--primary-hover);
   --color-primary-active: var(--primary-active);
+  --color-link: var(--link);
+  --color-link-hover: var(--link-hover);
+  --color-link-active: var(--link-active);
   --color-secondary: var(--secondary);
   --color-secondary-foreground: var(--secondary-foreground);
   --color-muted: var(--muted);
@@ -38,10 +41,6 @@
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
-  --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.12);
-  --shadow-md: 0 4px 12px rgb(0 0 0 / 0.16);
-  --shadow-lg: 0 16px 36px rgb(0 0 0 / 0.22);
-  --shadow-xl: 0 24px 64px rgb(0 0 0 / 0.3);
 }
 
 @layer base {
@@ -98,8 +97,8 @@
   }
 
   ::selection {
-    color: var(--foreground);
-    background: color-mix(in srgb, var(--primary) 28%, transparent);
+    color: var(--primary-foreground);
+    background: var(--primary);
   }
 
   :focus-visible {
@@ -186,10 +185,6 @@
     user-select: text;
   }
 
-  .surface-glass {
-    background: var(--surface-glass);
-    backdrop-filter: blur(16px);
-  }
 }
 
 @keyframes slide-bar {

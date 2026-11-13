@@ -7,7 +7,7 @@ function TableWrap({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
       className={cn(
-        "overflow-y-auto overflow-x-hidden rounded-xl border border-border/80 bg-card/80 shadow-sm",
+        "overflow-y-auto overflow-x-hidden rounded-xl border border-border/80 bg-card shadow-sm",
         className,
       )}
       {...props}
@@ -16,7 +16,7 @@ function TableWrap({ className, ...props }: React.ComponentProps<"div">) {
 }
 
 function Table({ className, ...props }: React.ComponentProps<"table">) {
-  return <table className={cn("w-full border-collapse text-[13px]", className)} {...props} />;
+  return <table className={cn("w-full border-collapse text-sm", className)} {...props} />;
 }
 
 function TableHeader({ className, ...props }: React.ComponentProps<"thead">) {
@@ -40,7 +40,7 @@ function TableHead({ className, ...props }: React.ComponentProps<"th">) {
   return (
     <th
       className={cn(
-        "sticky top-0 z-[1] h-10 bg-card/95 px-3 text-left text-xs font-semibold whitespace-nowrap text-muted-foreground backdrop-blur",
+        "sticky top-0 z-[1] h-10 bg-card px-2 text-left text-sm font-medium whitespace-nowrap text-foreground",
         "border-b border-border/80",
         className,
       )}
@@ -52,7 +52,7 @@ function TableHead({ className, ...props }: React.ComponentProps<"th">) {
 function TableCell({ className, ...props }: React.ComponentProps<"td">) {
   return (
     <td
-      className={cn("h-11 max-w-[360px] overflow-hidden px-3 text-ellipsis whitespace-nowrap", className)}
+      className={cn("h-11 max-w-[360px] overflow-hidden px-2 text-ellipsis align-middle whitespace-nowrap", className)}
       {...props}
     />
   );

@@ -43,19 +43,22 @@ function NavItem({
   icon: Icon,
   label,
   badge,
+  id,
   onClick,
 }: {
   active: boolean;
   icon: ComponentType<{ className?: string }>;
   label: string;
   badge?: ReactNode;
+  id?: string;
   onClick: () => void;
 }) {
   return (
     <button
+      id={id}
       onClick={onClick}
       className={cn(
-        "group flex h-10 cursor-pointer items-center gap-2.5 rounded-lg px-3 text-[13px] font-medium transition-colors duration-150",
+        "group flex h-10 cursor-pointer items-center gap-2.5 rounded-lg px-3 text-sm font-medium transition-colors duration-150",
         active
           ? "bg-accent text-accent-foreground shadow-[inset_2px_0_0_var(--primary)]"
           : "text-muted-foreground hover:bg-secondary/80 hover:text-foreground",
@@ -93,7 +96,7 @@ function Shell() {
             <Terminal className="size-[19px]" />
           </div>
           <div className="min-w-0">
-            <div className="font-heading text-[15px] font-semibold tracking-[-0.02em]">scoopUI</div>
+            <div className="font-heading text-base font-semibold tracking-[-0.02em]">scoopUI</div>
             <div className="max-w-[160px] overflow-hidden text-xs text-ellipsis whitespace-nowrap text-muted-foreground">
               {t("app.subtitle")}
             </div>
@@ -139,9 +142,10 @@ function Shell() {
 
         <div className="flex-1" />
 
-        <div className="mx-3 mb-3 rounded-xl border border-border/70 bg-background/45 p-2">
+        <div className="mx-3 mb-3 rounded-xl border border-border/70 bg-background p-2">
           <NavItem
             active={jobsPanelOpen}
+            id="jobs-toggle"
             icon={ListChecks}
             label={t("nav.jobs")}
             badge={

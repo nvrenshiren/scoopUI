@@ -69,7 +69,7 @@ export function BrowseView() {
         {loading ? (
           <div className="flex flex-col items-center justify-center gap-3 py-12 text-muted-foreground">
             <LoaderCircle className="size-8 animate-spin text-primary" />
-            <span className="text-[13px]">{t("browse.loadingAll")}</span>
+            <span className="text-sm">{t("browse.loadingAll")}</span>
           </div>
         ) : error ? (
           <EmptyState error title={t("browse.loadFailed")} hint={t("error.scoopUnavailable")}>

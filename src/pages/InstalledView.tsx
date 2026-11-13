@@ -159,7 +159,7 @@ export function InstalledView() {
               <CircleArrowUp className="size-4" />
               {t("installed.updateAll")}
               {outdatedList.length > 0 && (
-                <span className="rounded bg-black/15 px-1.5 text-xs">{outdatedList.length}</span>
+                <span className="ml-1 border-l border-primary-foreground/30 pl-2 text-xs tabular-nums">{outdatedList.length}</span>
               )}
             </Button>
           </>
@@ -168,7 +168,7 @@ export function InstalledView() {
 
       <div className="flex min-h-0 flex-1 flex-col gap-3 px-7 pt-4 pb-6">
         <div className="grid shrink-0 grid-cols-2 gap-3">
-          <div className="flex items-center gap-3 rounded-xl border border-border/75 bg-card/70 px-4 py-2.5 shadow-sm">
+          <div className="flex items-center gap-3 rounded-xl border border-border/75 bg-card px-4 py-2.5 shadow-sm">
             <div className="flex size-8 items-center justify-center rounded-lg bg-muted text-muted-foreground">
               <Package className="size-4" />
             </div>
@@ -178,7 +178,7 @@ export function InstalledView() {
             </div>
           </div>
           <div className="flex items-center gap-3 rounded-xl border border-warning/20 bg-[var(--warning-soft)] px-4 py-2.5 shadow-sm">
-            <div className="flex size-8 items-center justify-center rounded-lg bg-background/60 text-warning">
+            <div className="flex size-8 items-center justify-center rounded-lg bg-background text-warning">
               <CircleArrowUp className="size-4" />
             </div>
             <div>
@@ -206,7 +206,7 @@ export function InstalledView() {
 
         {selected.size > 0 && (
           <div className="flex items-center gap-3 rounded-lg border border-primary/30 bg-[var(--primary-glow-soft)] px-4 py-2.5">
-            <span className="text-[13px] font-medium text-primary">
+            <span className="text-sm font-medium text-primary">
               {t("installed.selectedCount", { n: selected.size })}
             </span>
             <div className="flex-1" />
@@ -218,7 +218,7 @@ export function InstalledView() {
               <CircleArrowUp className="size-4" />
               {t("installed.updateSelected")}
               {selectedUpdatable.length > 0 && (
-                <span className="rounded-sm bg-black/25 px-1.5 text-xs">{selectedUpdatable.length}</span>
+                <span className="ml-1 border-l border-primary-foreground/30 pl-2 text-xs tabular-nums">{selectedUpdatable.length}</span>
               )}
             </Button>
             <Button

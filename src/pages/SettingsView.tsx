@@ -25,11 +25,11 @@ function Section({
   className?: string;
 }) {
   return (
-    <section className={`rounded-xl border border-border/80 bg-card/80 p-5 shadow-sm ${className ?? ""}`}>
+    <section className={`rounded-xl border border-border/80 bg-card p-5 shadow-sm ${className ?? ""}`}>
       <div className="flex items-center gap-3">
         <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-accent text-accent-foreground">{icon}</span>
         <div className="min-w-0 flex-1">
-          <div className="font-heading text-sm font-semibold">{title}</div>
+          <h2 className="mb-0 font-heading text-sm font-semibold">{title}</h2>
           {desc && <div className="mt-0.5 text-xs text-muted-foreground">{desc}</div>}
         </div>
       </div>
@@ -116,7 +116,7 @@ export function SettingsView() {
           className="xl:col-span-2"
         >
           {installCfgRows.length === 0 ? (
-            <div className="mt-3 text-[13px] text-subtle">{t("settings.notConfigured")}</div>
+            <div className="mt-3 text-sm text-subtle">{t("settings.notConfigured")}</div>
           ) : (
             <dl className="mt-3 grid grid-cols-[minmax(140px,240px)_1fr] gap-x-4 gap-y-1.5 font-mono text-xs">
               {installCfgRows.map(([key, value]) => (

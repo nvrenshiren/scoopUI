@@ -31,12 +31,7 @@ export function ConfirmDialog({
 }) {
   return (
     <Dialog open={open} onOpenChange={(v) => !v && onCancel()}>
-      <DialogContent
-        className="w-[min(480px,calc(100vw-64px))]"
-        onKeyDown={(e) => {
-          if (e.key === "Enter") onConfirm();
-        }}
-      >
+      <DialogContent className="w-[min(480px,calc(100vw-32px))]">
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
           {message && <DialogDescription className="whitespace-pre-wrap">{message}</DialogDescription>}
