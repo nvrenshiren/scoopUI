@@ -24,11 +24,11 @@
 | Toast | sonner | — |
 | Rust 关键依赖 | `tauri-plugin-single-instance`(F18 单实例)、`serde`/`serde_json`(IPC 与持久化序列化)、`regex`(命令注入白名单校验) | — |
 
-**选型理由**(项目历史决策,见 `CLAUDE.md`):本项目最初以 Electron 技术方向规划(部分文档路径历史遗留 `electron` 命名),后**整体重写为 Tauri 2 + React 19**——Tauri 复用系统 WebView2、无需打包 Chromium,安装包更小,且 Rust 后端天然适合本产品"调用本机 `scoop` 命令行工具"的场景。
+**选型理由**:本项目使用 Tauri 2 + React 19。Tauri 复用系统 WebView2,无需打包 Chromium;Rust 后端适合调用本机 `scoop` 命令行工具。
 
-## 2. 端(endpoint)划分
+## 2. 实现层划分
 
-opcflow 坐标系的"端"在本项目按**技术实现面**划分为两端,与 `project.md` 第 4 节"端清单"(业务交付形态,只有一个 Windows 桌面端)是不同维度——业务上只有一个可交付产品,技术上前后端代码分属两个可独立验收的实现面:
+产品以 Windows 桌面应用交付,内部按技术职责分为 Rust 后端和 React 前端:
 
 | 端 | 目录 | 职责 |
 | --- | --- | --- |
@@ -43,7 +43,7 @@ opcflow 坐标系的"端"在本项目按**技术实现面**划分为两端,与 `
   `jobs: JobManager`(任务队列,见 api-doc 第 5 节)。这些状态通过 `Arc<Core>` 注入所有 Tauri 命令。
 - **阻塞工作**:Tauri 同步命令在主线程执行；文件写入、Scoop 探测/查询、`taskkill` 等待、安装 runner 生成通过 `spawn_blocking` 执行。任务 worker 和 stdout/stderr reader 自己使用专用线程执行阻塞子进程 I/O。设置读取只在 app runtime 建立前的启动路径执行。
 - **锁中毒策略**:`Core.settings`、`Core.settings_persistence`、`Core.scoop` 与 `JobManager.state` 使用 `std::sync::Mutex`，生产代码通过带明确理由的 `expect` fail-fast，不调用 `PoisonError::into_inner` 恢复。`settings`、`scoop`、`JobManager.state` 只保护短时内存状态更新/快照；唯一例外是设置文件写入会在 `spawn_blocking` 中持有单独的 `settings_persistence` 写入顺序锁,但已释放 `settings` 数据锁。panic 可能中断原地状态更新，恢复后继续使用无法证明一致的数据会让任务状态或设置错误，因此不恢复；`spawn_blocking` 中的 panic 由 Tauri 命令转换为 JoinError，job worker 中的 panic 会终止 worker。不要在这些锁保护区内加入 `.await`、子进程等待或用户可控回调。
-- **写命令**:一律不同步等待,入队后立即返回 `id`,执行结果经 `job-changed`/`job-log` 事件流回传(见 api-doc 第 4 节)。
+- **长时写操作**:入队后立即返回 `id`,由单 worker 顺序执行,结果经 `job-changed`/`job-log` 事件流回传(见 api-doc 第 4 节)。Scoop 配置读写采用请求-响应命令,不进入 InstallJob。
 - **单实例**(F18):`tauri-plugin-single-instance` 拦截二次启动,唤起并聚焦已运行窗口。
 
 ## 4. 关键架构决策与踩坑记录
@@ -66,10 +66,10 @@ opcflow 坐标系的"端"在本项目按**技术实现面**划分为两端,与 `
 | ARCH11 | 同步 Tauri handler 不执行同步磁盘或进程等待;这类工作进 `spawn_blocking`，任务队列子进程则留在专用 worker | 同步 handler 在主线程运行;避免设置写盘、runner 生成、Scoop 探测/查询和 `taskkill` 等待冻结 UI |
 | ARCH12 | Mutex poison 一律 fail-fast，不恢复 poisoned 状态 | panic 可能打断原地修改;拒绝继续读取/写入无法证明一致的 settings、Scoop 缓存或 job 状态 |
 
-## 5. 目录结构与 codeRoots 映射
+## 5. 目录结构
 
 ```
-src-tauri/src/            ← rust 端(codeRoots: src-tauri/src/{module}.rs)
+src-tauri/src/            ← Rust 后端
   commands.rs              全部 Tauri IPC 命令(api-doc 真相源)
   jobs.rs                  InstallJob 队列与状态机
   scoop.rs                 scoop 可执行文件定位与子进程构建
@@ -78,8 +78,8 @@ src-tauri/src/            ← rust 端(codeRoots: src-tauri/src/{module}.rs)
   settings.rs              本机持久化(db-doc 真相源)
   lib.rs / main.rs         应用入口、状态装配、IPC 注册
 
-src/                       ← web 端(codeRoots: src/{module}、src/{module}.ts(x))
-  pages/                   页面级组件(对应页面 PRD P01~P10)
+src/                       ← React 前端
+  pages/                   页面级组件(对应页面 PRD P01~P11)
   components/              跨页面复用组件与 shadcn/ui 基础组件(components/ui/)
   store.ts                 zustand 全局状态与 Boot Sequence 编排
   api.ts                   IPC 调用封装(含浏览器 mock 降级)

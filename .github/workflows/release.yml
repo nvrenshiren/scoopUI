@@ -20,7 +20,7 @@ permissions:
 
 jobs:
   build:
-    name: Build & publish continuous build
+    name: Build & publish versioned release
     runs-on: windows-latest
     steps:
       - name: Checkout
@@ -73,10 +73,13 @@ jobs:
       - name: Package portable (no-install) build
         shell: pwsh
         run: |
-          $exe = Get-ChildItem -Path "src-tauri/target/release" -Filter "*.exe" -File | Select-Object -First 1
+          $exe = "src-tauri/target/release/scoop-gui.exe"
+          if (-not (Test-Path -LiteralPath $exe -PathType Leaf)) {
+            throw "Expected release executable was not found: $exe"
+          }
           $portableDir = "src-tauri/target/release/portable"
           New-Item -ItemType Directory -Path $portableDir | Out-Null
-          Copy-Item $exe.FullName -Destination "$portableDir/scoopUI.exe"
+          Copy-Item -LiteralPath $exe -Destination "$portableDir/scoopUI.exe"
           Copy-Item "src-tauri/target/release/WebView2Loader.dll" -Destination $portableDir -ErrorAction SilentlyContinue
           Compress-Archive -Path "$portableDir/*" -DestinationPath "src-tauri/target/release/scoopUI-portable-x64.zip"
 

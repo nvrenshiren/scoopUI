@@ -15,7 +15,7 @@
 ```bash
 git clone https://github.com/nvrenshiren/scoopUI.git
 cd scoopUI
-npm install
+npm ci
 npm run tauri dev    # 开发模式,首次 Rust 编译约 10 分钟
 ```
 
@@ -42,10 +42,10 @@ Mutex 中毒策略与同步磁盘/进程操作边界见 [ARCHITECTURE.md §3](AR
 
 在改动代码前,请先阅读:
 
-- [CLAUDE.md](CLAUDE.md) — 架构要点、踩坑记录、关键设计约束(强烈建议先读,包含大量非显而易见的实现细节)
+- [CLAUDE.md](CLAUDE.md) — 当前架构要点与关键实现约定
 - [docs/prd/flows/scoop-gui.md](docs/prd/flows/scoop-gui.md) — 全部实体状态机的唯一真相源;涉及状态流转的改动必须先同步这里
 - [docs/prd/modules/scoop-gui.md](docs/prd/modules/scoop-gui.md) — 功能清单与对应的 scoop CLI 命令
-- [docs/design/systems/electron.md](docs/design/systems/electron.md) — 设计系统硬约束(暗色默认、run-green、组件形态等)
+- [docs/design/systems/web.md](docs/design/systems/web.md) — COHESION 设计系统接入、主题同步与桌面界面约定
 
 硬约束(PR 中不应违反):
 
@@ -64,7 +64,7 @@ Mutex 中毒策略与同步磁盘/进程操作边界见 [ARCHITECTURE.md §3](AR
 ## Pull Request 流程
 
 1. Fork 仓库并基于 `master` 创建分支
-2. 完成改动后确保「提交前自检」两步均通过
+2. 完成改动后确保「提交前自检」中的适用命令均通过
 3. 提交 PR,按照 PR 模板填写改动内容与测试情况
 4. CI([ci.yml](.github/workflows/ci.yml))会自动跑类型检查、前端构建与 Rust 单测,请确保全部通过
 5. 等待 review;根据反馈继续推送新提交即可,无需强制推送覆盖历史

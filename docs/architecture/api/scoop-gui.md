@@ -10,8 +10,7 @@
 
 ## 1. 概述
 
-本产品**没有网络 API**(不联网,project.md §3.3"软件源唯一性")——"API"specifically 指前端(web
-端,`src/api.ts`)与 Rust 后端(rust 端)之间的 **Tauri IPC 命令契约**。命令分两类:
+本产品没有自有服务端或应用级网络 API;它通过本机 Scoop CLI 访问用户已配置的软件源。本文的"API"专指前端(`src/api.ts`)与 Rust 后端之间的 **Tauri IPC 命令契约**。命令分为长时任务与请求-响应两类:
 
 - **读命令**:直接 `invoke` 并 `await` 返回结果(`scoop_list` / `scoop_status` / `scoop_search` /
   `scoop_info` / `bucket_list` / `bucket_known` / `get_settings` / `detect_scoop`)。
@@ -20,11 +19,11 @@
 
 前端统一在 `src/api.ts` 封装每条命令;浏览器 mock 模式(无 `__TAURI_INTERNALS__` 时)在同文件内降级为假数据,契约形状必须与本文档一致。
 
-> 例外:`scoop_config_get/set/rm`(F20,§3.16~3.18)是同步读写命令 —— 读直接读 scoop 配置文件、写走 `scoop config` CLI 即时生效,**均不**入 InstallJob 队列(配置写入是毫秒级操作,无需进度流)。
+> `scoop_config_get/set/rm`(F20,§3.16~3.18)采用请求-响应,不进入 InstallJob 队列。读取直接读 Scoop 配置文件;写入通过 Scoop CLI 并在后台线程等待命令完成,无需任务进度事件。
 
 ## 2. 安全校验(公共约束)
 
-所有写操作与查询参数在 Rust 侧过 `commands.rs` 顶部的白名单正则,防止拼进 `cmd` 的参数携带元字符:
+拼入 Scoop 命令的包名、桶名、仓库地址、搜索词与配置键值在 Rust 侧按用途白名单校验。语言和主题使用固定枚举校验:
 
 | 正则 | 用途 | 规则 |
 | --- | --- | --- |
@@ -42,10 +41,10 @@
 返回当前持久化设置(见 db-doc §3.1)。无参数,同步命令。
 
 ### 3.2 `set_language(language: string) -> Result<(), string>`
-`language` 必须 ∈ `{"zh","en"}`,否则返回 `Err("unsupported language")`。成功后立即持久化(F13/F14)。
+`language` 必须 ∈ `{"zh","en"}`,否则返回 `Err("unsupported language")`。成功后立即更新设置并持久化(F13/F14);磁盘写入在阻塞线程执行。
 
 ### 3.3 `set_theme(theme: string) -> Result<(), string>`
-`theme` 必须 ∈ `{"dark","light","system"}`,否则报错。成功后立即持久化。
+`theme` 必须 ∈ `{"dark","light","system"}`,否则报错。成功后立即更新设置并持久化;磁盘写入在阻塞线程执行。
 
 ### 3.4 `detect_scoop() -> Result<DetectResult, string>`(异步)
 F15。探测本机 `scoop` 可达性并缓存定位结果(`shims_dir`)供后续读/写命令注入 PATH。
@@ -117,7 +116,7 @@ interface JobDto { id: number; kind: JobKind; target: string; state: JobState; e
 返回该任务累计的逐行输出(已清理 ANSI 转义与 `\r` 行内重绘,取每段最后非空内容)。`id` 不存在返回空数组(非错误)。
 
 ### 3.16 `scoop_config_get() -> Result<ScoopConfigMap, string>`(异步)
-F20。直接读取 scoop 配置文件 `%USERPROFILE%\.config\scoop\config.json`(`XDG_CONFIG_HOME` 优先),返回"键→当前值"映射(仅含**已显式设置过**的项);文件缺失/解析失败返回空对象(视作全部为默认)。**不**经 scoop CLI,**不**入 InstallJob 队列。
+F20。直接读取 Scoop 配置文件 `%USERPROFILE%\.config\scoop\config.json`(`XDG_CONFIG_HOME` 优先),返回"键→当前值"映射(仅含**已显式设置过**的项);文件缺失/解析失败返回空对象(视作全部为默认)。**不**经 Scoop CLI,**不**入 InstallJob 队列。
 
 ```ts
 type ScoopConfigValue = boolean | number | string | string[] | Record<string, unknown> | null
@@ -125,10 +124,10 @@ type ScoopConfigMap = Record<string, ScoopConfigValue>
 ```
 
 ### 3.17 `scoop_config_set(name: string, value: string) -> Result<(), string>`(异步)
-F20。`name` 必须 ∈ `CONFIG_KEYS`(32 项白名单),否则报 `unknown config key`;`value` 校验 `CONFIG_VALUE_RE`。对应 `scoop config <name> <value>`,由 scoop 负责布尔/数值类型转换与切换分支等副作用。即时生效,不入队。
+F20。`name` 必须 ∈ `CONFIG_KEYS`(32 项白名单),否则报 `unknown config key`;`value` 校验 `CONFIG_VALUE_RE`。对应 `scoop config <name> <value>`,由 Scoop 负责布尔/数值类型转换与切换分支等副作用。命令完成后返回结果,不进入 InstallJob 队列。
 
 ### 3.18 `scoop_config_rm(name: string) -> Result<(), string>`(异步)
-F20。`name` 校验白名单;对应 `scoop config rm <name>`,恢复该项默认。
+F20。`name` 校验白名单;对应 `scoop config rm <name>`,恢复该项默认并返回命令结果,不进入 InstallJob 队列。
 
 ## 4. 事件流(前端订阅,非请求-响应)
 
@@ -150,7 +149,7 @@ F20。`name` 校验白名单;对应 `scoop config rm <name>`,恢复该项默认�
 | --- | --- | --- | --- |
 | API01 | 2026-07-12 | `scoop_info` 返回二元组数组而非固定结构体 | `scoop info` 输出字段因包而异(如是否为 global 安装、是否有 notes),固定结构体无法覆盖;前端已按 key 做 i18n 回退,契约维持现状 |
 | API02 | 2026-07-12 | 写操作一律不同步返回结果,统一走 `enqueue_job`/`install_scoop` + 事件流 | 安装/卸载/更新/桶增删/协助安装均为长耗时操作,同步等待会阻塞 UI;F17"安装任务进度反馈"要求可观察的中间进度,事件流是唯一满足该要求的形状 |
-| API03 | 2026-07-16 | scoop config 读用直接读 `config.json`、写用 `scoop config` CLI,且三条命令均不入 InstallJob 队列 | 读文件一次拿全部当前值,避免解析 `scoop config` 无参输出的非表格键值;写走 CLI 让 scoop 处理布尔/数值类型转换与切分支等副作用;配置写入毫秒级完成,不属于 F17"长时任务"范畴,无需队列与进度事件 |
+| API03 | 2026-07-16 | Scoop 配置读取直接读 `config.json`,写入通过 `scoop config` CLI,三条命令均采用请求-响应而不入 InstallJob 队列 | 读取一次取得全部已设置值;写走 CLI 让 Scoop 负责类型转换与副作用。它们没有独立长时任务状态与进度事件,但 CLI 请求仍可能等待进程完成 |
 
 ## 7. 文档范围声明
 

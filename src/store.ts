@@ -203,7 +203,7 @@ export async function refreshAvailable(force = false) {
 
 /**
  * 已添加桶 / 已知桶清单分别请求、分别记录失败(两条独立的 F19 呈现);
- * 一个失败不吞另一个,避免"仅已知桶清单出错"被误判为整页失败(见 P06 验收文档已知偏差)。
+ * 一个失败不吞另一个,让已添加桶与已知桶区段能分别呈现数据或重试状态。
  */
 export async function refreshBuckets() {
   set((s) => ({ loading: { ...s.loading, buckets: true } }));

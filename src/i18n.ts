@@ -308,8 +308,8 @@ const dict: Dict = {
   // ---------------- Scoop 配置 P11(F20)
   "config.title": { zh: "Scoop 配置", en: "Scoop Configuration" },
   "config.desc": {
-    zh: "管理 Scoop 自身的全部配置项(scoop config);修改即时生效。",
-    en: "Manage all of Scoop's own settings (scoop config). Changes apply immediately.",
+    zh: "管理当前支持的 Scoop 配置项(scoop config);修改即时生效。",
+    en: "Manage supported Scoop settings (scoop config). Changes apply immediately.",
   },
   "config.loadFailed": { zh: "配置读取失败", en: "Failed to read configuration" },
   "config.notSet": { zh: "未设置", en: "Not set" },

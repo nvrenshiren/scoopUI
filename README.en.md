@@ -7,7 +7,7 @@
 **A graphical desktop client for the [Scoop](https://scoop.sh) command-line package manager on Windows**
 
 [![CI](https://github.com/nvrenshiren/scoopUI/actions/workflows/ci.yml/badge.svg)](https://github.com/nvrenshiren/scoopUI/actions/workflows/ci.yml)
-[![Release](https://img.shields.io/github/v/release/nvrenshiren/scoopUI?include_prereleases&label=release)](https://github.com/nvrenshiren/scoopUI/releases)
+[![Release](https://img.shields.io/github/v/release/nvrenshiren/scoopUI?label=release)](https://github.com/nvrenshiren/scoopUI/releases)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Platform](https://img.shields.io/badge/platform-Windows%2010%2F11-0078D6)](https://github.com/nvrenshiren/scoopUI/releases)
 [![Tauri](https://img.shields.io/badge/Tauri-2-FFC131?logo=tauri&logoColor=white)](https://tauri.app)
@@ -29,7 +29,8 @@ scoopUI turns everyday `scoop` command-line workflows — browsing, searching, i
 - **Browse & search** — every installable package across your added buckets, instant keyword filtering, one-click install
 - **Package details** — `scoop info` key/value output plus action buttons that adapt to the package's current state
 - **Bucket management** — list added buckets, browse Scoop's known-bucket catalog, add (including custom repo URLs) or remove buckets
-- **Job queue** — every write operation (install/uninstall/update/bucket add-remove/Scoop install) runs through a single sequential queue with live streaming logs, cancellation (kills the entire process tree), and retry on failure
+- **Long-running job queue** — package and bucket operations plus guided Scoop installation run sequentially with live logs and cancellation; retry by starting the action again from its source page
+- **Scoop settings** — manage supported Scoop configuration values; scalar values apply immediately and complex `private_hosts` is read-only
 - **Guided first-run Scoop install** — detects whether `scoop` is available; if not, presents an editable form covering every parameter of the official `install.ps1` (ScoopDir / ScoopGlobalDir / ScoopCacheDir / Proxy / NoProxy / ProxyCredential / ProxyUseDefaultCredentials / RunAsAdmin), runs once confirmed, supports the UAC elevation path, and persists your settings locally for reinstalls
 - **Bilingual (Chinese/English)** — choose on first launch, switch anytime from Settings with instant effect and persistence
 - **Three themes** — dark / light / follow system, dark by default with the COHESION shadcn theme
@@ -41,19 +42,19 @@ scoopUI turns everyday `scoop` command-line workflows — browsing, searching, i
 
 Grab the latest `*-setup.exe` from [Releases](https://github.com/nvrenshiren/scoopUI/releases) and run it.
 
-> The `latest` pre-release is a rolling build: CI recompiles and refreshes the installer automatically on every commit to `master`.
+When code changes are pushed to `master`, the release workflow increments the patch version and creates a versioned GitHub Release. Markdown-only and `docs/` changes do not trigger a release.
 
 **Requirements**: Windows 10 / 11 (needs the [WebView2 Runtime](https://developer.microsoft.com/microsoft-edge/webview2/), preinstalled on Windows 11 and recent Windows 10 builds); installs per-user, no administrator rights required.
 
 ### Build from source
 
-Prerequisites: [Rust](https://www.rust-lang.org/tools/install) (stable), [Node.js](https://nodejs.org) ≥ 20.19.
+Prerequisites: [Rust](https://www.rust-lang.org/tools/install) 1.88+, [Node.js](https://nodejs.org) 20.19+ or 22.12+.
 
 ```bash
 git clone https://github.com/nvrenshiren/scoopUI.git
 cd scoopUI
-npm install
-npm run tauri build   # NSIS installer → src-tauri/target/release/bundle/nsis/
+npm ci
+npm run tauri build -- -- --locked   # NSIS installer → src-tauri/target/release/bundle/nsis/
 ```
 
 ## Architecture
@@ -65,8 +66,8 @@ src/                 React 19 + TypeScript frontend (Vite 8)
   store.ts           zustand global state: boot sequence, data refresh, job events, derived entity state
   i18n.ts            Full Chinese/English dictionary
   components/ui/     shadcn/ui components (Radix + cva, customized per the design system)
-  pages/             Boot/guided-install · language picker · installed · browse · buckets · settings
-  components/        Detail dialog · job-progress overlay · empty/error states, etc.
+  pages/             Boot/guided-install · language picker · installed · browse · buckets · Scoop config · settings
+  components/        Detail dialog · long-running task panel · empty/error states, etc.
 src-tauri/           Rust backend
   src/scoop.rs       Locating scoop (multiple shim candidates) and spawning child processes (windowless, PATH injection)
   src/parse.rs       CLI table-text parsing (dash-separator rows anchor column boundaries), with real-output unit tests
@@ -78,13 +79,16 @@ src-tauri/           Rust backend
 
 Product requirements, business flows, and state-machine contracts live in [docs/prd/](docs/prd/); the design system is documented in [docs/design/systems/web.md](docs/design/systems/web.md).
 
-## Development & testing
+## Development & checks
 
 ```bash
 npm run tauri dev    # dev mode with hot reload (first Rust compile takes ~10 minutes)
 npm run dev          # frontend only, mock data in the browser (no Rust needed)
-npm run build         # tsc type-check + vite production build
-cd src-tauri && cargo test   # unit tests for the parser and installer script generation (based on real scoop output samples)
+npm run build
+cargo fmt --manifest-path src-tauri/Cargo.toml --all -- --check
+cargo clippy --manifest-path src-tauri/Cargo.toml --locked --all-targets -- -D warnings
+cargo check --manifest-path src-tauri/Cargo.toml --locked
+cargo test --manifest-path src-tauri/Cargo.toml --locked
 ```
 
 ## Tech stack

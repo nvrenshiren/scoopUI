@@ -1,4 +1,4 @@
-// P11 · Scoop 配置页(F20)。可视化 scoop config 支持的全部配置项,改一项即时写入。
+// P11 · Scoop 配置页(F20)。呈现 schema 列出的配置项,可编辑项即时写入。
 // - bool→Switch;enum→Button 段选;number/string/secret→Input(失焦或回车提交);
 //   readonly(private_hosts)→只读展示。
 // - 危险路径项(root/global/cache_path)提交/恢复前弹 ConfirmDialog 警告。

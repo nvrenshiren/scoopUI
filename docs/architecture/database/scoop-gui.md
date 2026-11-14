@@ -20,8 +20,8 @@
 | --- | --- |
 | 配置文件 | `%APPDATA%\scoop-gui\config.json` |
 | 临时工作目录 | `%TEMP%\scoop-gui`(协助安装 runner 脚本落盘用,见 `installer.rs`) |
-| 写入方式 | 原子写入:先写 `config.json.tmp`,`remove_file` 旧文件后 `rename` 到位(Windows 上 rename 到已存在目标会失败,故先删) |
-| 读取失败降级 | 文件不存在或解析失败 → 返回 `Settings::default()`(全字段 `None`/空),不阻塞启动 |
+| 写入方式 | 先写 `config.json.tmp`,再将旧文件移至 `config.json.bak` 并替换主文件;替换失败时恢复旧文件 |
+| 读取失败降级 | 主文件缺失或解析失败时尝试读取 `.bak`;两者都不可读时返回 `Settings::default()`(全字段 `None`/空),不阻塞启动 |
 
 ## 3. 表结构(JSON Schema)
 
@@ -49,7 +49,7 @@
 | `proxyUseDefaultCredentials` | `bool`(默认 `false`) | 是否使用默认凭据(`ProxyUseDefaultCredentials`) |
 | `runAsAdmin` | `bool`(默认 `false`) | 是否以管理员权限运行(`RunAsAdmin`) |
 
-> 备注:`InstallConfig` 同时是 `install_scoop` IPC 命令的入参形状(见 api-doc 第 3.9 节),
+> 备注:`InstallConfig` 同时是 `install_scoop` IPC 命令的入参形状(见 api-doc 第 3.12 节),
 > 持久化与 IPC 传输复用同一 Rust 类型,序列化规则(camelCase)在两处保持一致。
 
 ## 4. 读写路径

@@ -315,10 +315,10 @@
 ## 19. Scoop 配置项
 
 **定义**
-Scoop 配置项是 Scoop 自身在安装完成后、通过 `scoop config` 命令读写的运行时配置集合(下载器 aria2、代理、默认架构、更新分支、目录、令牌等),持久化于 `~/.config/scoop/config.json`。
+Scoop 配置项是 Scoop 安装后通过 `scoop config` 命令管理的运行时配置。本产品当前支持 `src/scoopConfig.ts` 列出的 32 项;其中 31 个标量项可编辑,复杂对象 `private_hosts` 只读呈现。配置默认保存在 `%USERPROFILE%\.config\scoop\config.json`;设置 `XDG_CONFIG_HOME` 时使用该目录下的 `scoop\config.json`。
 
 **范围/边界**
-覆盖 `scoop config` 支持的全部键;本产品对其提供可视化读取与即时写入(F20,阶段一后追加,见模块 PRD 决策 D13)。写入经 `scoop config <key> <value>`、恢复默认经 `scoop config rm <key>`,均即时生效、不进入长时任务队列(InstallJob)。
+产品仅展示 `src/scoopConfig.ts` 定义的受支持键,不声称覆盖 Scoop 命令可能支持的全部键。可编辑项经 `scoop config <key> <value>` 即时写入,恢复默认经 `scoop config rm <key>`;配置操作不进入长时任务队列(InstallJob)。
 
 **关联术语**
 与"安装配置项"(§17,二者是不同阶段的两套配置)、"协助安装"(安装 Scoop 本身的能力)密切相关。

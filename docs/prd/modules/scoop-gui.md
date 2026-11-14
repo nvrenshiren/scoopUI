@@ -18,14 +18,14 @@
 | 模块 ID | scoop-gui |
 | 模块名称 | Scoop 图形化前端 |
 | 一句话职责 | 为本机已安装的 Scoop 提供浏览/搜索/安装/卸载/更新/桶管理的图形化操作界面(摘自 `project.md` 第 5 节) |
-| 唯一端 | electron(本模块仅在 electron 端运行,详见 `project.md` 第 4 节) |
+| 交付形态 | Windows 桌面应用;页面由 Tauri WebView 承载,本机能力由 Rust 后端提供 |
 | 上游角色 | 唯一使用角色 `local-user`(详见 `roles.md` 第 1 节) |
 
 ---
 
-## 2. 功能列表(按端 electron 分组)
+## 2. 功能列表
 
-> 所有功能均仅在 electron 端呈现;所有数据均来源于用户本机已安装的 Scoop(`project.md` 第 3.3 节"软件源唯一性")。功能 ID 在本模块内唯一,供页面 PRD 引用。
+> 功能由 Windows 桌面应用的 Web 前端与 Rust 后端协作提供;包与桶数据来自用户本机的 Scoop(`project.md` 第 3.3 节"软件源唯一性")。功能 ID 在本模块内唯一,供页面 PRD 引用。
 
 ### 2.1 软件包浏览与查询
 
@@ -85,17 +85,17 @@
 
 | 功能 ID | 功能名称 | 一句话业务描述 | 上游引用 |
 | --- | --- | --- | --- |
-| F20 | Scoop 配置可视化编辑 | 以图形界面读取并即时修改 Scoop 自身 `scoop config` 支持的全部配置项(下载器 / 代理 / 更新 / 工具 / 目录 / 令牌等) | `glossary.md`(scoop config 体系) / 决策 D13 |
+| F20 | Scoop 配置可视化编辑 | 显示已知 `scoop config` 配置项;可编辑受支持的标量值,复杂 `private_hosts` 仅只读呈现 | `glossary.md`(Scoop 配置项) / 决策 D13 |
 
-> - F20 覆盖 Scoop 自身配置体系(`scoop config`),与 F13/F14/F16 的"本产品自有持久化"(§4.5)是两套独立数据,互不影响。
+> - F20 展示 `src/scoopConfig.ts` 定义的配置项;标量项可经 `scoop config` 写入,复杂对象 `private_hosts` 只读呈现。它与 F13/F14/F16 的"本产品自有持久化"(§4.5)是两套独立数据,互不影响。
 > - F20 每项改动**即时写入**(`scoop config <k> <v>`),无 InstallJob 队列参与,不属于 F17 长时任务。
 > - 目录类配置项(root/global/cache)改动伴随业务警告:仅改配置、不搬移已有数据(详见 P11 页面 PRD)。
 
 ---
 
-## 3. 页面清单(electron 端)
+## 3. 页面清单(Windows 桌面应用)
 
-> 所有页面仅在 electron 端呈现;页面 ID 在本模块内唯一,供后续页面 PRD 引用。
+> 页面 ID 在本模块内唯一,供后续页面 PRD 与验收文档引用。
 > "主要功能"列引用第 2 节的功能 ID;**不**复述 `flow` 中已定义的状态机(详见 `flow` 第 4 节"单一出现原则")。
 
 | 页面 ID | 页面名称 | 业务目的 | 主要功能(引用 §2) | 入口 | 出口 |
@@ -105,17 +105,17 @@
 | P03 | 主界面壳 | 提供侧边栏导航 + 主区承载,统一收纳已装列表、可装/搜索、桶管理、设置入口 | F01(框架)、F09、F14、F18、F20 | Boot Sequence 进入"进入主界面"(`flow` 2.6.3-8) | 导航到 P04 / P05 / P06 / P09 / P11 |
 | P04 | 已装软件包列表页 | 列出本机已装软件包并标注过期项,支持进入详情、卸载、更新、批量更新 | F01(已装部分)、F03、F04、F06、F07、F08、F17、F19 | 从 P03 侧边栏进入 | 进入 P07(详情/操作)、P08(进度) |
 | P05 | 浏览/搜索软件包页 | 列出已添加桶内的可装软件包,支持关键字搜索、进入详情、执行安装 | F01(可装部分)、F02、F04、F05、F17、F19 | 从 P03 侧边栏进入 | 进入 P07(详情/操作)、P08(进度) |
-| P06 | 桶管理页 | 列出本机已添加桶与 Scoop 已知桶清单,支持添加/移除桶 | F09、F10、F11、F12、F17、F19 | 从 P03 侧边栏进入 | 进入 P07(桶详情)、P08(进度) |
-| P07 | 软件包详情页/对话框 | 展示单个软件包或单个桶的详细信息与可用操作 | F04、F05、F06、F07、F11、F12 | 从 P04(已装项)、P05(可装项)、P06(桶)进入 | 触发操作后转 P08;关闭返回来源页 |
-| P08 | 长时操作进度对话框 | 实时呈现当前 InstallJob 的排队/执行进度与终态结果 | F17、F19 | 从 P04/P05/P06/P07 触发 F05/F06/F07/F08/F11/F12/F16 | 终态后允许关闭,回退到来源页 |
-| P09 | 设置/语言切换页 | 提供界面语言切换入口;切换立即生效并本机持久化 | F14、F19 | 从 P03 侧边栏或菜单进入 | 关闭返回 P03 |
+| P06 | 桶管理页 | 列出本机已添加桶与 Scoop 已知桶清单,支持添加/移除桶 | F09、F10、F11、F12、F17、F19 | 从 P03 侧边栏进入 | 桶操作进入 P08(进度) |
+| P07 | 软件包详情对话框 | 展示单个软件包的详细信息与可用操作 | F04、F05、F06、F07 | 从 P04(已装项)、P05(可装项)进入 | 触发软件包操作后转 P08;关闭返回来源页 |
+| P08 | 长时操作任务面板 | 呈现 InstallJob 的状态、日志与终态结果;失败后从来源页重新发起操作 | F17、F19 | 从 P01/P04/P05/P06/P07 触发 F05/F06/F07/F08/F11/F12/F16 | 终态后可关闭,回到来源页 |
+| P09 | 设置与语言切换页 | 提供语言、主题切换及产品安装配置和版本信息的只读摘要 | F14、F19 | 从 P03 侧边栏进入 | 返回 P03 |
 | P10 | 空状态/错误状态页 | 当主列表为空、Scoop 在运行期间失效、或数据无法读取时,给出业务化提示 | F19(横切) | P03/P04/P05 内部因数据缺失或命令失败而转入 | 用户操作后回到 P03/P04/P05 |
-| P11 | Scoop 配置页 | 可视化读取并即时编辑 Scoop 自身全部配置项,按类别(下载器/网络/更新/工具/目录/令牌)分区呈现 | F20、F19 | 从 P03 侧边栏进入 | 关闭返回 P03 |
+| P11 | Scoop 配置页 | 呈现 32 个受支持配置项;31 个标量项可编辑,`private_hosts` 只读 | F20、F19 | 从 P03 侧边栏进入 | 返回 P03 |
 
 > 备注:
 > - P10 不是独立顶级页面,而是 P03/P04/P05 在特定数据缺失或读取失败状态下的"子状态呈现",是否折叠到所属页面由页面 PRD 决定。
-> - P08 是"长时操作"的统一承载页,凡是 F17 涉及的 InstallJob 执行过程均由此页呈现(详见 `flow` §2.4)。
-> - P07 是详情/操作的聚合入口,内部对"已装详情/可装详情/桶详情"是否分页呈现,由页面 PRD 决定。
+> - P08 是"长时操作"的统一任务面板,包括 F16 协助安装;进度日志由任务面板展示,首启页也会保留安装状态摘要(详见 `flow` §2.4)。
+> - P07 只展示软件包详情;桶管理不提供桶详情对话框。
 > - P01 与 P02 的先后顺序由 `flow` §1.1 / 2.6.3 决定:**先语言偏好,后 Scoop 检测**;P02 仅在"未选择"基态出现。
 > - 单实例约束(F18)的"再次启动聚焦已运行实例"在页面 PRD 中如何具体呈现(例如唤起主窗口、显示提示等),由页面 PRD 展开;本模块 PRD 仅声明该行为存在。
 
@@ -125,23 +125,23 @@
 
 > 本章是模块 PRD 的核心交付。本章只回答"每条业务数据从哪里来、是读还是写、触发哪条 Scoop CLI 命令、是否需要解析输出、是否伴随进度事件流"。**具体存储格式、IPC 协议、缓存策略、技术栈选型不在本章范围内**(详见第 6 节文档范围声明)。
 >
-> 所有命令的输出解析约束(无 `--json`,走文本/表格正则路线)已在 `docs/acceptance/scoop-cli-reference.md` §3.1 明确;数据来源说明以"业务对象"为单位,而非"逐字段"。
+> Scoop CLI 文本表格解析实现位于 `src-tauri/src/parse.rs`;进程调用与参数构造见 `src-tauri/src/scoop.rs`。本章按"业务对象"说明数据来源,不重复源码解析规则。
 
 ### 4.1 软件包相关业务数据
 
 | 业务对象 | 读/写 | 触发命令(关键参数) | 是否需要解析输出 | 是否伴随进度事件流 | 关联功能 |
 | --- | --- | --- | --- | --- | --- |
-| 已装软件包列表 | 读 | `scoop list`(无参数或按名过滤) | 是(文本表格正则,见 `scoop-cli-reference.md` §3.3) | 否(列表查询为瞬时命令) | F01(已装部分)、F04 |
+| 已装软件包列表 | 读 | `scoop list`(无参数或按名过滤) | 是(文本表格解析,见 `src-tauri/src/parse.rs`) | 否(请求-响应) | F01(已装部分)、F04 |
 | 可装软件包列表 | 读 | `scoop search`(无查询参数)或等价"遍历已添加桶内可发现应用包"的 Scoop 能力 | 是(文本表格正则) | 否 | F01(可装部分)、F04 |
-| 单个软件包详细信息 | 读 | `scoop info <app>` | 是(文本表格正则,见 `scoop-cli-reference.md` §3.7) | 否 | F04 |
-| 过期标记比对 | 读 | `scoop status`(用于已知桶内最新版本与本机版本对照) | 是(文本表格正则,见 `scoop-cli-reference.md` §3.4) | 否 | F03 |
+| 单个软件包详细信息 | 读 | `scoop info <app>` | 是(文本解析,见 `src-tauri/src/parse.rs`) | 否 | F04 |
+| 过期标记比对 | 读 | `scoop status`(用于已知桶内最新版本与本机版本对照) | 是(文本表格解析,见 `src-tauri/src/parse.rs`) | 否 | F03 |
 
 ### 4.2 桶相关业务数据
 
 | 业务对象 | 读/写 | 触发命令 | 是否需要解析输出 | 是否伴随进度事件流 | 关联功能 |
 | --- | --- | --- | --- | --- | --- |
-| 已添加桶列表 | 读 | `scoop bucket list` | 是(文本表格正则,见 `scoop-cli-reference.md` §3.5) | 否 | F09、F01(可装部分,依赖该列表确认桶归属) |
-| 已知桶清单 | 读 | `scoop bucket known` | 是(每行一桶名,见 `scoop-cli-reference.md` §3.6) | 否 | F10 |
+| 已添加桶列表 | 读 | `scoop bucket list` | 是(文本表格解析,见 `src-tauri/src/parse.rs`) | 否 | F09、F01(可装部分,依赖该列表确认桶归属) |
+| 已知桶清单 | 读 | `scoop bucket known` | 是(每行一桶名,见 `src-tauri/src/parse.rs`) | 否 | F10 |
 | 添加桶 | 写 | `scoop bucket add <name> [<repo>]` | 是(进度文本 + 结果) | 是(下载/克隆进度) | F11、F17 |
 | 移除桶 | 写 | `scoop bucket rm <name>` | 是(进度文本 + 结果) | 是 | F12、F17 |
 
@@ -152,14 +152,14 @@
 | 安装单包 | 写 | `scoop install <app> [options]`(本阶段 MVP 默认不携带额外 options,见决策 D11) | 是(进度文本 + 结果) | 是(下载/解压/安装各阶段) | F05、F17 |
 | 卸载单包 | 写 | `scoop uninstall <app> [options]` | 是(进度文本 + 结果) | 是 | F06、F17 |
 | 更新单包 | 写 | `scoop update <app> [options]` | 是(进度文本 + 结果) | 是 | F07、F17 |
-| 批量更新所有过期 | 写 | `scoop update *` 或 `scoop update --all`(等价,见 `scoop-cli-reference.md` §4.3) | 是(逐项进度文本 + 汇总结果) | 是(每个对象一条 InstallJob) | F08、F17 |
+| 批量更新所有过期 | 写 | 前端为每个过期包依次入队 `scoop update <app>` | 是(每项单独产生进度与结果) | 是(每个对象一条 InstallJob) | F08、F17 |
 
 ### 4.4 启动期与协助安装
 
 | 业务对象 | 读/写 | 触发命令 | 是否需要解析输出 | 是否伴随进度事件流 | 关联功能 |
 | --- | --- | --- | --- | --- | --- |
 | Scoop 是否可用 | 读 | `scoop --version` 或等价"探测 `scoop` 命令可达性"的最小命令 | 是(成功=可解析版本输出;失败=命令级失败) | 否 | F15 |
-| 协助安装 Scoop | 写 | PowerShell 执行 `install.ps1`(来源:https://github.com/ScoopInstaller/Install),参数集仅限 `ScoopDir / ScoopGlobalDir / ScoopCacheDir / NoProxy / Proxy / ProxyCredential / ProxyUseDefaultCredentials / RunAsAdmin`(详见 `scoop-cli-reference.md` §7) | 是(进度文本 + 结果;同时由 F15 在事后复检本机 `scoop --version`) | 是(下载/解包/写入 PATH 等阶段) | F16、F17、F19 |
+| 协助安装 Scoop | 写 | PowerShell 执行官方 `install.ps1`;参数边界见 `project.md` §3.3,实现见 `src-tauri/src/installer.rs` | 是(进度文本 + 结果;同时由 F15 在事后复检本机 `scoop --version`) | 是(下载/解包/写入 PATH 等阶段) | F16、F17、F19 |
 
 ### 4.5 本机持久化数据
 
@@ -169,7 +169,7 @@
 | 协助安装配置项(确认后的 `install.ps1` 参数集) | 读 + 写 | 本机本地存储(同上,具体位置由 architect 决定) | F16 |
 
 > 备注:
-> - 本机持久化数据**不**包含 Scoop 自身的配置(`scoop config` 体系);对 Scoop 配置的编辑留待后续 spec(详见决策 D09)。
+> - 本机持久化数据**不**包含 Scoop 自身的配置(`scoop config` 体系);其读取与编辑属于 F20,由 Scoop 自身持久化。
 > - 持久化的"读"在 F13 中体现为"首次启动序列读取偏好";在 F14 中体现为"重启后按上次选择显示"(`flow` 2.5.4)。
 > - 持久化的"写"在 F13/F14/F16 中体现为"立即写入本机",失败时的降级行为见 `flow` §1.8 异常分支。
 
@@ -177,21 +177,21 @@
 
 | 业务对象 | 读/写 | 触发命令 / 位置 | 是否需要解析输出 | 是否伴随进度事件流 | 关联功能 |
 | --- | --- | --- | --- | --- | --- |
-| Scoop 全部配置项当前值 | 读 | 直接读 `~/.config/scoop/config.json`(JSON,一次拿全) | 否(JSON 直接反序列化,不走 CLI 文本解析) | 否 | F20 |
-| 单个配置项写入 | 写 | `scoop config <name> <value>` | 否(仅取退出码) | 否(毫秒级同步,不入 InstallJob) | F20 |
-| 单个配置项恢复默认 | 写 | `scoop config rm <name>` | 否 | 否 | F20 |
+| 已支持的 Scoop 配置项当前值 | 读 | 直接读 Scoop 配置文件(默认 `%USERPROFILE%\\.config\\scoop\\config.json`; `XDG_CONFIG_HOME` 可覆盖) | 否(JSON 直接反序列化,不走 CLI 文本解析) | 否 | F20 |
+| 单个配置项写入 | 写 | `scoop config <name> <value>` | 否(仅取退出码) | 否(请求-响应,不入 InstallJob) | F20 |
+| 单个配置项恢复默认 | 写 | `scoop config rm <name>` | 否(仅取退出码) | 否(请求-响应,不入 InstallJob) | F20 |
 
 > - F20 的"读"绕过 CLI 直接读配置文件,是本产品唯一直接读取 Scoop 维护文件的场景(§4.6 其余隐式数据仍只经 CLI);因 `scoop config` 无参输出为非表格键值,直接读 JSON 更稳。
-> - F20 的"写"仍经 `scoop config` CLI,由 Scoop 负责布尔/数值类型转换与切换分支等副作用,不直接改写 config.json。
+> - F20 的"写"仅覆盖受支持的标量配置项,经 `scoop config` CLI 交由 Scoop 处理;复杂对象 `private_hosts` 只读呈现。
 
 ### 4.6 由 Scoop 自身维护的隐式数据
 
 | 业务对象 | 物理位置 | 关联功能 |
 | --- | --- | --- |
-| 已装应用清单 | `~/scoop/apps/*/current/`、`scoop list` 解析结果 | F01、F04 |
-| 桶 manifests 缓存 | `~/scoop/buckets/<bucket>/bucket/`,配合 `use_sqlite_cache`(见决策 D12) | F01、F02 |
-| Scoop 安装路径 / 全局目录 / 缓存目录 | `install.ps1` 写入的环境变量(`SCOOP`、`SCOOP_GLOBAL`、`SCOOP_CACHE`)及默认位置(`scoop-cli-reference.md` §1) | F15、F16 |
-| 桶 git 仓库 | `~/scoop/buckets/<bucket>/`(git 仓库) | F11、F12 |
+| 已装应用清单 | `%USERPROFILE%\\scoop\\apps\\*\\current\\`(默认,可由 `SCOOP` 覆盖)、`scoop list` 解析结果 | F01、F04 |
+| 桶 manifests 缓存 | `%USERPROFILE%\\scoop\\buckets\\<bucket>\\bucket\\`(默认,可由 `SCOOP` 覆盖),配合 `use_sqlite_cache`(见决策 D12) | F01、F02 |
+| Scoop 安装路径 / 全局目录 / 缓存目录 | `install.ps1` 写入的环境变量(`SCOOP`、`SCOOP_GLOBAL`、`SCOOP_CACHE`)及其默认位置 | F15、F16 |
+| 桶 git 仓库 | `%USERPROFILE%\\scoop\\buckets\\<bucket>\\`(默认,可由 `SCOOP` 覆盖; git 仓库) | F11、F12 |
 
 > 备注:
 > - 本节列出的隐式数据均**仅由 Scoop 自身维护**,本产品只读取,**不**直接读写这些目录或仓库。
@@ -208,7 +208,7 @@
 | F05 | `scoop install <app>` | 是 | 是 |
 | F06 | `scoop uninstall <app>` | 是 | 是 |
 | F07 | `scoop update <app>` | 是 | 是 |
-| F08 | `scoop update *` / `scoop update --all` | 是 | 是 |
+| F08 | 对每个过期包依次调用 `scoop update <app>` | 是 | 是 |
 | F09 | `scoop bucket list` | 是 | 否 |
 | F10 | `scoop bucket known` | 是 | 否 |
 | F11 | `scoop bucket add <name> [<repo>]` | 是 | 是 |
@@ -220,13 +220,15 @@
 | F17 | F05/F06/F07/F08/F11/F12/F16 的进度事件流 | 是 | 是 |
 | F18 | scoop-gui 进程自身约束,不依赖 Scoop CLI 数据 | 否 | 否 |
 | F19 | 各底层命令的退出码 / stderr / InstallJob 终态(详见 `flow` §1.9) | 是 | 否 |
-| F20 | 读 `~/.config/scoop/config.json` + 写 `scoop config <k> <v>` / `scoop config rm <k>` | 否(读为 JSON 反序列化;写仅取退出码) | 否 |
+| F20 | 读 `%USERPROFILE%\\.config\\scoop\\config.json`(受 `XDG_CONFIG_HOME` 覆盖) + 写 `scoop config <k> <v>` / `scoop config rm <k>` | 否(读为 JSON 反序列化;写仅取退出码) | 否 |
 
 ---
 
 ## 5. 决策记录(append-only)
 
 > 本节按时间顺序记录本项目评审过程中**讨论过但最终不做的**业务决定。每条决策记录只列"为什么不做",**不**重复上游契约中已经明确的范围。
+
+> D01 与 D09 记录的是 F20 加入前的阶段范围,当前配置编辑范围以 F20 和 D13 为准。
 
 | ID | 日期 | 决策摘要 | 理由(为什么不做) |
 | --- | --- | --- | --- |
@@ -242,10 +244,10 @@
 | D10 | 2026-07-11 | 离线搜索结果缓存由 Scoop 自身(`use_sqlite_cache`)决定,本产品不引入自建缓存 | 与 D03"软件源唯一性"一致:本产品不维护独立于 Scoop 的包索引缓存;可装软件包列表的获取权威来源始终是 Scoop CLI |
 | D11 | 2026-07-11 | F05/F06/F07/F08 不在 MVP 阶段一携带额外 CLI 选项(如 `--global` / `--force` / `--skip-hash-check` 等) | 业务边界:本产品对每项操作仅提供默认调用;额外的 CLI 选项(如"全局安装")可能要求管理员权限或改变业务语义,与 F19 的"提权执行仅作用于 F16"原则冲突,留待后续 spec 单独覆盖 |
 | D12 | 2026-07-11 | 不引入对 `scoop search` 之外的本地索引机制 | 与 D10 同源;若本产品自建本地索引会与 Scoop 自身缓存产生漂移点 |
-| D13 | 2026-07-16 | 阶段一 MVP 之后追加 F20"Scoop 配置可视化编辑",纳入原 D01/D09 曾划出范围的"配置项编辑" | 用户在阶段一验收通过后明确追加该能力;D01/D09 记录的是**当时**阶段一不做的决定,按 append-only 不修改其文字;F20 范围严格限定为 `scoop config` 支持项的读取与即时写入,**不**含 shims 管理、备份还原等其它阶段二特性 |
+| D13 | 2026-07-16 | 阶段一 MVP 之后追加 F20"Scoop 配置可视化管理",纳入原 D01/D09 曾划出范围的"配置项编辑" | 用户在阶段一验收通过后明确追加该能力;D01/D09 记录的是**当时**阶段一不做的决定,按 append-only 不修改其文字;F20 仅覆盖 `src/scoopConfig.ts` 列出的配置项,标量可即时写入,复杂 `private_hosts` 只读,不含 shims 管理、备份还原等其它阶段二特性 |
 
 > 备注:
-> - 决策记录的"日期"以 opcflow 评审日为准;后续如新增决策,在表末追加(append-only),**不**修改既有记录。
+> - 决策日期记录业务决定形成的日期;后续如新增决定,在表末追加,避免把历史决定改写成当前范围。
 > - D11/D12 是本模块 PRD 撰写阶段评审讨论过程中产生的额外决策,不属于上游契约的"3.2 不做"列表,但属于同一类"明确不做"的业务决定,故一并登记。
 
 ---

@@ -7,7 +7,7 @@
 **Windows 上 [Scoop](https://scoop.sh) 命令行包管理器的图形化桌面客户端**
 
 [![CI](https://github.com/nvrenshiren/scoopUI/actions/workflows/ci.yml/badge.svg)](https://github.com/nvrenshiren/scoopUI/actions/workflows/ci.yml)
-[![Release](https://img.shields.io/github/v/release/nvrenshiren/scoopUI?include_prereleases&label=release)](https://github.com/nvrenshiren/scoopUI/releases)
+[![Release](https://img.shields.io/github/v/release/nvrenshiren/scoopUI?label=release)](https://github.com/nvrenshiren/scoopUI/releases)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Platform](https://img.shields.io/badge/platform-Windows%2010%2F11-0078D6)](https://github.com/nvrenshiren/scoopUI/releases)
 [![Tauri](https://img.shields.io/badge/Tauri-2-FFC131?logo=tauri&logoColor=white)](https://tauri.app)
@@ -29,7 +29,8 @@
 - **浏览与搜索** — 已添加桶内全部可装软件包,关键字即时过滤,单包安装
 - **软件包详情** — `scoop info` 键值信息 + 随安装状态变化的操作按钮
 - **桶管理** — 已添加桶列表、Scoop 官方已知桶清单、添加(含自定义 repo)/移除桶
-- **任务队列** — 所有写操作(安装/卸载/更新/桶增删/装 Scoop)统一排队顺序执行,实时日志流、可取消(终止整棵进程树)、失败可重试
+- **长时任务队列** — 软件包与桶操作、协助安装 Scoop 按序执行,实时记录日志并支持取消;失败后可从来源页重新发起
+- **Scoop 配置** — 管理当前支持的 Scoop 配置项,标量值即时写入,复杂 `private_hosts` 只读呈现
 - **首启协助安装 Scoop** — 检测 `scoop` 可用性;未安装时呈现官方 `install.ps1` 全部参数(ScoopDir / ScoopGlobalDir / ScoopCacheDir / Proxy / NoProxy / ProxyCredential / ProxyUseDefaultCredentials / RunAsAdmin)的可填写表单,一次确认后执行,支持 UAC 提权路径,配置本机持久化供重装复用
 - **中英双语** — 首启二选一,设置页随时切换、立即生效并持久化
 - **三主题** — 暗 / 亮 / 跟随系统,暗色默认;界面沿用逐科 COHESION shadcn 主题
@@ -41,19 +42,19 @@
 
 前往 [Releases](https://github.com/nvrenshiren/scoopUI/releases) 下载最新的 `*-setup.exe` 安装包运行即可。
 
-> `latest` 预发布版本为滚动构建:master 分支每次提交都会由 CI 自动重新编译并更新安装包。
+代码变更推送到 `master` 后,发布工作流会递增补丁版本并创建带版本号的 GitHub Release;纯 Markdown 与 `docs/` 改动不会触发发布。
 
 **系统要求**:Windows 10 / 11(需要 [WebView2 Runtime](https://developer.microsoft.com/microsoft-edge/webview2/),Win 11 与近年 Win 10 已内置);安装模式为当前用户,无需管理员权限。
 
 ### 从源码构建
 
-前置:[Rust](https://www.rust-lang.org/tools/install)(stable)、[Node.js](https://nodejs.org) ≥ 20。
+前置:[Rust](https://www.rust-lang.org/tools/install) 1.88+、[Node.js](https://nodejs.org) 20.19+ 或 22.12+。
 
 ```bash
 git clone https://github.com/nvrenshiren/scoopUI.git
 cd scoopUI
-npm install
-npm run tauri build   # 产出 NSIS 安装包 → src-tauri/target/release/bundle/nsis/
+npm ci
+npm run tauri build -- -- --locked   # 产出 NSIS 安装包 → src-tauri/target/release/bundle/nsis/
 ```
 
 ## 技术架构
@@ -65,8 +66,8 @@ src/                 React 19 + TypeScript 前端(Vite 8)
   store.ts           zustand 全局状态:Boot Sequence、数据刷新、任务事件、实体状态推导
   i18n.ts            中英全量字典
   components/ui/     shadcn/ui 组件(Radix + cva,按设计系统定制)
-  pages/             启动检测/协助安装 · 语言选择 · 已装 · 浏览 · 桶 · 设置
-  components/        详情对话框 · 任务进度浮层 · 空态/错误态 等
+  pages/             启动检测/协助安装 · 语言选择 · 已装 · 浏览 · 桶 · Scoop 配置 · 设置
+  components/        详情对话框 · 长时任务面板 · 空态/错误态 等
 src-tauri/           Rust 后端
   src/scoop.rs       scoop 定位(shims 多候选)与子进程执行(无窗口、PATH 注入)
   src/parse.rs       CLI 文本表格解析(dash 分隔行定位列边界,附真实输出单测)
@@ -78,13 +79,16 @@ src-tauri/           Rust 后端
 
 产品需求、业务流程与状态机契约见 [docs/prd/](docs/prd/),设计系统见 [docs/design/systems/web.md](docs/design/systems/web.md)。
 
-## 开发与测试
+## 开发与检查
 
 ```bash
 npm run tauri dev    # 开发模式(热更新;首次 Rust 编译约 10 分钟)
 npm run dev          # 仅前端,浏览器 mock 模式预览 UI(无需 Rust)
-npm run build        # tsc 类型检查 + vite 产物构建
-cd src-tauri && cargo test   # 解析器 / 安装脚本生成 单元测试(基于真实 scoop 输出样例)
+npm run build
+cargo fmt --manifest-path src-tauri/Cargo.toml --all -- --check
+cargo clippy --manifest-path src-tauri/Cargo.toml --locked --all-targets -- -D warnings
+cargo check --manifest-path src-tauri/Cargo.toml --locked
+cargo test --manifest-path src-tauri/Cargo.toml --locked
 ```
 
 ## 技术栈

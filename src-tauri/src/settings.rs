@@ -1,5 +1,5 @@
 //! 本机持久化:界面语言 / 主题 / 协助安装配置(PRD §4.5)。
-//! 存放于 %APPDATA%\scoop-gui\config.json,原子写入。
+//! 存放于 %APPDATA%\scoop-gui\config.json;通过临时文件和备份文件保存。
 
 use serde::{Deserialize, Serialize};
 use std::fs;
@@ -44,10 +44,15 @@ fn config_file() -> PathBuf {
 
 pub fn load() -> Settings {
     let path = config_file();
-    match fs::read_to_string(&path) {
-        Ok(text) => serde_json::from_str(&text).unwrap_or_default(),
-        Err(_) => Settings::default(),
-    }
+    let backup = path.with_extension("json.bak");
+    read_settings(&path)
+        .or_else(|| read_settings(&backup))
+        .unwrap_or_default()
+}
+
+fn read_settings(path: &std::path::Path) -> Option<Settings> {
+    let text = fs::read_to_string(path).ok()?;
+    serde_json::from_str(&text).ok()
 }
 
 pub fn save(settings: &Settings) -> Result<(), String> {
@@ -57,9 +62,44 @@ pub fn save(settings: &Settings) -> Result<(), String> {
     let text = serde_json::to_string_pretty(settings).map_err(|e| e.to_string())?;
     fs::write(&tmp, text).map_err(|e| format!("write config: {e}"))?;
     let dest = config_file();
-    // Windows 上 rename 到已存在目标会失败,先移除旧文件
-    let _ = fs::remove_file(&dest);
-    fs::rename(&tmp, &dest).map_err(|e| format!("persist config: {e}"))?;
+    let backup = dir.join("config.json.bak");
+    let had_previous = dest.exists();
+    let previous_is_valid = read_settings(&dest).is_some();
+    let backup_is_valid = read_settings(&backup).is_some();
+    let moved_previous = had_previous && !(backup_is_valid && !previous_is_valid);
+
+    if had_previous && previous_is_valid {
+        match fs::remove_file(&backup) {
+            Ok(()) => {}
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => {}
+            Err(error) => return Err(format!("remove previous config backup: {error}")),
+        }
+        fs::rename(&dest, &backup).map_err(|e| format!("backup config: {e}"))?;
+    } else if had_previous && backup_is_valid {
+        // Keep the only valid copy available until the new file is installed.
+        fs::remove_file(&dest).map_err(|e| format!("remove invalid config: {e}"))?;
+    } else if had_previous {
+        match fs::remove_file(&backup) {
+            Ok(()) => {}
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => {}
+            Err(error) => return Err(format!("remove previous config backup: {error}")),
+        }
+        fs::rename(&dest, &backup).map_err(|e| format!("backup config: {e}"))?;
+    }
+
+    if let Err(error) = fs::rename(&tmp, &dest) {
+        if moved_previous {
+            if let Err(restore_error) = fs::rename(&backup, &dest) {
+                return Err(format!(
+                    "persist config: {error}; restore previous config: {restore_error}"
+                ));
+            }
+        }
+        return Err(format!("persist config: {error}"));
+    }
+
+    // The new file is already in place. A leftover backup is safe; load() prefers the primary.
+    let _ = fs::remove_file(&backup);
     Ok(())
 }
 

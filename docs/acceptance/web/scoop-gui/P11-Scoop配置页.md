@@ -1,7 +1,7 @@
 # P11 · 验收标准 · Scoop 配置页
 
 > 文档层级:页面级契约(qa 产出 · 可执行验收标准,尚未执行)
-> 适用范围:web 端 scoop-gui 模块 P11
+> 适用范围:Windows 桌面端 scoop-gui 模块 P11
 > 上游依赖:`docs/prd/pages/web/scoop-gui/P11-Scoop配置页.md`
 > 真相源:`src/pages/ConfigView.tsx`、`src/scoopConfig.ts`、`src/store.ts`(scoopConfig 状态与动作)、`src/i18n.ts`、`src-tauri/src/commands.rs`(`scoop_config_*`)、`src-tauri/src/config.rs`(如本文验收标准与页面 PRD 字面描述有出入,以组件真实实现为准;第 7 节据实登记出入)
 > 关联功能:F20(Scoop 配置可视化编辑)、F19(错误处理与友好提示)
@@ -20,7 +20,7 @@
 | --- | --- | --- | --- |
 | A1 | 从 P03 可进入 P11 | 点击侧边栏"Scoop 配置" | 主区切换为 P11,该导航项呈选中态,壳层保持可见 |
 | A2 | 分区完整 | 检视页面分区 | 恰有 6 个分区:下载器、网络与代理、更新策略、安装与工具、目录、令牌与密钥,顺序固定 |
-| A3 | 覆盖全部配置项 | 清点各分区配置项 | 覆盖 `scoop config` 全部 32 项(见 `src/scoopConfig.ts` / api-doc §2 `CONFIG_KEYS`),无遗漏、无重复 |
+| A3 | 覆盖受支持的配置项 | 清点各分区配置项 | 覆盖 `src/scoopConfig.ts` 定义的 32 项,无遗漏、无重复;31 项可编辑,`private_hosts` 只读 |
 | A4 | 当前值正确回填 | 在已设置若干项的环境进入 | 各项控件显示 `config.json` 中的当前值(开关态、枚举选中、输入框文本);未设置项以默认值占位,不显示为已设置 |
 | A5 | 控件形态匹配类型 | 逐项检视控件 | 布尔→开关;枚举(scoop_branch/default_architecture/shim)→候选值段选按钮;数值→数字输入;字符串→文本输入;令牌→密码输入;private_hosts→只读展示 |
 | A6 | 每项展示键名与说明 | 检视任一项 | 展示业务名称 + 一句说明 + 原始键名(如 `aria2-enabled`);键名可选中复制 |
@@ -66,10 +66,11 @@
 | E4 | 双语齐备 | 切换界面语言 | 分区标题、配置项名称与说明随语言切换;无仅单语文案(项目硬约束) |
 | E5 | 复杂项降级 | 检视 private_hosts | 只读展示当前值 + 提示走命令行编辑,不提供易出错的图形编辑 |
 
-## 7. 与页面 PRD 的口径差异登记(据实登记,不改写 PRD 原文)
+## 7. 数据边界
 
-1. **private_hosts 采用只读降级。** 页面 PRD 场景描述"覆盖全部配置项",实现中 `private_hosts`(对象数组)因经 `scoop config` CLI 传复杂结构易出错,采用只读展示 + 提示命令行编辑(见 `scoopConfig.ts` 中 `control: "readonly"`),其余 31 项完整可视化读写。用例 A5/E5 按此实现口径。
-2. **写入值格式交由 scoop 处理。** 前端统一以字符串经 `scoop config <k> <v>` 写入,布尔/数值的类型落库由 scoop 负责(见 api-doc 决策 API03),前端读回时按 JSON 原值展示。
+- 检查范围来自 `src/scoopConfig.ts`,不等同于 Scoop 命令可能支持的全部配置键。
+- `private_hosts` 作为复杂对象只读呈现;其余 31 项经 `scoop config` 写入。
+- 前端以字符串传递标量值,具体类型转换由 Scoop 处理。
 
 ## 8. 文档范围声明
 
