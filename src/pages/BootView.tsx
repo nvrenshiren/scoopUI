@@ -14,6 +14,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
+import { CohesionWordmark } from "@/components/CohesionWordmark";
 
 interface FormState {
   scoopDir: string;
@@ -195,8 +196,9 @@ export function BootView() {
     return (
       <div className="app-shell relative flex h-full items-center justify-center px-6">
         <div className="bg-grid pointer-events-none absolute inset-0 opacity-40" />
-        <div className="relative flex min-w-[320px] flex-col items-center rounded-xl border border-border/80 bg-card px-10 py-9 text-center shadow-lg">
-          <div className="mb-5 flex size-12 items-center justify-center rounded-xl border border-border bg-secondary text-primary">
+        <div className="relative flex min-w-[320px] flex-col items-center rounded-xl border border-border/80 bg-card px-10 py-9 text-center shadow-xl">
+          <CohesionWordmark className="mb-5 w-28" />
+          <div className="mb-4 flex size-12 items-center justify-center rounded-xl border border-primary/15 bg-accent text-accent-foreground">
             <LoaderCircle className="size-5 animate-spin" />
           </div>
           <h1 className="mb-0 font-heading text-lg font-semibold">{t("boot.detecting")}</h1>
@@ -214,11 +216,13 @@ export function BootView() {
         <div className="gradient-line" />
         <div className="overflow-auto px-7 pt-6 pb-7 sm:px-9">
           <div className="mb-6 flex items-start gap-4">
-            <div className="flex size-11 shrink-0 items-center justify-center rounded-xl border border-warning/25 bg-[var(--warning-soft)] text-warning">
+            <div className={installing
+              ? "flex size-11 shrink-0 items-center justify-center rounded-xl border border-primary/15 bg-accent text-accent-foreground"
+              : "flex size-11 shrink-0 items-center justify-center rounded-xl border border-warning/25 bg-[var(--warning-soft)] text-warning"}>
               {installing ? <Download className="size-6" /> : <TriangleAlert className="size-6" />}
             </div>
             <div>
-              <div className="mb-1 text-xs font-semibold uppercase tracking-[0.12em] text-primary">scoopUI</div>
+              <CohesionWordmark className="mb-2" />
               <h2 className="mb-0 text-2xl font-semibold tracking-[-0.025em]">
                 {installing ? t("setup.installing") : t("setup.notFoundTitle")}
               </h2>
@@ -230,7 +234,7 @@ export function BootView() {
 
           {/* 失败原因(F19:业务语言 + 可重试) */}
           {!installing && errorText && (
-            <div role="alert" className="mt-4 flex gap-2.5 rounded-md border border-destructive/35 bg-[var(--destructive-glow)] px-3.5 py-3 text-sm text-destructive">
+            <div role="alert" className="mt-4 flex gap-2.5 rounded-lg border border-destructive/35 bg-[var(--destructive-glow)] px-3.5 py-3 text-sm text-destructive">
               <TriangleAlert className="mt-0.5 size-[15px] shrink-0" />
               <div>
                 <div className="font-medium">{t("setup.failedTitle")}</div>
@@ -257,7 +261,7 @@ export function BootView() {
             </>
           ) : (
             <>
-              <h3 className="mt-6 mb-0 text-base font-semibold">{t("setup.formTitle")}</h3>
+              <h3 className="mt-6 mb-0 border-t border-border/70 pt-5 text-base font-semibold">{t("setup.formTitle")}</h3>
               <p className="mt-1 mb-4 text-xs leading-relaxed text-muted-foreground">{t("setup.formDesc")}</p>
 
               <div className="grid grid-cols-1 gap-x-5 gap-y-3.5 md:grid-cols-2">

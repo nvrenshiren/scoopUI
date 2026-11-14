@@ -83,7 +83,7 @@ export function BucketsView() {
         }
       />
 
-      <div className="flex min-h-0 flex-1 flex-col gap-4 px-7 pt-4 pb-6">
+      <div className="flex min-h-0 flex-1 flex-col gap-4 px-8 pt-5 pb-6">
         {error ? (
           <EmptyState error title={t("buckets.loadFailed")} hint={t("error.scoopUnavailable")}>
             <Button variant="secondary" onClick={() => void refreshBuckets()}>

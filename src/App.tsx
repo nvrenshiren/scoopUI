@@ -10,7 +10,6 @@ import {
   Package,
   Search,
   SlidersVertical,
-  Terminal,
   Wrench,
 } from "lucide-react";
 import { Toaster } from "sonner";
@@ -20,6 +19,7 @@ import { selectOutdatedNames, useApp, useLang } from "@/store";
 import type { ViewId } from "@/types";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
+import { CohesionWordmark } from "@/components/CohesionWordmark";
 import { DetailDialog } from "@/components/DetailDialog";
 import { JobsPanel } from "@/components/JobsPanel";
 import { LanguagePick } from "@/pages/LanguagePick";
@@ -29,6 +29,7 @@ import { BrowseView } from "@/pages/BrowseView";
 import { BucketsView } from "@/pages/BucketsView";
 import { ConfigView } from "@/pages/ConfigView";
 import { SettingsView } from "@/pages/SettingsView";
+import packageJson from "../package.json";
 
 const VIEWS: Record<ViewId, ComponentType> = {
   installed: InstalledView,
@@ -58,10 +59,10 @@ function NavItem({
       id={id}
       onClick={onClick}
       className={cn(
-        "group flex h-10 cursor-pointer items-center gap-2.5 rounded-lg px-3 text-sm font-medium transition-colors duration-150",
+        "group relative flex h-10 cursor-pointer items-center gap-2.5 rounded-lg border border-transparent px-3 text-sm font-medium transition-colors duration-150",
         active
-          ? "bg-accent text-accent-foreground shadow-[inset_2px_0_0_var(--primary)]"
-          : "text-muted-foreground hover:bg-secondary/80 hover:text-foreground",
+          ? "border-primary/10 bg-accent/80 text-accent-foreground shadow-[inset_2px_0_0_var(--primary)]"
+          : "text-muted-foreground hover:bg-secondary/70 hover:text-foreground",
       )}
       aria-current={active ? "page" : undefined}
     >
@@ -89,24 +90,23 @@ function Shell() {
 
   return (
     <div className="app-shell flex h-full min-w-0 text-foreground">
-      <aside className="flex w-[232px] shrink-0 flex-col border-r border-border/70 bg-card/90 pb-3 backdrop-blur-xl">
+      <aside className="flex w-[244px] shrink-0 flex-col border-r border-border/80 bg-card/95 pb-3">
         <div className="gradient-line" />
-        <div className="flex items-center gap-3 px-5 pt-5 pb-4">
-          <div className="flex size-10 items-center justify-center rounded-xl border border-border bg-secondary text-primary shadow-sm">
-            <Terminal className="size-[19px]" />
-          </div>
+        <div className="flex items-center gap-2.5 border-b border-border/70 px-5 py-4">
+          <CohesionWordmark className="w-24 shrink-0" />
+          <div className="h-8 w-px bg-border" />
           <div className="min-w-0">
-            <div className="font-heading text-base font-semibold tracking-[-0.02em]">scoopUI</div>
-            <div className="max-w-[160px] overflow-hidden text-xs text-ellipsis whitespace-nowrap text-muted-foreground">
+            <div className="font-heading text-sm font-semibold tracking-[-0.02em]">scoopUI</div>
+            <div className="max-w-[88px] overflow-hidden text-xs text-ellipsis whitespace-nowrap text-muted-foreground">
               {t("app.subtitle")}
             </div>
           </div>
         </div>
 
-        <div className="px-5 pb-2 pt-4 text-xs font-semibold uppercase tracking-[0.12em] text-subtle">
+        <div className="px-5 pb-2 pt-5 text-[11px] font-semibold uppercase tracking-[0.14em] text-subtle">
           {t("nav.workspace")}
         </div>
-        <nav className="flex flex-col gap-1 px-3">
+        <nav aria-label={t("nav.workspace")} className="flex flex-col gap-1 px-3">
           <NavItem
             active={view === "installed"}
             icon={Package}
@@ -142,7 +142,7 @@ function Shell() {
 
         <div className="flex-1" />
 
-        <div className="mx-3 mb-3 rounded-xl border border-border/70 bg-background p-2">
+        <div className="mx-3 mb-3 rounded-xl border border-border/80 bg-background p-2 shadow-sm">
           <NavItem
             active={jobsPanelOpen}
             id="jobs-toggle"
@@ -163,22 +163,27 @@ function Shell() {
             <span className="truncate">{scoopVersion ? `Scoop ${scoopVersion}` : "Scoop"}</span>
           </div>
         </div>
-        <div className="px-5 text-xs tracking-wide text-subtle">scoopUI</div>
+        <div className="flex items-center justify-between border-t border-border/60 px-5 pt-3 text-[11px] tracking-wide text-subtle">
+          <span>COHESION</span>
+          <span className="font-mono tabular-nums">v{packageJson.version}</span>
+        </div>
       </aside>
 
       <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-        <header className="flex h-12 shrink-0 items-center justify-between border-b border-border/70 bg-card/45 px-7 backdrop-blur-xl">
+        <header className="flex h-[54px] shrink-0 items-center justify-between border-b border-border/75 bg-card/70 px-7">
           <div className="flex items-center gap-2 text-xs">
-            <span className="font-medium text-muted-foreground">scoopUI</span>
-            <ChevronRight className="size-3.5 text-subtle" />
+            <span className="font-medium text-muted-foreground">COHESION</span>
+            <ChevronRight className="size-3.5 text-subtle" aria-hidden="true" />
+            <span className="text-muted-foreground">scoopUI</span>
+            <ChevronRight className="size-3.5 text-subtle" aria-hidden="true" />
             <span className="font-medium text-foreground">{t(`nav.${view}`)}</span>
           </div>
-          <div className="flex items-center gap-2 text-xs text-muted-foreground">
-            <span className="size-1.5 rounded-full bg-success" />
+          <div className="flex items-center gap-2 rounded-full border border-success/20 bg-[var(--success-soft)] px-3 py-1.5 text-xs font-medium text-success">
+            <span className="size-1.5 rounded-full bg-success" aria-hidden="true" />
             {t("app.localManager")}
           </div>
         </header>
-        <main className="min-h-0 min-w-0 flex-1">
+        <main id="main-content" className="min-h-0 min-w-0 flex-1">
           <View />
         </main>
       </div>

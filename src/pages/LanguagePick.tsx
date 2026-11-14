@@ -2,6 +2,7 @@
 import { ChevronRight, Terminal } from "lucide-react";
 
 import { chooseLanguage } from "@/store";
+import { CohesionWordmark } from "@/components/CohesionWordmark";
 
 function Option({
   main,
@@ -15,7 +16,7 @@ function Option({
   return (
     <button
       onClick={onClick}
-      className="group relative flex min-h-[104px] w-[220px] cursor-pointer flex-col items-start justify-center gap-1 rounded-xl border border-border/80 bg-background p-5 text-left transition-all duration-150 hover:border-primary/60 hover:bg-accent hover:shadow-md focus-visible:ring-[3px] focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+      className="group relative flex min-h-[104px] w-[220px] cursor-pointer flex-col items-start justify-center gap-1 rounded-xl border border-border/80 bg-background p-5 text-left transition-colors duration-150 hover:border-primary/35 hover:bg-accent/60 focus-visible:ring-[3px] focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
     >
       <span className="font-heading text-xl font-semibold tracking-[-0.02em]">{main}</span>
       <span className="text-sm text-muted-foreground">{sub}</span>
@@ -29,10 +30,11 @@ export function LanguagePick() {
     <div className="app-shell relative flex h-full items-center justify-center overflow-auto px-6 py-8">
       <div className="bg-grid pointer-events-none absolute inset-0 opacity-40" />
       <div className="relative z-[1] flex w-full max-w-[640px] flex-col items-center rounded-xl border border-border/80 bg-card px-8 py-10 shadow-xl sm:px-12">
-        <div className="mb-5 flex size-14 items-center justify-center rounded-2xl border border-border bg-secondary text-primary shadow-sm">
+        <CohesionWordmark className="mb-5 w-28" />
+        <div className="mb-4 flex size-12 items-center justify-center rounded-xl border border-primary/15 bg-accent text-accent-foreground shadow-sm">
           <Terminal className="size-[26px]" />
         </div>
-        <h1 className="mb-0 text-[30px] font-semibold tracking-[-0.035em]">scoopUI</h1>
+        <h1 className="mb-0 font-heading text-[30px] font-semibold tracking-[-0.035em]">scoopUI</h1>
         {/* 首次选择前无语言偏好,双语并列呈现(此页即语言选择本身) */}
         <p className="mt-3 mb-0 text-sm text-muted-foreground">选择界面语言 · Choose your language</p>
         <p className="mt-1 text-xs text-subtle">

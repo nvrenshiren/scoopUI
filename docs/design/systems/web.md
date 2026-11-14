@@ -28,3 +28,11 @@ The script reads `D:\Work\dawi\design` by default. Other machines should set `CO
 - Use canvas atmosphere only as a low contrast background detail. Keep primary, information, success, warning, and danger colors tied to their semantic roles.
 - Keep focus rings visible, labels bilingual, destructive actions explicit, and cancellation neutral. Respect the system reduced-motion preference.
 - Preserve all existing business behavior and state contracts in `docs/prd/`, `docs/architecture/`, and `docs/acceptance/`; these govern functionality, while the COHESION system governs visual styling.
+
+## Desktop redesign direction
+
+The 2026-11 redesign uses the COHESION 2.0 brand wordmark and the generated shadcn New York / Neutral theme in both light and dark modes. The wordmark files in `public/branding/` are visual assets copied from the configured COHESION source checkout; refresh them from `D:\Work\dawi\design\原色.png` and `白色.png` when updating the shared brand version.
+
+The desktop package manager expresses a restrained technical character through precise typography, compact navigation, clear table hierarchy, opaque work surfaces, subtle canvas atmosphere, and semantic status treatments. Decorative effects stay on the canvas or brand mark. Tables, settings, forms, dialogs, and logs remain solid and readable. Buttons and inputs retain the shadcn 36px default height and 8px radius; cards use the 14px COHESION radius; status badges remain pill shaped.
+
+Use the Windows system font stack for reliable offline startup. Scoop package identifiers, versions, paths, and command output use the generated Cascadia Code / Consolas stack. Keep user actions, keyboard focus, semantic state text, Escape dismissal, and reduced-motion behavior visible when restyling components.

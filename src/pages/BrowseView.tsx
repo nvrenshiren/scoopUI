@@ -54,11 +54,11 @@ export function BrowseView() {
         }
       />
 
-      <div className="flex min-h-0 flex-1 flex-col gap-3 px-7 pt-4 pb-6">
+      <div className="flex min-h-0 flex-1 flex-col gap-4 px-8 pt-5 pb-6">
         <div className="relative">
-          <Search className="absolute top-3 left-3 size-4 text-subtle" />
+          <Search className="absolute top-2.5 left-3 size-4 text-subtle" aria-hidden="true" />
           <Input
-            className="pl-9"
+            className="pl-9 shadow-sm"
             aria-label={t("browse.searchPlaceholder")}
             placeholder={t("browse.searchPlaceholder")}
             value={query}
@@ -68,7 +68,7 @@ export function BrowseView() {
 
         {loading ? (
           <div className="flex flex-col items-center justify-center gap-3 py-12 text-muted-foreground">
-            <LoaderCircle className="size-8 animate-spin text-primary" />
+            <LoaderCircle className="size-7 animate-spin text-primary" />
             <span className="text-sm">{t("browse.loadingAll")}</span>
           </div>
         ) : error ? (
@@ -149,7 +149,8 @@ export function BrowseView() {
                 </TableBody>
               </Table>
             </TableWrap>
-            <div className="text-xs text-subtle">
+            <div className="flex shrink-0 items-center gap-2 text-xs text-muted-foreground">
+              <span className="size-1.5 rounded-full bg-primary" aria-hidden="true" />
               {t("browse.showing", { shown: shown.length, total: filtered.length })}
               {filtered.length > LIMIT && <> · {t("browse.narrowHint")}</>}
             </div>

@@ -102,7 +102,7 @@
   }
 
   :focus-visible {
-    outline: 2px solid var(--ring);
+    outline: 3px solid var(--ring);
     outline-offset: 2px;
   }
 
@@ -132,9 +132,8 @@
   .app-shell {
     background-color: var(--background);
     background-image:
-      radial-gradient(ellipse 58% 42% at 100% 0%, var(--canvas-cyan), transparent 72%),
-      radial-gradient(ellipse 45% 34% at 0% 100%, var(--canvas-lime), transparent 72%),
-      radial-gradient(ellipse 56% 40% at 78% 100%, var(--canvas-green), transparent 76%);
+      radial-gradient(ellipse 50% 38% at 100% 0%, var(--canvas-cyan), transparent 76%),
+      radial-gradient(ellipse 44% 32% at 0% 100%, var(--canvas-green), transparent 78%);
   }
 
   .bg-grid {
@@ -149,11 +148,17 @@
   }
 
   .gradient-line {
-    height: 2px;
+    height: 1px;
     flex-shrink: 0;
-    background: linear-gradient(90deg, transparent, var(--primary), transparent);
-    opacity: 0.8;
+    background: linear-gradient(90deg, transparent, var(--primary), var(--info), transparent);
+    opacity: 0.78;
   }
+
+  .cohesion-logo-color { display: block; }
+  .cohesion-logo-white { display: none; }
+
+  :root[data-shadcn-theme="dark"] .cohesion-logo-color { display: none; }
+  :root[data-shadcn-theme="dark"] .cohesion-logo-white { display: block; }
 
   .running-bar {
     height: 2px;
@@ -184,7 +189,6 @@
     overflow-wrap: anywhere;
     user-select: text;
   }
-
 }
 
 @keyframes slide-bar {

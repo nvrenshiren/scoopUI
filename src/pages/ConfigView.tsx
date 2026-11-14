@@ -43,15 +43,15 @@ function Section({
   children: ReactNode;
 }) {
   return (
-    <section className="mx-auto mb-4 w-full max-w-5xl rounded-xl border border-border/80 bg-card p-5 shadow-sm">
+    <section className="mx-auto mb-4 w-full max-w-5xl rounded-xl border border-border/80 bg-card px-5 py-4 shadow-sm">
       <div className="flex items-center gap-3">
-        <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-accent text-accent-foreground">{icon}</span>
+        <span className="flex size-9 shrink-0 items-center justify-center rounded-lg border border-primary/10 bg-accent text-accent-foreground">{icon}</span>
         <div className="min-w-0 flex-1">
           <h2 className="mb-0 font-heading text-sm font-semibold">{title}</h2>
           {desc && <div className="mt-0.5 text-xs text-muted-foreground">{desc}</div>}
         </div>
       </div>
-      <div className="mt-2">{children}</div>
+      <div className="mt-3">{children}</div>
     </section>
   );
 }
@@ -208,14 +208,14 @@ function ConfigRow({
   const helpId = `config-${item.key}-help`;
   const label = t(`config.item.${item.key}.label`);
   return (
-    <div className="flex items-start justify-between gap-4 border-b border-border/60 py-3 last:border-0">
+    <div className="flex items-start justify-between gap-5 border-b border-border/60 py-3.5 last:border-0">
       <div className="min-w-0 flex-1">
         <div id={labelId} className="flex items-center gap-1.5 text-sm font-medium">
           <span>{label}</span>
           {item.danger && <Badge variant="warning">{t("config.dangerBadge")}</Badge>}
         </div>
-        <div id={helpId} className="mt-0.5 text-xs text-muted-foreground">{tf(`config.item.${item.key}.help`, "")}</div>
-        <div className="mt-1 font-mono text-xs text-subtle select-text">{item.key}</div>
+        <div id={helpId} className="mt-1 text-xs leading-5 text-muted-foreground">{tf(`config.item.${item.key}.help`, "")}</div>
+        <div className="mt-1.5 font-mono text-[11px] tracking-wide text-subtle select-text">{item.key}</div>
       </div>
       <div className="flex shrink-0 items-center gap-2 pt-0.5">
         <Control item={item} scoopConfig={scoopConfig} onCommit={onCommit} labelId={labelId} helpId={helpId} />
@@ -267,9 +267,9 @@ export function ConfigView() {
     <div className="flex h-full min-w-0 flex-col">
       <PageHeader icon={Wrench} title={t("config.title")} description={t("config.desc")} />
 
-      <div className="min-h-0 flex-1 overflow-auto px-7 pt-4 pb-6">
+      <div className="min-h-0 flex-1 overflow-auto px-8 pt-5 pb-6">
         {error ? (
-          <div role="alert" className="mx-auto mt-2 max-w-5xl rounded-xl border border-destructive/30 bg-[var(--destructive-glow)] px-4 py-3 text-sm text-destructive">
+          <div role="alert" className="mx-auto mt-2 max-w-5xl rounded-xl border border-destructive/30 bg-[var(--destructive-glow)] px-4 py-3 text-sm text-destructive shadow-sm">
             {t("config.loadFailed")}: {error}
           </div>
         ) : firstLoad ? (

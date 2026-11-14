@@ -166,33 +166,33 @@ export function InstalledView() {
         }
       />
 
-      <div className="flex min-h-0 flex-1 flex-col gap-3 px-7 pt-4 pb-6">
+      <div className="flex min-h-0 flex-1 flex-col gap-4 px-8 pt-5 pb-6">
         <div className="grid shrink-0 grid-cols-2 gap-3">
-          <div className="flex items-center gap-3 rounded-xl border border-border/75 bg-card px-4 py-2.5 shadow-sm">
-            <div className="flex size-8 items-center justify-center rounded-lg bg-muted text-muted-foreground">
-              <Package className="size-4" />
+          <div className="relative flex items-center gap-3.5 overflow-hidden rounded-xl border border-border/80 bg-card px-4 py-3 shadow-sm">
+            <div className="flex size-9 items-center justify-center rounded-lg border border-primary/10 bg-accent text-accent-foreground">
+              <Package className="size-[17px]" />
             </div>
             <div>
               <div className="text-xs font-medium text-muted-foreground">{t("installed.total")}</div>
-              <div className="font-mono text-lg font-semibold leading-5 tabular-nums">{installed.length}</div>
+              <div className="mt-0.5 font-mono text-xl font-semibold leading-5 tabular-nums">{installed.length}</div>
             </div>
           </div>
-          <div className="flex items-center gap-3 rounded-xl border border-warning/20 bg-[var(--warning-soft)] px-4 py-2.5 shadow-sm">
-            <div className="flex size-8 items-center justify-center rounded-lg bg-background text-warning">
-              <CircleArrowUp className="size-4" />
+          <div className="relative flex items-center gap-3.5 overflow-hidden rounded-xl border border-warning/25 bg-[var(--warning-soft)] px-4 py-3 shadow-sm">
+            <div className="flex size-9 items-center justify-center rounded-lg border border-warning/15 bg-card text-warning">
+              <CircleArrowUp className="size-[17px]" />
             </div>
             <div>
               <div className="text-xs font-medium text-muted-foreground">{t("installed.outdatedCount")}</div>
-              <div className="font-mono text-lg font-semibold leading-5 tabular-nums text-warning">{outdatedList.length}</div>
+              <div className="mt-0.5 font-mono text-xl font-semibold leading-5 tabular-nums text-warning">{outdatedList.length}</div>
             </div>
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2.5">
           <div className="relative min-w-0 flex-1">
-            <Search className="absolute top-3 left-3 size-4 text-subtle" />
+            <Search className="absolute top-2.5 left-3 size-4 text-subtle" aria-hidden="true" />
             <Input
-              className="pl-9"
+              className="pl-9 shadow-sm"
               aria-label={t("installed.filter")}
               placeholder={t("installed.filter")}
               value={filter}
@@ -205,7 +205,7 @@ export function InstalledView() {
         </div>
 
         {selected.size > 0 && (
-          <div className="flex items-center gap-3 rounded-lg border border-primary/30 bg-[var(--primary-glow-soft)] px-4 py-2.5">
+          <div className="flex items-center gap-3 rounded-xl border border-primary/25 bg-[var(--primary-glow-soft)] px-4 py-2.5 shadow-sm">
             <span className="text-sm font-medium text-primary">
               {t("installed.selectedCount", { n: selected.size })}
             </span>
@@ -283,11 +283,11 @@ export function InstalledView() {
                     <TableRow
                       key={app.name}
                       className={
-                        isOutdated
-                          ? "cursor-pointer bg-[var(--warning-soft)]"
-                          : isSelected
+                        isSelected
                             ? "cursor-pointer bg-[var(--primary-glow-soft)]"
-                            : "cursor-pointer"
+                            : isOutdated
+                              ? "cursor-pointer shadow-[inset_2px_0_0_var(--warning)]"
+                              : "cursor-pointer"
                       }
                       onClick={() => useApp.setState({ detailName: app.name })}
                     >

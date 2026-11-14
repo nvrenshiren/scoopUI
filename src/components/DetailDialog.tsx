@@ -60,11 +60,11 @@ export function DetailDialog() {
 
   return (
     <Dialog open={!!name} onOpenChange={(v) => !v && close()}>
-      <DialogContent className="sm:w-[min(672px,calc(100vw-64px))]" aria-describedby={undefined}>
+      <DialogContent className="sm:w-[min(700px,calc(100vw-64px))]" aria-describedby={undefined}>
         {/* 头部:图标 + 名称 + 版本(mono)+ 状态 Badge(设计系统 §10.3) */}
-        <div className="flex items-center gap-3 border-b border-border/70 bg-popover px-6 pt-5 pb-4">
-          <div className="flex size-11 shrink-0 items-center justify-center rounded-xl border border-border bg-accent text-accent-foreground">
-            <Package className="size-[22px]" />
+        <div className="flex items-center gap-3 border-b border-border/70 bg-card px-6 pt-5 pb-4">
+          <div className="flex size-11 shrink-0 items-center justify-center rounded-xl border border-primary/15 bg-accent text-accent-foreground">
+            <Package className="size-[20px]" strokeWidth={1.8} />
           </div>
           <div className="flex min-w-0 flex-1 items-center gap-2.5">
             <DialogTitle className="mb-0 min-w-0 truncate font-mono text-lg font-semibold tracking-[-0.015em]">{name}</DialogTitle>
@@ -85,7 +85,7 @@ export function DetailDialog() {
           </div>
         </div>
 
-        <div className="min-h-[160px] overflow-auto px-6 py-3">
+          <div className="min-h-[180px] overflow-auto px-6 py-4">
           {loading ? (
             <div className="flex items-center justify-center gap-2 py-8 text-muted-foreground">
               <LoaderCircle className="size-4 animate-spin text-primary" />
@@ -108,7 +108,7 @@ export function DetailDialog() {
               </div>
             </div>
           ) : (
-            <dl className="my-1 grid grid-cols-[minmax(100px,140px)_1fr] gap-x-5 gap-y-3 text-sm">
+            <dl className="my-0 grid grid-cols-[minmax(120px,160px)_1fr] gap-x-5 gap-y-3.5 text-sm">
               {pairs.map(([key, value]) => (
                 <div key={key} className="contents">
                   <dt className="text-subtle">{tf("detail.field." + key, key)}</dt>

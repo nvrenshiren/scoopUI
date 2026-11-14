@@ -25,9 +25,9 @@ function Section({
   className?: string;
 }) {
   return (
-    <section className={`rounded-xl border border-border/80 bg-card p-5 shadow-sm ${className ?? ""}`}>
+    <section className={`rounded-xl border border-border/80 bg-card px-5 py-4 shadow-sm ${className ?? ""}`}>
       <div className="flex items-center gap-3">
-        <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-accent text-accent-foreground">{icon}</span>
+        <span className="flex size-9 shrink-0 items-center justify-center rounded-lg border border-primary/10 bg-accent text-accent-foreground">{icon}</span>
         <div className="min-w-0 flex-1">
           <h2 className="mb-0 font-heading text-sm font-semibold">{title}</h2>
           {desc && <div className="mt-0.5 text-xs text-muted-foreground">{desc}</div>}
@@ -63,7 +63,7 @@ export function SettingsView() {
     <div className="flex h-full min-w-0 flex-col">
       <PageHeader icon={SlidersVertical} title={t("settings.title")} description={t("settings.desc")} />
 
-      <div className="min-h-0 flex-1 overflow-auto px-7 pt-4 pb-6">
+      <div className="min-h-0 flex-1 overflow-auto px-8 pt-5 pb-6">
         <div className="mx-auto grid w-full max-w-5xl grid-cols-1 gap-4 xl:grid-cols-2">
         {/* 语言(F14:切换立即生效并持久化) */}
         <Section
