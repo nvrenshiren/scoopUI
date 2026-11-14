@@ -12,14 +12,17 @@ use crate::settings::{self, InstallConfig, Settings};
 use crate::{config, installer, parse, scoop, Core};
 
 /// 包名/桶名白名单(允许 bucket/name 形式);防止拼进 cmd 的参数携带元字符。
-static NAME_RE: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r"^[A-Za-z0-9][A-Za-z0-9._/-]{0,127}$").unwrap());
+static NAME_RE: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"^[A-Za-z0-9][A-Za-z0-9._/-]{0,127}$").expect("NAME_RE is a fixed regex")
+});
 /// 桶仓库地址(https URL 或 git 形式)。
-static REPO_RE: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r"^[A-Za-z0-9][A-Za-z0-9._:/@~+-]{0,255}$").unwrap());
+static REPO_RE: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"^[A-Za-z0-9][A-Za-z0-9._:/@~+-]{0,255}$").expect("REPO_RE is a fixed regex")
+});
 /// 搜索关键字。
-static QUERY_RE: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$").unwrap());
+static QUERY_RE: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$").expect("QUERY_RE is a fixed regex")
+});
 
 /// `scoop config` 已知配置项白名单(= GUI 可视化的 32 项);拒绝把任意 key 拼进 scoop config。
 static CONFIG_KEYS: &[&str] = &[
@@ -65,15 +68,44 @@ static CONFIG_KEYS: &[&str] = &[
 
 /// config 值字符白名单:覆盖路径(反斜杠/盘符冒号/空格)、代理(user:pass@host:port)、
 /// 日期、架构、aria2 选项(空格/=/-)、令牌、仓库 URL;排除 cmd 元字符(& | < > ^ " 等)防注入。
-static CONFIG_VALUE_RE: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r"^[A-Za-z0-9 ._:/\\@~+=,#-]{1,512}$").unwrap());
+static CONFIG_VALUE_RE: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"^[A-Za-z0-9 ._:/\\@~+=,#-]{1,512}$").expect("CONFIG_VALUE_RE is a fixed regex")
+});
+
+fn is_valid_name(value: &str) -> bool {
+    NAME_RE.is_match(value)
+}
+
+fn is_valid_repo(value: &str) -> bool {
+    REPO_RE.is_match(value)
+}
+
+fn is_valid_query(value: &str) -> bool {
+    QUERY_RE.is_match(value)
+}
+
+fn is_valid_config_key(value: &str) -> bool {
+    CONFIG_KEYS.contains(&value)
+}
+
+fn is_valid_config_value(value: &str) -> bool {
+    CONFIG_VALUE_RE.is_match(value)
+}
+
+/// 应用设置更新并按写入顺序持久化快照。
+/// 文件 I/O 可持有 persistence 锁,但不会持有 settings 数据锁。
+fn persist_settings(core: &Core, update: impl FnOnce(&mut Settings)) -> Result<(), String> {
+    let _write_order = core.lock_settings_persistence();
+    let snapshot = {
+        let mut settings = core.lock_settings();
+        update(&mut settings);
+        settings.clone()
+    };
+    settings::save(&snapshot)
+}
 
 fn shims_of(core: &Core) -> Option<String> {
-    core.scoop
-        .lock()
-        .unwrap()
-        .as_ref()
-        .and_then(|e| e.shims_dir.clone())
+    core.lock_scoop().as_ref().and_then(|e| e.shims_dir.clone())
 }
 
 /// 执行 scoop 读命令并返回 stdout;非零退出码转为错误(F19 命令级失败)。
@@ -83,7 +115,11 @@ fn run_read(core: &Core, args: &[&str]) -> Result<String, String> {
     if !out.status.success() {
         let stderr = scoop::stderr_text(&out);
         let stdout = scoop::stdout_text(&out);
-        let detail = if stderr.trim().is_empty() { stdout } else { stderr };
+        let detail = if stderr.trim().is_empty() {
+            stdout
+        } else {
+            stderr
+        };
         return Err(format!(
             "scoop {} failed (exit {:?}): {}",
             args.join(" "),
@@ -98,27 +134,33 @@ fn run_read(core: &Core, args: &[&str]) -> Result<String, String> {
 
 #[tauri::command]
 pub fn get_settings(core: State<'_, Arc<Core>>) -> Settings {
-    core.settings.lock().unwrap().clone()
+    core.lock_settings().clone()
 }
 
 #[tauri::command]
-pub fn set_language(core: State<'_, Arc<Core>>, language: String) -> Result<(), String> {
+pub async fn set_language(core: State<'_, Arc<Core>>, language: String) -> Result<(), String> {
     if language != "zh" && language != "en" {
         return Err("unsupported language".into());
     }
-    let mut s = core.settings.lock().unwrap();
-    s.language = Some(language);
-    settings::save(&s)
+    let core = core.inner().clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        persist_settings(&core, |settings| settings.language = Some(language))
+    })
+    .await
+    .map_err(|e| e.to_string())?
 }
 
 #[tauri::command]
-pub fn set_theme(core: State<'_, Arc<Core>>, theme: String) -> Result<(), String> {
+pub async fn set_theme(core: State<'_, Arc<Core>>, theme: String) -> Result<(), String> {
     if !matches!(theme.as_str(), "dark" | "light" | "system") {
         return Err("unsupported theme".into());
     }
-    let mut s = core.settings.lock().unwrap();
-    s.theme = Some(theme);
-    settings::save(&s)
+    let core = core.inner().clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        persist_settings(&core, |settings| settings.theme = Some(theme))
+    })
+    .await
+    .map_err(|e| e.to_string())?
 }
 
 // ------------------------------------------------------------------ detect
@@ -137,7 +179,10 @@ pub struct DetectResult {
 /// 用于在已装 scoop 的机器上预览 P01 协助安装页(仅影响本进程,无副作用)。
 #[tauri::command]
 pub async fn detect_scoop(core: State<'_, Arc<Core>>) -> Result<DetectResult, String> {
-    if std::env::var("SCOOP_GUI_FORCE_SETUP").map(|v| v == "1").unwrap_or(false) {
+    if std::env::var("SCOOP_GUI_FORCE_SETUP")
+        .map(|v| v == "1")
+        .unwrap_or(false)
+    {
         return Ok(DetectResult {
             available: false,
             version: None,
@@ -147,9 +192,7 @@ pub async fn detect_scoop(core: State<'_, Arc<Core>>) -> Result<DetectResult, St
     let core = core.inner().clone();
     tauri::async_runtime::spawn_blocking(move || {
         let configured = core
-            .settings
-            .lock()
-            .unwrap()
+            .lock_settings()
             .install_config
             .as_ref()
             .and_then(|c| c.scoop_dir.clone());
@@ -159,7 +202,7 @@ pub async fn detect_scoop(core: State<'_, Arc<Core>>) -> Result<DetectResult, St
             version: env.as_ref().map(|e| e.version.clone()),
             shims_dir: env.as_ref().and_then(|e| e.shims_dir.clone()),
         };
-        *core.scoop.lock().unwrap() = env;
+        *core.lock_scoop() = env;
         result
     })
     .await
@@ -184,7 +227,7 @@ pub async fn scoop_list(
     query: Option<String>,
 ) -> Result<Vec<parse::InstalledApp>, String> {
     if let Some(q) = &query {
-        if !NAME_RE.is_match(q) {
+        if !is_valid_name(q) {
             return Err("invalid list query".into());
         }
     }
@@ -231,7 +274,7 @@ pub async fn scoop_search(
     query: Option<String>,
 ) -> Result<Vec<parse::SearchResult>, String> {
     if let Some(q) = &query {
-        if !QUERY_RE.is_match(q) {
+        if !is_valid_query(q) {
             return Err("invalid search query".into());
         }
     }
@@ -249,7 +292,7 @@ pub async fn scoop_info(
     core: State<'_, Arc<Core>>,
     name: String,
 ) -> Result<Vec<(String, String)>, String> {
-    if !NAME_RE.is_match(&name) {
+    if !is_valid_name(&name) {
         return Err("invalid app name".into());
     }
     blocking_query!(core, move |core: Arc<Core>| {
@@ -293,12 +336,12 @@ pub fn enqueue_job(
         "bucket-remove" => JobKind::BucketRemove,
         _ => return Err(format!("unknown job kind: {kind}")),
     };
-    if !NAME_RE.is_match(&target) {
+    if !is_valid_name(&target) {
         return Err("invalid target name".into());
     }
     let repo = match repo {
         Some(r) if !r.trim().is_empty() => {
-            if !REPO_RE.is_match(&r) {
+            if !is_valid_repo(&r) {
                 return Err("invalid bucket repo url".into());
             }
             Some(r)
@@ -310,21 +353,35 @@ pub fn enqueue_job(
 
 /// F16:确认安装配置 → 持久化 → 生成 runner → 入队执行。
 #[tauri::command]
-pub fn install_scoop(core: State<'_, Arc<Core>>, config: InstallConfig) -> Result<u64, String> {
-    {
-        let mut s = core.settings.lock().unwrap();
-        s.install_config = Some(config.clone());
-        // 持久化失败不阻塞安装本身(flow §1.8 同源原则),但记录到返回值之外
-        let _ = settings::save(&s);
-    }
-    let runner = installer::prepare_runner(&config)?;
-    core.jobs
-        .enqueue(JobKind::InstallScoop, "Scoop".to_string(), None, Some(runner))
+pub async fn install_scoop(
+    core: State<'_, Arc<Core>>,
+    config: InstallConfig,
+) -> Result<u64, String> {
+    let core = core.inner().clone();
+    let core_for_setup = core.clone();
+    let runner = tauri::async_runtime::spawn_blocking(move || {
+        // 持久化失败不阻塞安装本身(flow §1.8 同源原则);runner 生成失败仍会返回给调用方。
+        let _ = persist_settings(&core_for_setup, |settings| {
+            settings.install_config = Some(config.clone())
+        });
+        installer::prepare_runner(&config)
+    })
+    .await
+    .map_err(|e| e.to_string())??;
+    core.jobs.enqueue(
+        JobKind::InstallScoop,
+        "Scoop".to_string(),
+        None,
+        Some(runner),
+    )
 }
 
 #[tauri::command]
-pub fn cancel_job(core: State<'_, Arc<Core>>, id: u64) -> Result<(), String> {
-    core.jobs.cancel(id)
+pub async fn cancel_job(core: State<'_, Arc<Core>>, id: u64) -> Result<(), String> {
+    let core = core.inner().clone();
+    tauri::async_runtime::spawn_blocking(move || core.jobs.cancel(id))
+        .await
+        .map_err(|e| e.to_string())?
 }
 
 #[tauri::command]
@@ -354,10 +411,10 @@ pub async fn scoop_config_set(
     name: String,
     value: String,
 ) -> Result<(), String> {
-    if !CONFIG_KEYS.contains(&name.as_str()) {
+    if !is_valid_config_key(&name) {
         return Err(format!("unknown config key: {name}"));
     }
-    if !CONFIG_VALUE_RE.is_match(&value) {
+    if !is_valid_config_value(&value) {
         return Err("invalid config value".into());
     }
     blocking_query!(core, move |core: Arc<Core>| {
@@ -369,11 +426,53 @@ pub async fn scoop_config_set(
 /// 删除单个配置项 → `scoop config rm <name>`(恢复该项默认)。
 #[tauri::command]
 pub async fn scoop_config_rm(core: State<'_, Arc<Core>>, name: String) -> Result<(), String> {
-    if !CONFIG_KEYS.contains(&name.as_str()) {
+    if !is_valid_config_key(&name) {
         return Err(format!("unknown config key: {name}"));
     }
     blocking_query!(core, move |core: Arc<Core>| {
         run_read(&core, &["config", "rm", &name])?;
         Ok(())
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn name_allowlist_accepts_scoop_identifiers_and_rejects_shell_syntax() {
+        assert!(is_valid_name("git"));
+        assert!(is_valid_name("bucket/package.name_1"));
+        assert!(!is_valid_name(""));
+        assert!(!is_valid_name("git; whoami"));
+        assert!(!is_valid_name("git&&whoami"));
+    }
+
+    #[test]
+    fn repository_allowlist_accepts_https_and_ssh_forms_but_rejects_shell_syntax() {
+        assert!(is_valid_repo("https://github.com/ScoopInstaller/Extras"));
+        assert!(is_valid_repo("git@github.com:ScoopInstaller/Extras.git"));
+        assert!(!is_valid_repo("https://example.com/repo&whoami"));
+        assert!(!is_valid_repo("https://example.com/repo|whoami"));
+    }
+
+    #[test]
+    fn search_allowlist_rejects_whitespace_and_shell_metacharacters() {
+        assert!(is_valid_query("node.js"));
+        assert!(is_valid_query("7zip-nightly"));
+        assert!(!is_valid_query("node js"));
+        assert!(!is_valid_query("node;whoami"));
+    }
+
+    #[test]
+    fn config_allowlist_accepts_known_keys_and_safe_values_only() {
+        assert!(is_valid_config_key("root_path"));
+        assert!(is_valid_config_key("proxy"));
+        assert!(!is_valid_config_key("unknown-key"));
+        assert!(is_valid_config_value(r"C:\Scoop Root"));
+        assert!(is_valid_config_value("user:pass@proxy.example:8080"));
+        assert!(!is_valid_config_value("safe&whoami"));
+        assert!(!is_valid_config_value("value|another"));
+        assert!(!is_valid_config_value(""));
+    }
 }

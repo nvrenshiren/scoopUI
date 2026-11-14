@@ -102,7 +102,7 @@ F16。`config` 形状见 db-doc §3.2。流程:持久化 `installConfig`(失败�
 `installer::prepare_runner` 生成 runner 脚本 → 以 `JobKind::InstallScoop` 入队,返回 `id`。
 
 ### 3.13 `cancel_job(id: u64) -> Result<(), string>`
-对排队中任务直接标记取消;对执行中任务设置 `cancel_requested` 并 `taskkill /F /T /PID` 杀整棵进程树(cmd → powershell → 下载器),`id` 不存在报 `job not found`。终态任务调用无副作用。
+对排队中任务直接标记取消;对执行中任务在进程 PID 已登记后设置 `cancel_requested` 并用 `taskkill /F /T /PID` 杀整棵进程树(cmd → powershell → 下载器)。进程尚未启动时返回 `job process has not started yet`;启动 taskkill 失败或其退出码非零时返回错误并撤销取消意图,除非 worker 已同时完成。`id` 不存在报 `job not found`;终态任务调用无副作用。
 
 ### 3.14 `list_jobs() -> JobDto[]`
 返回当前进程内全部 `InstallJob`(含终态),供 P08 面板渲染。
@@ -141,7 +141,7 @@ F20。`name` 校验白名单;对应 `scoop config rm <name>`,恢复该项默认�
 
 - **单 worker 顺序执行**:全部写操作(含协助安装 Scoop)共享一条 FIFO 队列(`mpsc::channel`),同一时刻只有一个子进程在跑,与 `docs/prd/flows/scoop-gui.md` §2.4 状态机一致。
 - **状态**:`queued → running → (succeeded | failed | cancelled)`,终态不可逆(`cancel` 对终态任务是 no-op)。
-- **取消语义**:`queued` 态取消直接置终态;`running` 态取消需 `taskkill /F /T` 杀整棵子进程树(仅 `child.kill()` 杀不掉 cmd 派生的 powershell/下载器孙进程)。
+- **取消语义**:`queued` 态取消直接置终态;`running` 态进程 PID 登记后,用 `taskkill /F /T` 杀整棵子进程树(仅 `child.kill()` 杀不掉 cmd 派生的 powershell/下载器孙进程)。启动/非零退出错误返回给调用方,失败不会把仍在运行的任务报告成已取消。
 - **子进程构建**(`build_command`):`install`/`uninstall`/`update`/`bucket-add`/`bucket-remove` 经 `scoop::scoop_command`(即 `cmd /d /c scoop …`,注入 shims 目录到 PATH);`install-scoop` 直接起 `powershell -File <runner脚本>`。
 
 ## 6. 决策记录(append-only)

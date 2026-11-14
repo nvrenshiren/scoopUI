@@ -73,7 +73,10 @@ pub fn detect(configured_scoop_dir: Option<&str>) -> Option<ScoopEnv> {
     if let Some(dir) = configured_scoop_dir {
         if !dir.trim().is_empty() {
             candidates.push(Some(
-                PathBuf::from(dir).join("shims").to_string_lossy().into_owned(),
+                PathBuf::from(dir)
+                    .join("shims")
+                    .to_string_lossy()
+                    .into_owned(),
             ));
         }
     }
@@ -82,7 +85,10 @@ pub fn detect(configured_scoop_dir: Option<&str>) -> Option<ScoopEnv> {
     if let Ok(scoop) = std::env::var("SCOOP") {
         if !scoop.trim().is_empty() {
             candidates.push(Some(
-                PathBuf::from(scoop).join("shims").to_string_lossy().into_owned(),
+                PathBuf::from(scoop)
+                    .join("shims")
+                    .to_string_lossy()
+                    .into_owned(),
             ));
         }
     }

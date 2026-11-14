@@ -44,7 +44,7 @@ jobs:
         run: npm ci
 
       - name: Run Rust tests
-        run: cargo test --manifest-path src-tauri/Cargo.toml
+        run: cargo test --manifest-path src-tauri/Cargo.toml --locked
 
       - name: Bump patch version
         id: bump
@@ -53,6 +53,7 @@ jobs:
           npm version patch --no-git-tag-version
           NEW_VERSION=$(node -p "require('./package.json').version")
           sed -i "s/^version = .*/version = \"$NEW_VERSION\"/" src-tauri/Cargo.toml
+          cargo check --manifest-path src-tauri/Cargo.toml
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git commit -am "chore: 发布自动递增版本号到 v${NEW_VERSION}"
@@ -61,7 +62,7 @@ jobs:
           echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
 
       - name: Build Tauri app (NSIS installer)
-        run: npm run tauri build
+        run: npm run tauri build -- -- --locked
 
       - name: Collect build metadata
         id: meta

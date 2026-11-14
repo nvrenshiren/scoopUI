@@ -7,6 +7,14 @@
 
 use regex::Regex;
 use serde::Serialize;
+use std::sync::LazyLock;
+
+// These fixed expressions are source constants, not data from Scoop or the user.
+static ANSI_RE: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"\x1b\[[0-9;]*[A-Za-z]").expect("ANSI_RE is a fixed regex"));
+static INFO_RE: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"^([A-Za-z][A-Za-z0-9 ]*?)\s*:\s?(.*)$").expect("INFO_RE is a fixed regex")
+});
 
 #[derive(Debug, Clone, Serialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
@@ -47,8 +55,7 @@ pub struct BucketInfo {
 }
 
 pub fn strip_ansi(text: &str) -> String {
-    let re = Regex::new(r"\x1b\[[0-9;]*[A-Za-z]").unwrap();
-    re.replace_all(text, "").into_owned()
+    ANSI_RE.replace_all(text, "").into_owned()
 }
 
 /// 在文本中找到 dash 分隔行,按 dash 段起点把其后的每一行切成列。
@@ -167,7 +174,8 @@ pub fn parse_known_buckets(text: &str) -> Vec<String> {
         .filter(|l| {
             !l.is_empty()
                 && !l.contains(' ')
-                && l.chars().all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_' || c == '.')
+                && l.chars()
+                    .all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_' || c == '.')
         })
         .map(|l| l.to_string())
         .collect()
@@ -176,7 +184,6 @@ pub fn parse_known_buckets(text: &str) -> Vec<String> {
 /// `scoop info <app>`:`Key : Value` 键值对,续行(前导空白)并入上一个值。
 pub fn parse_info(text: &str) -> Vec<(String, String)> {
     let clean = strip_ansi(text);
-    let re = Regex::new(r"^([A-Za-z][A-Za-z0-9 ]*?)\s*:\s?(.*)$").unwrap();
     let mut pairs: Vec<(String, String)> = Vec::new();
     for line in clean.lines() {
         if line.trim().is_empty() {
@@ -192,7 +199,7 @@ pub fn parse_info(text: &str) -> Vec<(String, String)> {
             }
             continue;
         }
-        if let Some(caps) = re.captures(line) {
+        if let Some(caps) = INFO_RE.captures(line) {
             pairs.push((caps[1].trim().to_string(), caps[2].trim().to_string()));
         }
     }

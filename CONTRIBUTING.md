@@ -8,7 +8,7 @@
 
 前置要求:
 
-- [Rust](https://www.rust-lang.org/tools/install)(stable 工具链)
+- [Rust](https://www.rust-lang.org/tools/install)(stable 工具链,本 crate 的最低版本为 1.88)
 - [Node.js](https://nodejs.org) ≥ 20.19(或 ≥ 22.12)
 - Windows 10/11(项目仅面向 Windows,依赖 WebView2 与 Scoop 本身的 Windows 语义)
 
@@ -28,11 +28,15 @@ npm run dev           # http://localhost:5173
 ## 提交前自检
 
 ```bash
-npm run build                  # tsc 类型检查 + vite 构建,必须无错误
-cd src-tauri && cargo test     # Rust 单元测试(解析器 / 安装脚本生成),必须全部通过
+npm run build
+cargo fmt --manifest-path src-tauri/Cargo.toml --all -- --check
+cargo clippy --manifest-path src-tauri/Cargo.toml --locked --all-targets -- -D warnings
+cargo check --manifest-path src-tauri/Cargo.toml --locked
+cargo test --manifest-path src-tauri/Cargo.toml --locked
 ```
 
-这两步与 CI 工作流([.github/workflows/ci.yml](.github/workflows/ci.yml))完全一致,本地先跑通再提 PR 可以节省来回等待时间。
+以上命令与 CI 工作流([.github/workflows/ci.yml](.github/workflows/ci.yml))保持一致。Rust 单测使用提交的固定输入样例和隔离回调，不启动真实 Scoop，也不终止用户进程。
+Mutex 中毒策略与同步磁盘/进程操作边界见 [ARCHITECTURE.md §3](ARCHITECTURE.md)。
 
 ## 项目约定
 
@@ -76,4 +80,4 @@ cd src-tauri && cargo test     # Rust 单元测试(解析器 / 安装脚本生�
 ## 代码风格
 
 - TypeScript/React:遵循仓库现有风格(函数组件 + hooks、zustand 模块级 action、Tailwind 原子类),提交前用 `npm run build` 校验类型
-- Rust:标准 `rustfmt` 格式(`cargo fmt`),新增解析/命令逻辑尽量附带基于真实 `scoop` 输出的单元测试
+- Rust:遵循默认 `rustfmt` 格式；模块与可见性按单一职责和最小公开面组织。新增解析、命令 allowlist、任务状态及取消分支应补充隔离单测；测试可以使用提交的 Scoop 输出样例，不启动真实 Scoop、不终止用户进程。提交前执行上方全部 Rust 门禁命令。

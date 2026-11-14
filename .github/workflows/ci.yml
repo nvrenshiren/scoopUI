@@ -26,6 +26,8 @@ jobs:
 
       - name: Install Rust stable
         uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
 
       - name: Rust cache
         uses: Swatinem/rust-cache@v2
@@ -34,6 +36,18 @@ jobs:
 
       - name: Install frontend dependencies
         run: npm ci
+
+      - name: Check Rust formatting
+        run: cargo fmt --manifest-path src-tauri/Cargo.toml --all -- --check
+
+      - name: Run Rust Clippy
+        run: cargo clippy --manifest-path src-tauri/Cargo.toml --locked --all-targets -- -D warnings
+
+      - name: Check Rust production crate
+        run: cargo check --manifest-path src-tauri/Cargo.toml --locked
+
+      - name: Run Rust tests
+        run: cargo test --manifest-path src-tauri/Cargo.toml --locked
 
       - name: Typecheck & build frontend
         run: npm run build
@@ -44,6 +58,3 @@ jobs:
           name: frontend-dist
           path: dist/
           retention-days: 7
-
-      - name: Run Rust tests
-        run: cargo test --manifest-path src-tauri/Cargo.toml
