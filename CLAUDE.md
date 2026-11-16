@@ -10,7 +10,7 @@ Windows 桌面应用:Scoop 包管理器的图形化客户端。前端使用 Reac
 - `docs/prd/pages/web/scoop-gui/` — 页面行为契约。
 - `docs/architecture/api/scoop-gui.md`、`docs/architecture/database/scoop-gui.md` — IPC 与本机设置契约。
 - `ARCHITECTURE.md` — Rust/前端边界、锁与阻塞操作约定。
-- `docs/design/systems/web.md` — COHESION 2.0 接入与本应用当前视觉约定。
+- `docs/design/systems/web.md` — 逐科 (whzhuke) 设计系统接入与本应用当前 Token 来源。
 
 代码和配置是实现现状的依据;契约变更时同步更新对应文档,不要在多个文件复制状态机定义。
 
@@ -43,10 +43,10 @@ Rust 使用 edition 2021、最低版本 1.88。CI 在 Windows 执行格式、Cli
 
 ### 前端与设计系统
 
-- 所有界面文案在 `src/i18n.ts` 维护中英文对照;主题和组件使用 COHESION 生成 token。
+- 所有界面文案在 `src/i18n.ts` 维护中英文对照;主题和组件使用逐科 (whzhuke) 设计系统派生 Token。`COHESION` 只用于既有文件名、脚本、环境变量等内部标识。
 - 单包安装/更新/卸载成功后只刷新对应软件包;完整更新检查由用户主动触发或启动流程触发。
 - F08 批量更新由前端逐包入队,不调用 `scoop update *`。
-- 设计 token 快照位于 `src/theme/`;需要更新时执行 `npm run sync:cohesion`,并从 `D:\Work\dawi\design` 或配置的 `COHESION_DESIGN_ROOT` 读取共享源码。
+- 设计 Token 快照位于 `src/theme/`;需要更新时执行 `npm run sync:cohesion`,并从 `D:\Work\dawi\design` 或配置的 `COHESION_DESIGN_ROOT` 读取共享源码。脚本名和环境变量名为既有技术标识。
 
 ## CI 与发布
 

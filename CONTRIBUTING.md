@@ -45,7 +45,7 @@ Mutex 中毒策略与同步磁盘/进程操作边界见 [ARCHITECTURE.md §3](AR
 - [CLAUDE.md](CLAUDE.md) — 当前架构要点与关键实现约定
 - [docs/prd/flows/scoop-gui.md](docs/prd/flows/scoop-gui.md) — 全部实体状态机的唯一真相源;涉及状态流转的改动必须先同步这里
 - [docs/prd/modules/scoop-gui.md](docs/prd/modules/scoop-gui.md) — 功能清单与对应的 scoop CLI 命令
-- [docs/design/systems/web.md](docs/design/systems/web.md) — COHESION 设计系统接入、主题同步与桌面界面约定
+- [docs/design/systems/web.md](docs/design/systems/web.md) — 逐科 (whzhuke) 设计系统接入与主题同步约定
 
 硬约束(PR 中不应违反):
 

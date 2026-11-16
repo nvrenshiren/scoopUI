@@ -33,7 +33,7 @@ import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { EmptyState } from "@/components/EmptyState";
 import { PageHeader } from "@/components/PageHeader";
 
-export function InstalledView() {
+export function InstalledView({ embedded = false }: { embedded?: boolean }) {
   useLang();
   const installed = useApp((s) => s.installed);
   const statusEntries = useApp((s) => s.statusEntries);
@@ -141,7 +141,7 @@ export function InstalledView() {
 
   return (
     <div className="flex h-full min-w-0 flex-col">
-      <PageHeader
+      {!embedded && <PageHeader
         icon={Package}
         title={t("installed.title")}
         description={t("installed.desc")}
@@ -164,9 +164,24 @@ export function InstalledView() {
             </Button>
           </>
         }
-      />
+      />}
 
       <div className="flex min-h-0 flex-1 flex-col gap-4 px-8 pt-5 pb-6">
+        {embedded && (
+          <div className="flex shrink-0 justify-end gap-2">
+            <Button variant="outline" disabled={loading.status} onClick={() => void refreshStatus()}>
+              {loading.status ? <LoaderCircle className="size-4 animate-spin" /> : <RefreshCw className="size-4" />}
+              {t("installed.checkUpdates")}
+            </Button>
+            <Button disabled={!outdatedList.length} onClick={() => setUpdateAllOpen(true)}>
+              <CircleArrowUp className="size-4" />
+              {t("installed.updateAll")}
+              {outdatedList.length > 0 && (
+                <span className="ml-1 border-l border-primary-foreground/30 pl-2 text-xs tabular-nums">{outdatedList.length}</span>
+              )}
+            </Button>
+          </div>
+        )}
         <div className="grid shrink-0 grid-cols-2 gap-3">
           <div className="relative flex items-center gap-3.5 overflow-hidden rounded-xl border border-border/80 bg-card px-4 py-3 shadow-sm">
             <div className="flex size-9 items-center justify-center rounded-lg border border-primary/10 bg-accent text-accent-foreground">

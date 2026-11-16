@@ -15,32 +15,30 @@
 
 English | [简体中文](README.md)
 
-<img src="screen.png" alt="scoopUI screenshot" width="840" />
-
 </div>
 
 ---
 
-scoopUI turns everyday `scoop` command-line workflows — browsing, searching, installing, uninstalling, updating packages, and managing buckets — into a point-and-click desktop experience. On first launch, if Scoop isn't installed yet, the app can walk you through a guided, parameterized run of the official install script. Built with **Rust (Tauri 2) + React 19 + shadcn/ui + Tailwind CSS v4** for a small install footprint and low memory usage.
+scoopUI turns package browsing, search, installation, updates, source management, and supported Scoop configuration into desktop workflows. If Scoop is missing on first launch, the app guides the user through a parameterized run of the official install script. Built with **Rust (Tauri 2) + React 19 + shadcn/ui + Tailwind CSS v4**.
 
 ## Features
 
-- **Installed packages** — list view with outdated markers (diffed against `scoop status`), per-package update/uninstall, and one-click "update all outdated"
-- **Browse & search** — every installable package across your added buckets, instant keyword filtering, one-click install
+- **Package workspace** — browse packages from added buckets, search instantly, see installed status, and install individual packages
+- **Installed package maintenance** — inspect versions and outdated status; update or uninstall one package, update all or selected outdated packages, and uninstall selected packages in bulk
 - **Package details** — `scoop info` key/value output plus action buttons that adapt to the package's current state
-- **Bucket management** — list added buckets, browse Scoop's known-bucket catalog, add (including custom repo URLs) or remove buckets
+- **Sources** — view added buckets and Scoop's known-bucket catalog, add known or custom repositories, and remove buckets
 - **Long-running job queue** — package and bucket operations plus guided Scoop installation run sequentially with live logs and cancellation; retry by starting the action again from its source page
 - **Scoop settings** — manage supported Scoop configuration values; scalar values apply immediately and complex `private_hosts` is read-only
 - **Guided first-run Scoop install** — detects whether `scoop` is available; if not, presents an editable form covering every parameter of the official `install.ps1` (ScoopDir / ScoopGlobalDir / ScoopCacheDir / Proxy / NoProxy / ProxyCredential / ProxyUseDefaultCredentials / RunAsAdmin), runs once confirmed, supports the UAC elevation path, and persists your settings locally for reinstalls
 - **Bilingual (Chinese/English)** — choose on first launch, switch anytime from Settings with instant effect and persistence
-- **Three themes** — dark / light / follow system, dark by default with the COHESION shadcn theme
+- **Three themes** — dark / light / follow system, dark by default, using the whzhuke design system's components and semantic colors
 - **Single instance** — relaunching focuses the existing window instead of opening a duplicate
 
 ## Installation
 
 ### Download the installer (recommended)
 
-Grab the latest `*-setup.exe` from [Releases](https://github.com/nvrenshiren/scoopUI/releases) and run it.
+Download the latest NSIS installer (`*-setup.exe`) or portable ZIP from [Releases](https://github.com/nvrenshiren/scoopUI/releases).
 
 When code changes are pushed to `master`, the release workflow increments the patch version and creates a versioned GitHub Release. Markdown-only and `docs/` changes do not trigger a release.
 
@@ -66,8 +64,8 @@ src/                 React 19 + TypeScript frontend (Vite 8)
   store.ts           zustand global state: boot sequence, data refresh, job events, derived entity state
   i18n.ts            Full Chinese/English dictionary
   components/ui/     shadcn/ui components (Radix + cva, customized per the design system)
-  pages/             Boot/guided-install · language picker · installed · browse · buckets · Scoop config · settings
-  components/        Detail dialog · long-running task panel · empty/error states, etc.
+  pages/             Boot/guided-install · language picker · overview · package workspace · sources · Scoop config · settings
+  components/        Package details · task status/logs · empty/error feedback, etc.
 src-tauri/           Rust backend
   src/scoop.rs       Locating scoop (multiple shim candidates) and spawning child processes (windowless, PATH injection)
   src/parse.rs       CLI table-text parsing (dash-separator rows anchor column boundaries), with real-output unit tests

@@ -79,12 +79,12 @@ src-tauri/src/            ← Rust 后端
   lib.rs / main.rs         应用入口、状态装配、IPC 注册
 
 src/                       ← React 前端
-  pages/                   页面级组件(对应页面 PRD P01~P11)
+  pages/                   启动与主流程视图;页面 PRD P01~P11 所指的业务能力分布在这些视图和跨页组件中
   components/              跨页面复用组件与 shadcn/ui 基础组件(components/ui/)
   store.ts                 zustand 全局状态与 Boot Sequence 编排
   api.ts                   IPC 调用封装(含浏览器 mock 降级)
   i18n.ts                  中英双语字典
-  App.tsx                  主界面壳(对应 P03)
+  App.tsx                  启动分流与主流程宿主(P03);视图路由由 ViewId 管理,任务状态由全局状态协调
 ```
 
 ## 6. 文档范围声明

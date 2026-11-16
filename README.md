@@ -15,32 +15,30 @@
 
 简体中文 | [English](README.en.md)
 
-<img src="screen.png" alt="scoopUI 界面截图" width="840" />
-
 </div>
 
 ---
 
-把命令行才能完成的软件包浏览、搜索、安装、卸载、更新、桶(bucket)管理转换为可视化操作;首次启动时若本机未安装 Scoop,可在应用内完成官方安装脚本的参数化协助安装。使用 **Rust(Tauri 2)+ React 19 + shadcn/ui + Tailwind CSS v4** 开发,安装包体积小、内存占用低。
+把 Scoop 的软件包浏览、搜索、安装、卸载、更新、软件源管理和受支持的 Scoop 配置管理转为桌面操作。首次启动时若本机未安装 Scoop,可在应用内完成官方安装脚本的参数化协助安装。使用 **Rust(Tauri 2)+ React 19 + shadcn/ui + Tailwind CSS v4** 开发。
 
 ## 功能特性
 
-- **已装软件包** — 列表展示、过期标记(`scoop status` 比对)、单包更新/卸载、一键批量更新全部过期包
-- **浏览与搜索** — 已添加桶内全部可装软件包,关键字即时过滤,单包安装
+- **软件包管理** — 浏览已添加桶中的软件包并即时搜索;目录同时标记已安装状态,支持单包安装
+- **已装软件维护** — 查看版本与过期状态,更新或卸载单包,批量更新全部或所选过期包,批量卸载所选软件包
 - **软件包详情** — `scoop info` 键值信息 + 随安装状态变化的操作按钮
-- **桶管理** — 已添加桶列表、Scoop 官方已知桶清单、添加(含自定义 repo)/移除桶
+- **软件源管理** — 查看已添加桶与 Scoop 已知桶,添加已知或自定义仓库并移除桶
 - **长时任务队列** — 软件包与桶操作、协助安装 Scoop 按序执行,实时记录日志并支持取消;失败后可从来源页重新发起
 - **Scoop 配置** — 管理当前支持的 Scoop 配置项,标量值即时写入,复杂 `private_hosts` 只读呈现
 - **首启协助安装 Scoop** — 检测 `scoop` 可用性;未安装时呈现官方 `install.ps1` 全部参数(ScoopDir / ScoopGlobalDir / ScoopCacheDir / Proxy / NoProxy / ProxyCredential / ProxyUseDefaultCredentials / RunAsAdmin)的可填写表单,一次确认后执行,支持 UAC 提权路径,配置本机持久化供重装复用
 - **中英双语** — 首启二选一,设置页随时切换、立即生效并持久化
-- **三主题** — 暗 / 亮 / 跟随系统,暗色默认;界面沿用逐科 COHESION shadcn 主题
+- **三主题** — 暗色 / 亮色 / 跟随系统,暗色为默认;组件与语义色沿用逐科 (whzhuke) 设计系统
 - **单实例** — 重复启动自动唤起并聚焦已有窗口
 
 ## 安装
 
 ### 下载安装包(推荐)
 
-前往 [Releases](https://github.com/nvrenshiren/scoopUI/releases) 下载最新的 `*-setup.exe` 安装包运行即可。
+前往 [Releases](https://github.com/nvrenshiren/scoopUI/releases) 下载最新的 NSIS 安装包(`*-setup.exe`)或免安装 ZIP。
 
 代码变更推送到 `master` 后,发布工作流会递增补丁版本并创建带版本号的 GitHub Release;纯 Markdown 与 `docs/` 改动不会触发发布。
 
@@ -66,8 +64,8 @@ src/                 React 19 + TypeScript 前端(Vite 8)
   store.ts           zustand 全局状态:Boot Sequence、数据刷新、任务事件、实体状态推导
   i18n.ts            中英全量字典
   components/ui/     shadcn/ui 组件(Radix + cva,按设计系统定制)
-  pages/             启动检测/协助安装 · 语言选择 · 已装 · 浏览 · 桶 · Scoop 配置 · 设置
-  components/        详情对话框 · 长时任务面板 · 空态/错误态 等
+  pages/             启动检测/协助安装 · 语言选择 · 概览 · 软件包工作区 · 软件源 · Scoop 配置 · 设置
+  components/        软件包详情 · 任务状态与日志 · 空态/错误态 等
 src-tauri/           Rust 后端
   src/scoop.rs       scoop 定位(shims 多候选)与子进程执行(无窗口、PATH 注入)
   src/parse.rs       CLI 文本表格解析(dash 分隔行定位列边界,附真实输出单测)

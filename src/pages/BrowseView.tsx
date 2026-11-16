@@ -15,7 +15,7 @@ import { PageHeader } from "@/components/PageHeader";
 
 const LIMIT = 500;
 
-export function BrowseView() {
+export function BrowseView({ embedded = false }: { embedded?: boolean }) {
   useLang();
   const available = useApp((s) => s.available);
   const installed = useApp((s) => s.installed);
@@ -42,7 +42,7 @@ export function BrowseView() {
 
   return (
     <div className="flex h-full min-w-0 flex-col">
-      <PageHeader
+      {!embedded && <PageHeader
         icon={Search}
         title={t("browse.title")}
         description={t("browse.desc")}
@@ -52,9 +52,17 @@ export function BrowseView() {
             {t("common.refresh")}
           </Button>
         }
-      />
+      />}
 
       <div className="flex min-h-0 flex-1 flex-col gap-4 px-8 pt-5 pb-6">
+        {embedded && (
+          <div className="flex shrink-0 justify-end">
+            <Button variant="outline" disabled={loading} onClick={() => void refreshAvailable(true)}>
+              {loading ? <LoaderCircle className="size-4 animate-spin" /> : <RefreshCw className="size-4" />}
+              {t("common.refresh")}
+            </Button>
+          </div>
+        )}
         <div className="relative">
           <Search className="absolute top-2.5 left-3 size-4 text-subtle" aria-hidden="true" />
           <Input

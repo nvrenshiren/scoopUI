@@ -215,7 +215,7 @@ function ConfigRow({
           {item.danger && <Badge variant="warning">{t("config.dangerBadge")}</Badge>}
         </div>
         <div id={helpId} className="mt-1 text-xs leading-5 text-muted-foreground">{tf(`config.item.${item.key}.help`, "")}</div>
-        <div className="mt-1.5 font-mono text-[11px] tracking-wide text-subtle select-text">{item.key}</div>
+        <div className="mt-1.5 font-mono text-[11px] tracking-wide text-subtle">{item.key}</div>
       </div>
       <div className="flex shrink-0 items-center gap-2 pt-0.5">
         <Control item={item} scoopConfig={scoopConfig} onCommit={onCommit} labelId={labelId} helpId={helpId} />

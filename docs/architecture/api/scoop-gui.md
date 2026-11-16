@@ -70,7 +70,7 @@ interface StatusEntry { name: string; installedVersion: string; latestVersion: s
 ```
 
 ### 3.7 `scoop_search(query?: string) -> Result<SearchResult[], string>`(异步)
-F01(可装部分)/ F02。`query` 校验 `QUERY_RE`;对应 `scoop search [<query>]`。
+F01(软件目录)/ F02。`query` 校验 `QUERY_RE`;对应 `scoop search [<query>]`。无查询参数读取已添加桶中的软件目录,前端将其与已装清单合并以标记本机安装状态。
 
 ```ts
 interface SearchResult { name: string; version: string; source: string; binaries: string }

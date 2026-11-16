@@ -21,6 +21,7 @@ import type {
   StatusEntry,
   Theme,
   ViewId,
+  PackageTab,
 } from "./types";
 
 interface AppState {
@@ -29,6 +30,7 @@ interface AppState {
   installJobId: number;
 
   view: ViewId;
+  packageTab: PackageTab;
   lang: Language;
   theme: Theme;
 
@@ -61,7 +63,8 @@ export const useApp = create<AppState>()(() => ({
   setupError: "",
   installJobId: 0,
 
-  view: "installed",
+  view: "overview",
+  packageTab: "catalog",
   lang: "zh",
   theme: "dark",
 

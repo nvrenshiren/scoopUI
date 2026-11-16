@@ -55,7 +55,7 @@ export function DetailDialog() {
   }
 
   function askUninstall() {
-    useApp.setState({ detailName: "", view: "installed", uninstallAsk: name });
+    useApp.setState({ detailName: "", view: "packages", packageTab: "installed", uninstallAsk: name });
   }
 
   return (
@@ -96,7 +96,7 @@ export function DetailDialog() {
               <TriangleAlert className="mt-0.5 size-4 shrink-0" />
               <div className="min-w-0 flex-1">
                 {t("detail.failed")}
-                <div className="mt-1 font-mono text-xs break-all select-text">{error}</div>
+                <div className="mt-1 font-mono text-xs break-all">{error}</div>
                 <Button
                   variant="secondary"
                   size="sm"
@@ -114,7 +114,7 @@ export function DetailDialog() {
                   <dt className="text-subtle">{tf("detail.field." + key, key)}</dt>
                   <dd
                     className={
-                    "m-0 break-words whitespace-pre-wrap select-text " +
+                    "m-0 break-words whitespace-pre-wrap " +
                       (key !== "Description" && key !== "Notes" ? "font-mono" : "")
                     }
                   >

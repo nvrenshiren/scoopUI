@@ -122,7 +122,7 @@ export function SettingsView() {
               {installCfgRows.map(([key, value]) => (
                 <div key={key} className="contents">
                   <dt className="text-subtle">{key}</dt>
-                  <dd className="m-0 break-all select-text">{value}</dd>
+                  <dd className="m-0 break-all">{value}</dd>
                 </div>
               ))}
             </dl>
@@ -133,9 +133,9 @@ export function SettingsView() {
         <Section icon={<Info className="size-[18px]" />} title={t("settings.about")}>
           <dl className="mt-3 grid grid-cols-[minmax(100px,160px)_1fr] gap-x-4 gap-y-1.5 font-mono text-xs">
             <dt className="text-subtle">{t("settings.appVersion")}</dt>
-            <dd className="m-0 select-text">{`scoopUI ${packageJson.version}`}</dd>
+            <dd className="m-0">{`scoopUI ${packageJson.version}`}</dd>
             <dt className="text-subtle">{t("settings.scoopVersion")}</dt>
-            <dd className="m-0 select-text">{scoopVersion || "—"}</dd>
+            <dd className="m-0">{scoopVersion || "—"}</dd>
           </dl>
         </Section>
         </div>

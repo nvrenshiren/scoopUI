@@ -1,38 +1,36 @@
-# scoopUI Web UI Design Integration
+# scoopUI 设计系统接入
 
-## Design source
+## 设计来源与品牌
 
-The shared source of visual tokens and interaction patterns is the COHESION design system in `D:\Work\dawi\design` (version `2.0.0` at the time of this integration). Follow its `README.md`, `DESIGN.md`, and `theme/` configuration. This app keeps its existing product identity, Tauri/React stack, shadcn/Radix components, and Windows desktop scope.
+scoopUI 沿用 `D:\Work\dawi\design` 中的逐科设计系统。逐科的英文标识为小写 `whzhuke`；用户可见的品牌称呼使用“逐科 / whzhuke”。`COHESION` 只保留在既有文件名、API、CSS 类名、脚本名和环境变量等内部技术标识中，不作为品牌名。
 
-The application uses the COHESION shadcn New York / Neutral foundation and its generated brand tokens. Do not add a second palette or hand-maintain a competing color scale in this project. The shared brand configuration is the source for primary, link, focus, and semantic states. The application keeps its dark default and light/system choices.
+查阅共享系统时，以该目录当前版本的 `README.md`、`DESIGN.md` 和 `theme/` 正式配置为准；涉及品牌适用范围或平台差异时，再查阅 `PRODUCT.md` 与 `platforms.md`。不要把此文的接入说明当作共享设计系统的副本。
 
-## Token sync
+## 本项目的实现边界
 
-Generated files in `src/theme/` are checked in so builds do not depend on another checkout:
+- 当前前端沿用 React、Tailwind CSS v4、shadcn/ui 与 Radix。继续使用这套组件基础及逐科语义 Token；组件体系或颜色配置有变化时，以共享设计系统正式入口为准。
+- 产品功能、页面划分和信息层级以当前功能需求为依据。此文只约束设计语言与组件接入，不固定页面树、导航数量、区域排列或信息密度。
+- 暗色是默认主题；暗色、亮色和跟随系统由应用设置控制。正文、链接、焦点、成功、警告、错误和信息状态分别使用对应语义，不用 Logo 色替代功能语义色。
+- 保留清晰的键盘焦点、足够的文字对比、键盘可达性和减少动效支持。软件包名、版本、路径、配置键及命令输出使用等宽字体；普通文字使用系统字体栈，避免离线启动时依赖远程字体。
+- 面向用户的文案需提供中文和英文版本。危险操作与普通取消分别表达；取消操作使用中性语义。
 
-- `cohesion-shadcn.css` — generated shadcn semantic tokens from `preview/shadcn/tokens.css`.
-- `cohesion-semantic.css` — semantic status and canvas tokens derived by the shared theme factory and brand atmosphere configuration.
+## Token 同步
 
-Refresh both files with:
+`src/theme/` 中的生成文件随项目提交，使构建不依赖另一份本地 checkout：
+
+- `cohesion-shadcn.css`：共享 shadcn 主题的 CSS Token。
+- `cohesion-semantic.css`：由共享主题工厂生成的语义状态、画布和字体变量。
+
+从共享源码刷新快照：
 
 ```powershell
 npm run sync:cohesion
 ```
 
-The script reads `D:\Work\dawi\design` by default. Other machines should set `COHESION_DESIGN_ROOT` to a checkout of the intended COHESION version. It fails clearly when the source files or factory are missing. Do not edit generated token files directly.
+脚本入口为 `scripts/sync-cohesion-theme.mjs`。默认读取 `D:\Work\dawi\design`；其他环境通过 `COHESION_DESIGN_ROOT` 指向同一设计系统源码。不要直接编辑生成文件；改动应回到共享主题配置，再运行同步脚本。
 
-## Application conventions
+生成脚本、环境变量和 Token 文件名中的 `cohesion` 是沿用的内部标识，不代表品牌名称。
 
-- Keep Scoop package names, versions, paths, CLI output, and configuration keys in a monospace stack; use the system UI stack for other text to preserve offline startup and Windows readability.
-- Use a compact navigation rail and task-oriented content density. Tables remain vertically scrollable and keep their existing keyboard access and row actions.
-- Use canvas atmosphere only as a low contrast background detail. Keep primary, information, success, warning, and danger colors tied to their semantic roles.
-- Keep focus rings visible, labels bilingual, destructive actions explicit, and cancellation neutral. Respect the system reduced-motion preference.
-- Preserve all existing business behavior and state contracts in `docs/prd/`, `docs/architecture/`, and `docs/acceptance/`; these govern functionality, while the COHESION system governs visual styling.
+## 维护规则
 
-## Desktop redesign direction
-
-The 2026-11 redesign uses the COHESION 2.0 brand wordmark and the generated shadcn New York / Neutral theme in both light and dark modes. The wordmark files in `public/branding/` are visual assets copied from the configured COHESION source checkout; refresh them from `D:\Work\dawi\design\原色.png` and `白色.png` when updating the shared brand version.
-
-The desktop package manager expresses a restrained technical character through precise typography, compact navigation, clear table hierarchy, opaque work surfaces, subtle canvas atmosphere, and semantic status treatments. Decorative effects stay on the canvas or brand mark. Tables, settings, forms, dialogs, and logs remain solid and readable. Buttons and inputs retain the shadcn 36px default height and 8px radius; cards use the 14px COHESION radius; status badges remain pill shaped.
-
-Use the Windows system font stack for reliable offline startup. Scoop package identifiers, versions, paths, and command output use the generated Cascadia Code / Consolas stack. Keep user actions, keyboard focus, semantic state text, Escape dismissal, and reduced-motion behavior visible when restyling components.
+共享规范在 `D:\Work\dawi\design` 集中维护；本项目文档只记录接入方式和项目特有例外。修改页面结构时，按功能需求重组内容，并继续复用现有组件与语义 Token；不要为了套用某种旧页面布局而限制功能组织。设计变更后检查暗色与亮色、交互状态、中英文文案、键盘操作与减少动效表现。

@@ -47,6 +47,17 @@
   * {
     box-sizing: border-box;
     border-color: var(--border);
+    -webkit-user-select: none;
+    user-select: none;
+  }
+
+  input,
+  textarea,
+  [contenteditable="true"],
+  [contenteditable=""],
+  [contenteditable="plaintext-only"] {
+    -webkit-user-select: text;
+    user-select: text;
   }
 
   html,
@@ -187,7 +198,6 @@
     line-height: 1.65;
     white-space: pre-wrap;
     overflow-wrap: anywhere;
-    user-select: text;
   }
 }
 

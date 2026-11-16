@@ -94,4 +94,5 @@ export type ScoopConfigValue = boolean | number | string | string[] | Record<str
 /** key → 当前值(仅含已显式设置过的项;未出现即视为 scoop 默认) */
 export type ScoopConfigMap = Record<string, ScoopConfigValue>;
 
-export type ViewId = "installed" | "browse" | "buckets" | "config" | "settings";
+export type ViewId = "overview" | "packages" | "sources" | "config" | "settings";
+export type PackageTab = "installed" | "catalog";
